@@ -1,0 +1,15 @@
+config:
+   fail_fast: true
+
+mitos:
+  target: sustain
+  outputs:
+    sustain:
+      type: postgres
+      host: "{{ env_var('PG_WAREHOUSE_HOST') }}"
+      user: "{{ env_var('PG_USER') }}"
+      password: "{{ env_var('PG_PASSWORD') }}"
+      database: postgres
+      port: 5432
+      schema: public
+      threads: 8

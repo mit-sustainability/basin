@@ -1,0 +1,53 @@
+### Project Meta
+name: 'mitos'
+config-version: 2
+version: '0.1'
+
+profile: 'mitos'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analysis"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+    - "target"
+    - "dbt_modules"
+    - "logs"
+
+require-dbt-version: [">=1.0.0", "<2.0.0"]
+
+models:
+  mitos:
+    +persist_docs:
+      relation: true
+      columns: true
+    materialized: table
+    staging:
+      +meta:
+        dagster:
+          group: staging
+      +schema: staging
+      +tags:
+        - staging
+      materialized: view
+    final:
+      +meta:
+        dagster:
+          group: final
+      +schema: final
+      +materialized: view
+      +tags:
+        - final
+
+seeds:
+  mitos:
+    +meta:
+      dagster:
+        group: landing
+    +schema: raw
+    +persist_docs:
+      relation: true
+      columns: true

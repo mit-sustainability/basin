@@ -1,0 +1,21 @@
+version: '2'
+
+services:
+  dagster-webserver:
+    # image: 860551228838.dkr.ecr.us-east-1.amazonaws.com/mitos2023:basin_0.0.1
+    build:
+      context: .
+      dockerfile: orchestrator/Dockerfile
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    ports:
+      - 3000:3000
+  dagster-daemon:
+    # image: 860551228838.dkr.ecr.us-east-1.amazonaws.com/mitos2023:basin_0.0.1
+    build:
+      context: .
+      dockerfile: orchestrator/Dockerfile
+    command: "dagster-daemon run"
+
+# Pull an image build by github-actions? or run docker-compose up on EC2?

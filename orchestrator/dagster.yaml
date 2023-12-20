@@ -1,0 +1,23 @@
+storage:
+  postgres:
+    postgres_db:
+      username: ${PG_USER}
+      password: ${PG_PASSWORD}
+      hostname: ${PG_WAREHOUSE_HOST}
+      db_name: postgres
+      params:
+        options: -c search_path=dagster_logs
+      port: 5432
+
+compute_logs:
+  module: dagster_aws.s3.compute_log_manager
+  class: S3ComputeLogManager
+  config:
+    bucket: "mitos-dagster-compute-logs"
+    prefix: "dagster-test-"
+    region: "us-east-1"
+
+telemetry:
+  enabled: false
+nux:
+  enabled: false
