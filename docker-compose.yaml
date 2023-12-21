@@ -2,10 +2,7 @@ version: '2'
 
 services:
   dagster-webserver:
-    image: basin:0.0.2
-    # build:
-    #   context: .
-    #   dockerfile: orchestrator/Dockerfile
+    image: 860551228838.dkr.ecr.us-east-1.amazonaws.com/mitos2023:basin_0.0.1
     environment:
       - PG_PASSWORD=${PG_PASSWORD}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -13,11 +10,7 @@ services:
     ports:
       - 3000:3000
   dagster-daemon:
-    # image: 860551228838.dkr.ecr.us-east-1.amazonaws.com/mitos2023:basin_0.0.1
-    image: basin:0.0.2
-    # build:
-    #   context: .
-    #   dockerfile: orchestrator/Dockerfile
+    image: 860551228838.dkr.ecr.us-east-1.amazonaws.com/mitos2023:basin_0.0.1
     environment:
       - PG_PASSWORD=${PG_PASSWORD}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
