@@ -54,8 +54,8 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     host: Optional[str] = "localhost"
     port: Optional[int] = 5432
     user: Optional[str] = "postgres"
-    password: str
-    database: str
+    password: Optional[str] = "test"
+    database: Optional[str] = "postgres"
     dbschema: Optional[str] = "public"
 
     @property

@@ -1,9 +1,12 @@
 storage:
   postgres:
     postgres_db:
-      username: ${PG_USER}
-      password: ${PG_PASSWORD}
-      hostname: ${PG_WAREHOUSE_HOST}
+      username:
+        env: PG_USER
+      password:
+        env: PG_PASSWORD
+      hostname:
+        env: PG_WAREHOUSE_HOST
       db_name: postgres
       params:
         options: -c search_path=dagster_logs
