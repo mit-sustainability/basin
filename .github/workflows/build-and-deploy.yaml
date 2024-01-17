@@ -1,0 +1,68 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - main
+env:
+  GITHUB_REPO: ${{ github.repository }}
+  REPO_NAME: ${{ github.event.repository.name }}
+jobs:
+  Build-And-Push-Dagster-Image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Authentication
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::860551228838:role/docker-iam-role
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: mitos2023
+          IMAGE_TAG: basin_0.0.1
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
+      - name: Deploy to EC2 and Start the service
+        env:
+          # add ssh-private-key to env variable
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOSTNAME: ${{secrets.SSH_HOST}}
+          branch: ${{ steps.extract_branch.outputs.branch }}
+        run: |
+          echo $GITHUB_REPO
+          echo ${branch}
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} '
+
+            # Now we have got the access of EC2 and we will start the deploy .
+            if [ -d ${REPO_NAME} ]; then
+              cd /home/ubuntu/${REPO_NAME} &&
+              git fetch --all &&
+              git pull origin ${branch}  # Make sure this matches the branch you want
+            else
+              git clone -b ${branch} git@github.com:${GITHUB_REPO}.git &&
+              cd /home/ubuntu/${REPO_NAME} &&
+              git checkout ${branch}
+            fi
+
+            docker-compose run -d
+            '
+      - run: echo "🍏 This job's status is ${{ job.status }}.

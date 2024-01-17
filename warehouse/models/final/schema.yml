@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: travel_FY_school_exp_group_summary
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: fiscal_year
+      - name: school_area
+      - name: expense_group
+      - name: school_expense_total
+      - name: school_expense_amount_share
+      - name: school_mtCO2_total
+      - name: school_mtCO2_share
+
+  - name: travel_FY_exp_group_summary
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: fiscal_year
+      - name: expense_group
+      - name: expense_total
+      - name: expense_amount_share
+      - name: mtCO2_total
+      - name: mtCO2_share

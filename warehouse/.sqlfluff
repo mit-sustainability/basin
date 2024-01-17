@@ -1,0 +1,19 @@
+[sqlfluff]
+templater = jinja
+sql_file_exts = .sql
+exclude_rules = L034,L029
+dialect = postgres
+max_line_length = 100
+
+[sqlfluff:rules:layout.long_lines]
+# Line length
+ignore_comment_lines = True
+ignore_comment_clauses = True
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = True
+load_macros_from_path = macros/utils
+
+[sqlfluff:templater:jinja:macros]
+# Macros provided as builtins for dbt projects
+# dbt_var = {% macro var(variable, default='') %}1{% endmacro %}

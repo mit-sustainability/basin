@@ -1,0 +1,50 @@
+default_language_version:
+  python: python3
+
+ci:
+  autofix_prs: true
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit suggestions'
+  autoupdate_schedule: quarterly
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-docstring-first
+      - id: check-toml
+      - id: check-case-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: https://github.com/psf/black
+    rev: 23.12.0
+    hooks:
+      - id: black
+        args:
+          - --line-length=120
+          - --include='\.pyi?$'
+          - --exclude="""\.git |
+            \.__pycache__|
+            build|
+            libs|
+            .cache"""
+
+  - repo: https://github.com/pycqa/flake8.git
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-typing-imports==1.13.0]
+        args: ['--config=.flake8']
+
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 2.3.5
+    hooks:
+      - id: sqlfluff-lint
+        files: warehouse/
+        args: ['--processes=8', '--config=warehouse/.sqlfluff', 'warehouse']
+      - id: sqlfluff-fix
+        files: warehouse/
+        args: ['--processes=8', '--config=warehouse/.sqlfluff', 'warehouse']
