@@ -41,7 +41,6 @@ models:
       +materialized: view
       +tags:
         - final
-
 seeds:
   mitos:
     +meta:

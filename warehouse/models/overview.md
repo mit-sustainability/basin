@@ -1,11 +1,9 @@
 {% docs __overview__ %}
 
-## Data Documentation for Jaffle Shop
+## Data Catalog for MITOS data warehouse
 
-`jaffle_shop` is a fictional ecommerce store.
+`MITOS`' data warehouse hosts all data assets relevant to MIT's sustainability efforts.
 
-This [dbt](https://www.getdbt.com/) project is for testing out code.
-
-The source code can be found [here](https://github.com/clrcrl/jaffle_shop).
+The source code can be found [here](https://github.com/fischcheng/basin).
 
 {% enddocs %}

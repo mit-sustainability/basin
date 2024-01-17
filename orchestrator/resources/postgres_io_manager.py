@@ -1,4 +1,4 @@
-# Copyright 2023 Holger Bruch (hb@mfdz.de)
+# Adapted from Copyright 2023 Holger Bruch (hb@mfdz.de)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ from typing import Iterator, Optional, Sequence
 from dagster import (
     AssetKey,
     ConfigurableIOManager,
+    ConfigurableResource,
     InputContext,
     OutputContext,
 )
@@ -62,10 +63,12 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     def _config(self):
         return self.dict()
 
+    ## Use context to specified append or replace
     def handle_output(self, context: OutputContext, obj: pd.DataFrame):
         schema, table = self._get_schema_table(context.asset_key)
-        print(context.asset_key.path)
         print(f"schema: {schema} and table: {table}")
+        write_method = context.metadata.get("write_method", "replace")
+        print(write_method)
         if isinstance(obj, pd.DataFrame):
             row_count = len(obj)
             context.log.info(f"Row count: {row_count}")
@@ -74,8 +77,9 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
                     con=con,
                     name=table,
                     schema=schema,
-                    if_exists="replace",  # TODO allow append
+                    if_exists=write_method,  # TODO allow append
                     chunksize=500,
+                    index=False,
                 )
         else:
             raise Exception(f"Outputs of type {type(obj)} not supported.")
@@ -119,3 +123,23 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     ):
         col_str = ", ".join(columns) if columns else "*"
         return f"""SELECT {col_str} FROM {schema}.{table}"""
+
+
+class PostgreConnResources(ConfigurableResource):
+    host: Optional[str] = "localhost"
+    port: Optional[int] = 5432
+    user: Optional[str] = "postgres"
+    password: Optional[str] = "test"
+    database: Optional[str] = "postgres"
+    dbschema: Optional[str] = "public"
+
+    def create_engine(self):
+        url = URL.create(
+            "postgresql+psycopg2",
+            username=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            database=self.database,
+        )
+        return create_engine(url)

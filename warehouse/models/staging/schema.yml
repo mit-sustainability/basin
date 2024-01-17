@@ -1,50 +1,26 @@
 version: 2
 
 models:
-  - name: stg_customers
+  - name: stg_travel_spending
+    meta:
+      owner: yu_cheng@mit.edu
     columns:
-      - name: customer_id
-        tests:
-          - unique
-          - not_null
-
-  - name: stg_orders
-    columns:
-      - name: order_id
-        tests:
-          - unique
-          - not_null
-      - name: status
+      - name: expense_amount
+      - name: expense_type
+      - name: trip_end_date
+      - name: cost_object
+      - name: fiscal_year
+      - name: cal_year
+      - name: inflated_exp_amount
+      - name: dlc_name
+      - name: school_area
+      - name: expense_group
         tests:
           - accepted_values:
-              values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
-
-  - name: stg_payments
-    columns:
-      - name: payment_id
-        tests:
-          - unique
-          - not_null
-      - name: payment_method
+              values: ['Air Travel', 'Ground Travel', 'Accommodations', 'Food', 'Other']
+      - name: transport_mode
         tests:
           - accepted_values:
-              values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
-
-  - name: stg_sus2017
-    columns:
-      - name: variable
-      - name: exercise_rating
-        tests:
-          - accepted_values:
-              values: [1, 2, 3, 4, 5]
-              quote: false
-      - name: actionable
-        tests:
-          - accepted_values:
-              values: [1, 2, 3, 4, 5]
-              quote: false
-      - name: innovation
-        tests:
-          - accepted_values:
-              values: [1, 2, 3, 4, 5]
-              quote: false
+              values: ['misc.', 'housing', 'meals', 'car', 'train', 'ferry', 'air']
+      - name: co2_factor
+      - name: mtco2

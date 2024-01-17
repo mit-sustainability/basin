@@ -1,0 +1,64 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Dagster generated tables in MITOS datawarehouse
+    schema: raw
+    meta:
+      owner: yu_cheng@mit.edu
+    loader: Dagster
+    tables:
+      - name: travel_spending
+        description: "Travel Spending data from VPF"
+        meta:
+          dagster:
+            asset_key: ["travel_spending"]
+        columns:
+          - name: expense_amount
+          - name: expense_type
+          - name: trip_end_date
+          - name: cost_object
+          - name: last_update
+      - name: annual_cpi_index
+        description: "Consumer Price Index data from python CPI library. "
+        meta:
+          dagster:
+            asset_key: ["annual_cpi_index"]
+        columns:
+          - name: year
+          - name: value
+          - name: series_id
+          - name: series_title
+      - name: cost_object_dlc_mapper
+        description: "Mapping database for cost_object ID to DLC and School area"
+        meta:
+          dagster:
+            asset_key: ["cost_object_dlc_mapper"]
+        columns:
+          - name: cost_object
+          - name: DLC_NAME
+          - name: SCHOOL_AREA
+      - name: expense_category_mapper
+        description: "Mapping database for expense type to larger categories"
+        meta:
+          dagster:
+            asset_key: ["expense_category_mapper"]
+        columns:
+          - name: type
+          - name: category
+      - name: expense_emission_mapper
+        description: "Mapping database for expense type to transport mode required for CO2 factor matching"
+        meta:
+          dagster:
+            asset_key: ["expense_emission_mapper"]
+        columns:
+          - name: expense_type
+          - name: emission_category
+      - name: mode_co2_mapper
+        description: "Mapping dictionary for CO2 factor from transport mode"
+        meta:
+          dagster:
+            asset_key: ["mode_co2_mapper"]
+        columns:
+          - name: transport_mode
+          - name: CO2_factor

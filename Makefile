@@ -3,13 +3,11 @@ ifndef PLATFORM_ENV
 	$(error PLATFORM_ENV is undefined)
 endif
 
-
-## A way for quick patch before merging
-# deploy-dagster:  check-platform-env
-# 	@echo Deploying Dagster jobs to ${PLATFORM_ENV}
-
-# 	@echo "Done! 🎉"
-
+build-dagster-docker:
+	aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 860551228838.dkr.ecr.us-east-1.amazonaws.com && \
+	docker buildx build --secret id=pgpass,src=.envrc --build-arg pg_host=${PG_WAREHOUSE_HOST} --build-arg pg_user=${PG_USER} -f orchestrator/Dockerfile -t ${IMAGE_TAG} --no-cache && \
+	docker tag ${IMAGE_TAG} ${DAGSTER_IMAGE_ECR} && \
+	docker push ${DAGSTER_IMAGE_ECR}
 
 setup-dagster:
 	cd orchestrator && pip install -r requirements.txt
