@@ -17,10 +17,9 @@ jobs:
       - name: Configure AWS Authentication
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::860551228838:role/docker-iam-role
+          role-to-assume: arn:aws:iam::860551228838:role/github-action-access
           aws-region: us-east-1
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
 
       - name: Login to Amazon ECR
         id: login-ecr
