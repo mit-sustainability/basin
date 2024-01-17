@@ -1,0 +1,20 @@
+version: '2'
+
+services:
+  dagster-webserver:
+    image: ${DAGSTER_IMAGE}
+    environment:
+      - PG_PASSWORD=${PG_PASSWORD}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    ports:
+      - 3000:3000
+  dagster-daemon:
+    image: ${DAGSTER_IMAGE}
+    environment:
+      - PG_PASSWORD=${PG_PASSWORD}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    command: "dagster-daemon run"
+
+# Pull an image build by github-actions? or run docker-compose up on EC2?
