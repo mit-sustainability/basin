@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - dagster_dev
 env:
   GITHUB_REPO: ${{ github.repository }}
   REPO_NAME: ${{ github.event.repository.name }}
