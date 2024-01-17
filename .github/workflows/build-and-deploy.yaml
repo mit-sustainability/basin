@@ -7,6 +7,9 @@ on:
 env:
   GITHUB_REPO: ${{ github.repository }}
   REPO_NAME: ${{ github.event.repository.name }}
+permissions:
+  id-token: write
+  contents: read
 jobs:
   Build-And-Push-Dagster-Image:
     runs-on: ubuntu-latest
@@ -21,6 +24,10 @@ jobs:
           role-to-assume: arn:aws:iam::860551228838:role/github-action-access
           aws-region: us-east-1
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
+
+      - name: Sts GetCallerIdentity
+        run: |
+          aws sts get-caller-identity
 
       - name: Login to Amazon ECR
         id: login-ecr
