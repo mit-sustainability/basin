@@ -67,4 +67,4 @@ jobs:
             docker-compose pull &&
             docker-compose up -d
             '
-      - run: echo "🍏 This job's status is ${{ job.status }}.
+      - run: echo "🍏 This job's status is ${{ job.status }}."
