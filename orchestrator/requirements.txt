@@ -13,6 +13,7 @@ pandas
 pandera
 pyarrow
 requests
+cpi==1.1.1
 datasets
 python-dateutil
 matplotlib
