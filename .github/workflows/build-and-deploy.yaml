@@ -4,9 +4,7 @@ on:
     branches:
       - main
       - dagster_dev
-env:
-  GITHUB_REPO: ${{ github.repository }}
-  REPO_NAME: ${{ github.event.repository.name }}
+
 permissions:
   id-token: write
   contents: read
@@ -50,22 +48,21 @@ jobs:
 
       - name: Deploy to EC2 and Start the service
         env:
-          # add ssh-private-key to env variable
+          GITHUB_REPO: ${{ github.repository }}
           PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           HOSTNAME: ${{secrets.SSH_HOST}}
           branch: ${{ steps.extract_branch.outputs.branch }}
         run: |
-          echo $GITHUB_REPO
-          echo $REPO_NAME
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
-          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} '
+          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} GITHUB_REPO=${GITHUB_REPO} branch=${branch} '
           echo "Here I am, SSH successfully"
             # Now we have got the access of EC2 and we will start the deploy .
+            echo ${GITHUB_REPO} &&
             cd /home/ubuntu/ &&
-            rm -rf ${REPO_NAME} &&
+            rm -rf basin &&
             echo "Pulling from git@github.com:${GITHUB_REPO}.git" &&
             git clone git@github.com:${GITHUB_REPO}.git . &&
-            cd ${REPO_NAME}  &&
+            cd basin &&
             git checkout ${branch} &&
             cp /home/ubuntu/.env ./ &&
 
