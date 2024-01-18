@@ -56,19 +56,20 @@ jobs:
           branch: ${{ steps.extract_branch.outputs.branch }}
         run: |
           echo $GITHUB_REPO
-          echo ${branch}
+          echo $REPO_NAME
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
           ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} '
           echo "Here I am, SSH successfully"
             # Now we have got the access of EC2 and we will start the deploy .
             if [ -d ${REPO_NAME} ]; then
-              rm -rf ./${REPO_NAME}
+              rm -rf ${REPO_NAME}
             fi
-            echo "Pulling from github"
-            git clone git@github.com:${GITHUB_REPO}.git
-            cd /home/ubuntu/${REPO_NAME}
-            git checkout ${branch}
-            cp ../.env ./
+            echo "Pulling from github" &&
+            cd /home/ubuntu/ &&
+            git clone git@github.com:${GITHUB_REPO}.git &&
+            cd ${REPO_NAME}  &&
+            git checkout ${branch} &&
+            cp /home/ubuntu/.env ./ &&
 
             docker-compose run -d
             '
