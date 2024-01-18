@@ -61,12 +61,10 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} '
           echo "Here I am, SSH successfully"
             # Now we have got the access of EC2 and we will start the deploy .
-            if [ -d ${REPO_NAME} ]; then
-              rm -rf ${REPO_NAME}
-            fi
-            echo "Pulling from github" &&
             cd /home/ubuntu/ &&
-            git clone git@github.com:${GITHUB_REPO}.git &&
+            rm -rf ${REPO_NAME} &&
+            echo "Pulling from git@github.com:${GITHUB_REPO}.git" &&
+            git clone git@github.com:${GITHUB_REPO}.git . &&
             cd ${REPO_NAME}  &&
             git checkout ${branch} &&
             cp /home/ubuntu/.env ./ &&
