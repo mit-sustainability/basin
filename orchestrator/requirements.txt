@@ -1,7 +1,7 @@
 dagster-webserver==1.5.13
 dagster==1.5.13
 dagster-graphql==1.5.13
-dagster-postgres
+dagster-postgres==0.22.0
 dagster-docker
 dagster-aws
 dagster-dbt
@@ -24,4 +24,5 @@ dbt-postgres==1.7.4
 dbt-extractor==0.5.1
 dbt-semantic-interfaces==0.4.2
 pydantic==1.10.13
+psycopg2==2.9.9
 pytz

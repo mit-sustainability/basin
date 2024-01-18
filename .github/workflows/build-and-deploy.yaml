@@ -63,6 +63,8 @@ jobs:
             git checkout ${branch} &&
             # need to figure out how to load in the envs, how to set such from Secret Manager
             cp /home/ubuntu/.env ./ &&
-            docker-compose run -d
+            source .env &&
+            docker-compose pull &&
+            docker-compose up -d
             '
       - run: echo "🍏 This job's status is ${{ job.status }}.
