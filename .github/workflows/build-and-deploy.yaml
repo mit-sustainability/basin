@@ -39,7 +39,8 @@ jobs:
           REPOSITORY: mitos2023
           IMAGE_TAG: basin_0.0.1
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          echo ${PWD}
+          docker build --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
       - name: Extract branch name

@@ -18,3 +18,4 @@ services:
     command: "dagster-daemon run"
 
 # Pull an image build by github-actions? or run docker-compose up on EC2?
+# how to get environment variables
