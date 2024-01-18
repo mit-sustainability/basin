@@ -1,10 +1,10 @@
-dagster-webserver==1.5.13
-dagster==1.5.13
-dagster-graphql==1.5.13
+dagster-webserver==1.6.0
+dagster==1.6.0
+dagster-graphql==1.6.0
 dagster-postgres==0.22.0
 dagster-docker
 dagster-aws
-dagster-dbt
+dagster-dbt==0.22.0
 dagster-pandas
 dagster-pandera
 dagster-shell
