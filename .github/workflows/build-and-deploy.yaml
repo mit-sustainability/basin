@@ -61,8 +61,9 @@ jobs:
             git clone git@github.com:${GITHUB_REPO}.git &&
             cd basin &&
             git checkout ${branch} &&
-            # need to figure out how to load in the envs, how to set such from Secret Manager
-            cp /home/ubuntu/.env ./ &&
+            # Load environment var from Secret Manager
+            secret=$(aws secretsmanager get-secret-value --secret-id prod/dagster/envvars --query SecretString --output text) &&
+            echo $secret | jq -r "to_entries|map(\"\(.key)=\(.value)\")|.[]" > .env &&
             source .env &&
             docker-compose pull &&
             docker-compose up -d
