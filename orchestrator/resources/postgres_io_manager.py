@@ -15,7 +15,7 @@
 from contextlib import contextmanager
 
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, Connection
 from typing import Iterator, Optional, Sequence
 
@@ -40,8 +40,11 @@ def connect_postgresql(config) -> Iterator[Connection]:
         database=config["database"],
     )
     conn = None
+    engine = create_engine(url)
+    # Force create raw schema
+    engine.execute(text("CREATE SCHEMA IF NOT EXISTS raw"))
     try:
-        conn = create_engine(url).connect()
+        conn = engine.connect()
         yield conn
     finally:
         if conn:
@@ -69,6 +72,7 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
         print(f"schema: {schema} and table: {table}")
         write_method = context.metadata.get("write_method", "replace")
         print(write_method)
+        # Somewhat force create schema?
         if isinstance(obj, pd.DataFrame):
             row_count = len(obj)
             context.log.info(f"Row count: {row_count}")
