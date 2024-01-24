@@ -13,3 +13,12 @@ mitos:
       port: 5432
       schema: public
       threads: 8
+    docs:
+      type: postgres
+      host: foo
+      database: foo
+      schema: foo
+      port: 00
+      threads: 1
+      user: foo
+      password: foo
