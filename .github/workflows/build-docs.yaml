@@ -10,10 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: prd
-    env:
-      PG_WAREHOUSE_HOST: stream.cnjgldesfc50.us-east-1.rds.amazonaws.com
-      PG_USER: sustain
-      PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
 
     steps:
       - name: "Step 01 - Checkout current branch"
@@ -34,7 +30,7 @@ jobs:
         working-directory: ./warehouse
         run: |
           export DBT_PROFILES_DIR=$PWD
-          dbt docs generate
+          dbt docs generate -t docs
           cp docstyle.css target/
           cp MITOS_globe.png target/
           cd target
