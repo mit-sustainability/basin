@@ -18,7 +18,7 @@ mitos:
       host: foo
       database: foo
       schema: foo
-      port: 00
+      port: 5432
       threads: 1
       user: foo
       password: foo

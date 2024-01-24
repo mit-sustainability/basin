@@ -34,7 +34,7 @@ jobs:
         working-directory: ./warehouse
         run: |
           export DBT_PROFILES_DIR=$PWD
-          dbt docs generate -t docs
+          dbt docs generate -t docs --empty-catalog
           cp docstyle.css target/
           cp MITOS_globe.png target/
           cd target
