@@ -42,20 +42,20 @@ jobs:
 
       - name: "Step 05 - Upload pages to artifact"
         id: step-05
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ github.workspace }}/docs
 
-      - name: "Step 06 - Zip artifact"
-        id: step-06
-        run: zip -jrq docs.zip ${{ github.workspace }}/docs
+      # - name: "Step 06 - Zip artifact"
+      #   id: step-06
+      #   run: zip -jrq docs.zip ${{ github.workspace }}/docs
 
-      - name: "Step 07 - Upload artifact for deployment job"
-        id: step-07
-        uses: actions/upload-artifact@v3
-        with:
-          name: docs
-          path: docs.zip
+      # - name: "Step 07 - Upload artifact for deployment job"
+      #   id: step-07
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: docs
+      #     path: docs.zip
 
     # Deploy to Github pages
   deploy-to-github-pages:
@@ -64,8 +64,9 @@ jobs:
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
-      pages: write # to deploy to Pages
-      id-token: write # to verify the deployment originates from an appropriate source
+      contents: read
+      pages: write
+      id-token: write
 
     # Deploy to the github-pages environment
     environment:
@@ -77,4 +78,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4.0.3
+        uses: actions/deploy-pages@v4
