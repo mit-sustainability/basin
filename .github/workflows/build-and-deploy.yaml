@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - dagster_dev
+      - add_checks
 
 permissions:
   id-token: write

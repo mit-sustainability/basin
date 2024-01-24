@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - add_checks
 
 jobs:
   # Build job
@@ -36,6 +35,7 @@ jobs:
           cd target
           echo $PWD
           sed -i 's|<head>|<head>\n\t<link rel="stylesheet" type="text/css" href="docstyle.css" />|' index.html
+          sed -i 's/<title>dbt Docs<\/title>/<title>MITOS Data Catalog<\/title>/g' index.html
           mkdir ${{ github.workspace }}/docs
           cp *.json *.html *.png *.css graph.gpickle ${{ github.workspace }}/docs
           ls -ltra ${{ github.workspace }}/docs
