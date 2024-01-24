@@ -9,7 +9,7 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
-    environment: prd
+    environment: github-pages
 
     steps:
       - name: "Step 01 - Checkout current branch"
@@ -64,7 +64,6 @@ jobs:
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
-      contents: read
       pages: write
       id-token: write
 
