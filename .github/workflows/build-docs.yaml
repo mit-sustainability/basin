@@ -34,7 +34,8 @@ jobs:
           cp docstyle.css target/
           cp MITOS_globe.png target/
           cd target
-          sed -i '.bak' 's|<head>|<head>\n\t<link rel="stylesheet" type="text/css" href="docstyle.css" />|' index.html
+          echo $PWD
+          sed -i 's|<head>|<head>\n\t<link rel="stylesheet" type="text/css" href="docstyle.css" />|' index.html
           mkdir ${{ github.workspace }}/docs
           cp *.json *.html *.png *.css graph.gpickle ${{ github.workspace }}/docs
           ls -ltra ${{ github.workspace }}/docs
