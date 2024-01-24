@@ -1,0 +1,48 @@
+/* @import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro&display=swap'); */
+.logo {
+    background-image: url(MITOS_globe.png);
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+img.logo {
+    display: none ;
+}
+
+body {
+    font-size: larger;
+}
+
+.btn-info {
+    background-color: #3b9fe9 !important;
+}
+.form-control:focus {
+    box-shadow: 0 0 0 2px #3b9fe9, 0 15px 15px -7.5px rgba(0,0,0,0.15) !important;
+}
+.a {
+    color: #3b9fe9 !important;
+}
+.app-content p {
+    color: #1f1f1f;
+}
+.app-content a {
+    color: #3b9fe9 !important;
+}
+
+.menu a.menu-node.active:not(.not-active) {
+    color: #3b9fe9 !important;
+}
+.menu a {
+    color: #1f1f1f !important;
+}
+.tooltip {
+    background-color: #3b9fe9 !important;
+}
+.launcher-window {
+    background-color: #3b9fe9 !important;
+}
+.bg-navy {
+    background-color: #0f4d66 !important;
+}
+.text-navy-lightest {
+    color: #367cc2 !important;
+}

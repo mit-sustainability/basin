@@ -1,0 +1,83 @@
+name: Build Data Catalog
+on:
+  push:
+    branches:
+      - main
+      - add_checks
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    environment: prd
+    env:
+      PG_WAREHOUSE_HOST: stream.cnjgldesfc50.us-east-1.rds.amazonaws.com
+      PG_USER: sustain
+      PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+
+    steps:
+      - name: "Step 01 - Checkout current branch"
+        id: step-01
+        uses: actions/checkout@v4
+
+      - name: "Step 02 - Install dbt"
+        id: step-02
+        working-directory: ./warehouse
+        run: bash setup.sh
+
+      - name: "Step 03 - Verify dbt"
+        id: step-03
+        run: dbt --version
+
+      - name: "Step 04 - Generate dbt docs"
+        id: step-04
+        working-directory: ./warehouse
+        run: |
+          export DBT_PROFILES_DIR=$PWD
+          dbt docs generate
+          cp docstyle.css target/
+          cp MITOS_globe.png target/
+          cd target
+          sed -i '.bak' 's|<head>|<head>\n\t<link rel="stylesheet" type="text/css" href="docstyle.css" />|' index.html
+          mkdir ${{ github.workspace }}/docs
+          cp *.json *.html *.png *.css graph.gpickle ${{ github.workspace }}/docs
+          ls -ltra ${{ github.workspace }}/docs
+
+      - name: "Step 05 - Upload pages to artifact"
+        id: step-05
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ${{ github.workspace }}/docs
+
+      - name: "Step 06 - Zip artifact"
+        id: step-06
+        run: zip -jrq docs.zip ${{ github.workspace }}/docs
+
+      - name: "Step 07 - Upload artifact for deployment job"
+        id: step-07
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs
+          path: docs.zip
+
+    # Deploy to Github pages
+  deploy-to-github-pages:
+    # Add a dependency to the build job
+    needs: build
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4.0.3

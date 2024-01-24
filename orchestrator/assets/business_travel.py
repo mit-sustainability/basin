@@ -29,7 +29,7 @@ def concatenate_csv(unprocessed, s3_client, src_bucket):
     io_manager_key="postgres_pandas_io",
     compute_kind="python",
     group_name="raw",
-    metadata={"write_method": "append"},
+    op_tags={"write_method": "append"},
 )
 def travel_spending(context: AssetExecutionContext, s3: S3Resource, pg_engine: PostgreConnResources) -> pd.DataFrame:
     # this still works because the resource is still available on the context

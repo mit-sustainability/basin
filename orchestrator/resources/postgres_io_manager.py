@@ -70,7 +70,7 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     def handle_output(self, context: OutputContext, obj: pd.DataFrame):
         schema, table = self._get_schema_table(context.asset_key)
         print(f"schema: {schema} and table: {table}")
-        write_method = context.metadata.get("write_method", "replace")
+        write_method = context.op_tags.get("write_method", "replace")
         print(write_method)
         # Somewhat force create schema?
         if isinstance(obj, pd.DataFrame):
