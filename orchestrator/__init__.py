@@ -13,11 +13,9 @@ from dagster_aws.pipes import PipesLambdaClient
 from orchestrator.assets.postgres import (
     mitos_dbt_assets,
     output_test_asset,
-    input_test_asset,
 )
 from orchestrator.assets.business_travel import (
     travel_spending,
-    lambda_pipes_asset,
     annual_cpi_index,
     cost_object_dlc_mapper,
     expense_category_mapper,
@@ -34,7 +32,6 @@ defs = Definitions(
         mitos_dbt_assets,
         output_test_asset,
         travel_spending,
-        lambda_pipes_asset,
         annual_cpi_index,
         expense_category_mapper,
         cost_object_dlc_mapper,

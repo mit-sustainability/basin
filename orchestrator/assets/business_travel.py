@@ -2,12 +2,24 @@ from datetime import datetime
 import json
 import cpi
 from dagster import AssetExecutionContext, asset
-from dagster_aws.pipes import PipesLambdaClient
 from dagster_aws.s3 import S3Resource
-from resources.postgres_io_manager import PostgreConnResources
+from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
+import pandera as pa
+from pandera.typing import Series
 import pytz
-import requests
+
+from resources.postgres_io_manager import PostgreConnResources
+
+
+class TravelSpendingData(pa.SchemaModel):
+    """Validate the output data schema of travel spending asset"""
+
+    expense_amount: Series[str] = pa.Field(description="Expense Amount")
+    expense_type: Series[str] = pa.Field(description="Expense Type")
+    trip_end_date: Series[float] = pa.Field(ge=0, description="Travel Spending Report Date")
+    cost_objects: Series[float] = pa.Field(ge=0, description="Cost Object ID")
+    last_update_date: Series[float] = pa.Field(ge=0, description="Date of last update")
 
 
 def concatenate_csv(unprocessed, s3_client, src_bucket):
@@ -30,8 +42,13 @@ def concatenate_csv(unprocessed, s3_client, src_bucket):
     compute_kind="python",
     group_name="raw",
     op_tags={"write_method": "append"},
+    dagster_type=pandera_schema_to_dagster_type(TravelSpendingData),
 )
-def travel_spending(context: AssetExecutionContext, s3: S3Resource, pg_engine: PostgreConnResources) -> pd.DataFrame:
+def travel_spending(
+    context: AssetExecutionContext,
+    s3: S3Resource,
+    pg_engine: PostgreConnResources,
+) -> pd.DataFrame:
     # this still works because the resource is still available on the context
     source_bucket = "mitos-landing-zone"
     target_table = "bt_spending_test"
@@ -78,15 +95,6 @@ def travel_spending(context: AssetExecutionContext, s3: S3Resource, pg_engine: P
     df_out = df_out.sort_values("trip_end_date")
     ### Output to postgres
     return df_out
-
-
-@asset(compute_kind="python", group_name="lambda")
-def lambda_pipes_asset(context: AssetExecutionContext, lambda_pipes_client: PipesLambdaClient):
-    return lambda_pipes_client.run(
-        context=context,
-        function_name="convert-xlsx-csv-dir",
-        event={"some_parameter_value": 5},
-    ).get_materialize_result()
 
 
 @asset(
