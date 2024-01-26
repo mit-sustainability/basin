@@ -19,7 +19,7 @@ def mitos_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="landing",
     key_prefix="raw",
@@ -42,7 +42,7 @@ def output_test_asset(context: AssetExecutionContext) -> pd.DataFrame:
 
 # AssetIn takes either key_prefix or key
 @asset(
-    ins={"dbt_table": AssetIn(key=["staging", "stg_orders"], input_manager_key="postgres_pandas_io")},
+    ins={"dbt_table": AssetIn(key=["staging", "stg_orders"], input_manager_key="postgres_replace")},
     compute_kind="python",
     key_prefix="final",
     group_name="final",

@@ -25,7 +25,11 @@ from dagster import (
     ConfigurableResource,
     InputContext,
     OutputContext,
+    get_dagster_logger,
 )
+
+
+logger = get_dagster_logger()
 
 
 # TODO, wonder how to handle different schema for asset to write to.
@@ -61,6 +65,7 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     password: Optional[str] = "test"
     database: Optional[str] = "postgres"
     dbschema: Optional[str] = "public"
+    write_method: Optional[str] = "replace"
 
     @property
     def _config(self):
@@ -69,19 +74,17 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     ## Use context to specified append or replace
     def handle_output(self, context: OutputContext, obj: pd.DataFrame):
         schema, table = self._get_schema_table(context.asset_key)
-        print(f"schema: {schema} and table: {table}")
-        write_method = context.op_tags.get("write_method", "replace")
-        print(write_method)
-        # Somewhat force create schema?
+        logger.info(f"schema: {schema} and table: {table}")
+        logger.info(f"Write method: {self.write_method}")
         if isinstance(obj, pd.DataFrame):
-            row_count = len(obj)
-            context.log.info(f"Row count: {row_count}")
+            # row_count = len(obj)
+            # context.log.info(f"Row count: {row_count}")
             with connect_postgresql(config=self._config) as con:
                 obj.to_sql(
                     con=con,
                     name=table,
                     schema=schema,
-                    if_exists=write_method,  # TODO allow append
+                    if_exists=self.write_method,
                     chunksize=500,
                     index=False,
                 )

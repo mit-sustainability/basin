@@ -42,7 +42,8 @@ defs = Definitions(
     jobs=[business_asset_job],
     resources={
         "dbt": DbtCliResource(project_dir=os.fspath(dbt_project_dir)),
-        "postgres_pandas_io": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
+        "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
+        "postgres_append": PostgreSQLPandasIOManager(**PG_CREDENTIALS, write_method="append"),
         "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),

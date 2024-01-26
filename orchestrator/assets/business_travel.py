@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import cpi
-from dagster import AssetExecutionContext, asset
+from dagster import AssetExecutionContext, asset, get_dagster_logger
 from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
@@ -10,6 +10,9 @@ from pandera.typing import Series
 import pytz
 
 from resources.postgres_io_manager import PostgreConnResources
+
+
+logger = get_dagster_logger()
 
 
 class TravelSpendingData(pa.SchemaModel):
@@ -38,10 +41,9 @@ def concatenate_csv(unprocessed, s3_client, src_bucket):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_append",
     compute_kind="python",
     group_name="raw",
-    op_tags={"write_method": "append"},
     dagster_type=pandera_schema_to_dagster_type(TravelSpendingData),
 )
 def travel_spending(
@@ -69,6 +71,7 @@ def travel_spending(
 
     # Get last update from warehouse
     engine = pg_engine.create_engine()
+    logger.info("Check last update of the travel_spending table")
     with engine.connect() as conn:
         result = conn.execute(
             f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}');"
@@ -98,12 +101,13 @@ def travel_spending(
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
 def annual_cpi_index():
     DEFAULT_SERIES_ID = cpi.defaults.DEFAULT_SERIES_ID
+    logger.info("Ectract the annual CPI data using the python cpi library ")
     cpi_df = cpi.series.get_by_id(DEFAULT_SERIES_ID).to_dataframe()
     cpi_sub = cpi_df[cpi_df["period_code"] == "M13"][["year", "value", "series_id", "series_title"]].sort_values("year")
     cpi_sub["last_update"] = datetime.now()
@@ -112,7 +116,7 @@ def annual_cpi_index():
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
@@ -130,7 +134,7 @@ def cost_object_dlc_mapper(s3: S3Resource):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
@@ -147,7 +151,7 @@ def expense_category_mapper(s3: S3Resource):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
@@ -164,7 +168,7 @@ def expense_emission_mapper(s3: S3Resource):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
