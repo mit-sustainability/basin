@@ -4,6 +4,7 @@ models:
   - name: travel_FY_school_exp_group_summary
     meta:
       owner: yu_cheng@mit.edu
+    description: Business travel spending amount and CO2 emission grouped by FY, School Area and Expense Groups
     columns:
       - name: fiscal_year
         description: MIT Fiscal year July-June
@@ -23,6 +24,7 @@ models:
   - name: travel_FY_exp_group_summary
     meta:
       owner: yu_cheng@mit.edu
+    description: Business travel spending amount and CO2 emission grouped by FY and Expense Groups
     columns:
       - name: fiscal_year
         description: MIT Fiscal year July-June
