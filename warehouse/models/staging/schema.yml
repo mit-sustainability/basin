@@ -2,25 +2,39 @@ version: 2
 
 models:
   - name: stg_travel_spending
+    description: "Business travel spending data enrinched by DLC, School Area, Expense Groups and Emission factors"
     meta:
       owner: yu_cheng@mit.edu
     columns:
       - name: expense_amount
+        description: expense amount in dollar
       - name: expense_type
+        description: expense type
       - name: trip_end_date
+        description: date of expense
       - name: cost_object
+        description: DLC cost object ID
       - name: fiscal_year
+        description: MIT fiscal year July to June
       - name: cal_year
+        description: Expense record year
       - name: inflated_exp_amount
+        description: Adjusted by the latest annual CPI index
       - name: dlc_name
+        description: Department, Lab and Center name
       - name: school_area
+        description: School Area
       - name: expense_group
+        description: Larger Expense Group
         tests:
           - accepted_values:
               values: ['Air Travel', 'Ground Travel', 'Accommodations', 'Food', 'Other']
       - name: transport_mode
+        description: Transport Mode for GHG calculation
         tests:
           - accepted_values:
               values: ['misc.', 'housing', 'meals', 'car', 'train', 'ferry', 'air']
       - name: co2_factor
+        description: CO2 emission factor
       - name: mtco2
+        description: CO2 emission in megatons

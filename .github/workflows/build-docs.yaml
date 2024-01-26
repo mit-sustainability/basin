@@ -6,7 +6,7 @@ on:
       - add_checks
 
 jobs:
-  # Build job
+  # Build the docs
   build:
     runs-on: ubuntu-latest
     environment: github-pages
@@ -37,6 +37,7 @@ jobs:
           echo $PWD
           sed -i 's|<head>|<head>\n\t<link rel="stylesheet" type="text/css" href="docstyle.css" />|' index.html
           sed -i 's/<title>dbt Docs<\/title>/<title>MITOS Data Catalog<\/title>/g' index.html
+          sed -i 's|<link rel="shortcut icon" [^>]*>|<link rel="icon" href="MITOS_globe.png" />|g' index.html
           mkdir ${{ github.workspace }}/docs
           cp *.json *.html *.png *.css graph.gpickle ${{ github.workspace }}/docs
           ls -ltra ${{ github.workspace }}/docs
@@ -47,33 +48,15 @@ jobs:
         with:
           path: ${{ github.workspace }}/docs
 
-      # - name: "Step 06 - Zip artifact"
-      #   id: step-06
-      #   run: zip -jrq docs.zip ${{ github.workspace }}/docs
-
-      # - name: "Step 07 - Upload artifact for deployment job"
-      #   id: step-07
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: docs
-      #     path: docs.zip
-
-    # Deploy to Github pages
+  # Deploy to Github pages
   deploy-to-github-pages:
-    # Add a dependency to the build job
     needs: build
-
-    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
       pages: write
       id-token: write
-
-    # Deploy to the github-pages environment
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
-    # Specify runner + deployment step
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to GitHub Pages
