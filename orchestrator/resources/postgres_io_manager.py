@@ -46,9 +46,9 @@ def connect_postgresql(config) -> Iterator[Connection]:
     conn = None
     engine = create_engine(url)
     # Force create raw schema
-    engine.execute(text("CREATE SCHEMA IF NOT EXISTS raw"))
     try:
         conn = engine.connect()
+        engine.execute(text("CREATE SCHEMA IF NOT EXISTS raw"))
         yield conn
     finally:
         if conn:
