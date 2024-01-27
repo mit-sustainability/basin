@@ -6,8 +6,9 @@ from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
 import pandera as pa
-from pandera.typing import Series
+from pandera.typing import Series, DateTime
 import pytz
+from sqlalchemy import text
 
 from resources.postgres_io_manager import PostgreConnResources
 
@@ -18,11 +19,11 @@ logger = get_dagster_logger()
 class TravelSpendingData(pa.SchemaModel):
     """Validate the output data schema of travel spending asset"""
 
-    expense_amount: Series[str] = pa.Field(description="Expense Amount")
+    expense_amount: Series[float] = pa.Field(description="Expense Amount")
     expense_type: Series[str] = pa.Field(description="Expense Type")
-    trip_end_date: Series[float] = pa.Field(ge=0, description="Travel Spending Report Date")
-    cost_objects: Series[float] = pa.Field(ge=0, description="Cost Object ID")
-    last_update_date: Series[float] = pa.Field(ge=0, description="Date of last update")
+    trip_end_date: Series[DateTime] = pa.Field(lt="2025", description="Travel Spending Report Date")
+    cost_objects: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
+    last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
 def concatenate_csv(unprocessed, s3_client, src_bucket):
@@ -53,7 +54,7 @@ def travel_spending(
 ) -> pd.DataFrame:
     # this still works because the resource is still available on the context
     source_bucket = "mitos-landing-zone"
-    target_table = "bt_spending_test"
+    target_table = "travel_spending"
 
     required_cols = [
         "Expense Amount (reimbursement currency)",
@@ -74,13 +75,13 @@ def travel_spending(
     logger.info("Check last update of the travel_spending table")
     with engine.connect() as conn:
         result = conn.execute(
-            f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}');"
+            text(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}')")
         )
         table_exists = result.scalar()
         tz = pytz.timezone("America/New_York")
         last_update = datetime(2020, 1, 1, tzinfo=tz)
         if table_exists:
-            result = conn.execute(f"SELECT last_update FROM {target_table};")
+            result = conn.execute(text(f"SELECT last_update FROM {target_table}"))
             last_update = result.scalar()
         conn.commit()
     # Get s3 list
@@ -94,11 +95,15 @@ def travel_spending(
 
     # Concatenate and append new rows if there are new entries, select relevant columns
     new_entries = concatenate_csv(unprocessed, s3_client, source_bucket)
-    df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
-    df_out["trip_end_date"] = pd.to_datetime(df_out["trip_end_date"])
-    df_out = df_out.sort_values("trip_end_date")
-    ### Output to postgres
-    return df_out
+    new_entries_count = len(new_entries.index)
+    df_out = pd.DataFrame()
+    if new_entries_count > 0:
+        logger.info(f"Adding {new_entries_count} new entries to the travel_spending table")
+        df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
+        df_out["trip_end_date"] = pd.to_datetime(df_out["trip_end_date"])
+        df_out = df_out.sort_values("trip_end_date")
+        return df_out
+    logger.info("New entries found, appending no new entries to the travel_spending table")
 
 
 @asset(
