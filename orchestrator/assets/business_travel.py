@@ -82,6 +82,7 @@ def travel_spending(
         if table_exists:
             result = conn.execute(f"SELECT last_update FROM {target_table};")
             last_update = result.scalar()
+        conn.commit()
     # Get s3 list
     s3_client = s3.get_client()
     objects = s3_client.list_objects_v2(Bucket=source_bucket)

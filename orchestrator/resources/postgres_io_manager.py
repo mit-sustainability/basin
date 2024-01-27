@@ -45,10 +45,11 @@ def connect_postgresql(config) -> Iterator[Connection]:
     )
     conn = None
     engine = create_engine(url)
-    # Force create raw schema
+    with engine.begin() as precon:
+        # Force create raw schema
+        precon.execute(text("CREATE SCHEMA IF NOT EXISTS raw"))
     try:
         conn = engine.connect()
-        engine.execute(text("CREATE SCHEMA IF NOT EXISTS raw"))
         yield conn
     finally:
         if conn:
@@ -88,6 +89,7 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
                     chunksize=500,
                     index=False,
                 )
+                con.commit()
         else:
             raise Exception(f"Outputs of type {type(obj)} not supported.")
 

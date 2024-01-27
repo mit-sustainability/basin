@@ -18,6 +18,7 @@ datasets
 python-dateutil
 matplotlib
 tenacity
+sqlalchemy==2.0.25
 dask==2023.12.0
 datasets==2.15.0
 dbt-core==1.7.4
