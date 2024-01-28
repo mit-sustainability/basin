@@ -81,7 +81,7 @@ def travel_spending(
         tz = pytz.timezone("America/New_York")
         last_update = datetime(2020, 1, 1, tzinfo=tz)
         if table_exists:
-            result = conn.execute(text(f"SELECT last_update FROM {target_table}"))
+            result = conn.execute(text(f"SELECT last_update FROM raw.{target_table}"))
             last_update = result.scalar()
         conn.commit()
     # Get s3 list
