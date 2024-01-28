@@ -82,7 +82,7 @@ def travel_spending(
         last_update = datetime(2020, 1, 1, tzinfo=tz)
         if table_exists:
             result = conn.execute(text(f"SELECT last_update FROM raw.{target_table}"))
-            last_update = result.scalar()
+            last_update = pytz.utc.localize(result.scalar())
         conn.commit()
     # Get s3 list
     s3_client = s3.get_client()
