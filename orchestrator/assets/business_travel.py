@@ -26,6 +26,11 @@ class TravelSpendingData(pa.SchemaModel):
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
+def empty_dataframe_from_model(Model: pa.DataFrameModel) -> pd.DataFrame:
+    schema = Model.to_schema()
+    return pd.DataFrame(columns=schema.dtypes.keys()).astype({col: str(dtype) for col, dtype in schema.dtypes.items()})
+
+
 def concatenate_csv(unprocessed, s3_client, src_bucket):
     """
     Open csv files to be processed, select relevant columns and rename
@@ -94,16 +99,19 @@ def travel_spending(
     ]
 
     # Concatenate and append new rows if there are new entries, select relevant columns
-    new_entries = concatenate_csv(unprocessed, s3_client, source_bucket)
-    new_entries_count = len(new_entries.index)
-    df_out = pd.DataFrame()
+    new_entries_count = 0
+    try:
+        new_entries = concatenate_csv(unprocessed, s3_client, source_bucket)
+        new_entries_count = len(new_entries.index)
+    except ValueError:
+        logger.info("No new entries found, appending no new entries to the travel_spending table")
+        df_out = empty_dataframe_from_model(TravelSpendingData)
     if new_entries_count > 0:
         logger.info(f"Adding {new_entries_count} new entries to the travel_spending table")
         df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
         df_out["trip_end_date"] = pd.to_datetime(df_out["trip_end_date"])
         df_out = df_out.sort_values("trip_end_date")
-        return df_out
-    logger.info("New entries found, appending no new entries to the travel_spending table")
+    return df_out
 
 
 @asset(
