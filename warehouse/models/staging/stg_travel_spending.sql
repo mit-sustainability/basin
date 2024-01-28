@@ -81,7 +81,7 @@ em AS (
             OVER (PARTITION BY c.transaction_id ORDER BY LENGTH(e.expense_type) DESC)
         AS rn2
     FROM (SELECT * FROM cat WHERE rn1 = 1) AS c
-    LEFT JOIN {{ source('raw', 'expense_emission_mapper') }}AS AS e
+    LEFT JOIN {{ source('raw', 'expense_emission_mapper') }} AS e
         ON LOWER(c.expense_type) LIKE '%' || e.expense_type || '%'
 ),
 
