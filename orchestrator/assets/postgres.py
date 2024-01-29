@@ -1,17 +1,25 @@
 from dagster import AssetExecutionContext, asset, AssetIn
-from dagster_dbt import DbtCliResource, dbt_assets, get_asset_key_for_model
+from dagster_aws.pipes import PipesLambdaClient
+from dagster_dbt import (
+    DagsterDbtTranslator,
+    DagsterDbtTranslatorSettings,
+    DbtCliResource,
+    dbt_assets,
+)
 import pandas as pd
 
 from orchestrator.constants import dbt_manifest_path
 
+dagster_dbt_translator = DagsterDbtTranslator(settings=DagsterDbtTranslatorSettings(enable_asset_checks=True))
 
-@dbt_assets(manifest=dbt_manifest_path)
+
+@dbt_assets(manifest=dbt_manifest_path, dagster_dbt_translator=dagster_dbt_translator)
 def mitos_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     yield from dbt.cli(["build"], context=context).stream()
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="landing",
     key_prefix="raw",
@@ -34,7 +42,7 @@ def output_test_asset(context: AssetExecutionContext) -> pd.DataFrame:
 
 # AssetIn takes either key_prefix or key
 @asset(
-    ins={"dbt_table": AssetIn(key=["staging", "stg_orders"], input_manager_key="postgres_pandas_io")},
+    ins={"dbt_table": AssetIn(key=["staging", "stg_orders"], input_manager_key="postgres_replace")},
     compute_kind="python",
     key_prefix="final",
     group_name="final",
@@ -44,3 +52,13 @@ def input_test_asset(dbt_table) -> None:
     df = dbt_table.head(5)
     ### Output to postgres
     print(df)
+
+
+@asset(compute_kind="python", group_name="lambda")
+def lambda_pipes_asset(context: AssetExecutionContext, lambda_pipes_client: PipesLambdaClient):
+    """Test Dagster's experimental Pipe feature to trigger a lambda function"""
+    return lambda_pipes_client.run(
+        context=context,
+        function_name="convert-xlsx-csv-dir",
+        event={"some_parameter_value": 5},
+    ).get_materialize_result()

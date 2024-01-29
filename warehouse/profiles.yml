@@ -13,3 +13,6 @@ mitos:
       port: 5432
       schema: public
       threads: 8
+    docs:
+      path: /tmp/dbt.duckdb
+      type: duckdb

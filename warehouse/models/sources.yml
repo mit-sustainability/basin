@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw
-    description: Dagster generated tables in MITOS datawarehouse
+    description: Raw data in the MITOS warehouse, including reference tables and asset ingested data
     schema: raw
     meta:
       owner: yu_cheng@mit.edu
@@ -15,10 +15,15 @@ sources:
             asset_key: ["travel_spending"]
         columns:
           - name: expense_amount
+            description: "Reimbursed amount in dollar"
           - name: expense_type
+            description: "Type of the expense"
           - name: trip_end_date
+            description: "Trip end date"
           - name: cost_object
+            description: "DLC cost object ID"
           - name: last_update
+            description: "Timestamp of the entry being added"
       - name: annual_cpi_index
         description: "Consumer Price Index data from python CPI library. "
         meta:
@@ -28,7 +33,9 @@ sources:
           - name: year
           - name: value
           - name: series_id
+            description: "Consumer Price Index ID"
           - name: series_title
+            description: "Consumer Price Index name"
       - name: cost_object_dlc_mapper
         description: "Mapping database for cost_object ID to DLC and School area"
         meta:
@@ -36,7 +43,11 @@ sources:
             asset_key: ["cost_object_dlc_mapper"]
         columns:
           - name: cost_object
+            description: "Cost Object ID"
+            tests:
+              - unique
           - name: DLC_NAME
+            description: "MIT Department, Lab, and Center name"
           - name: SCHOOL_AREA
       - name: expense_category_mapper
         description: "Mapping database for expense type to larger categories"
@@ -46,6 +57,9 @@ sources:
         columns:
           - name: type
           - name: category
+            description: "Larger expense group"
+            tests:
+              - not_null
       - name: expense_emission_mapper
         description: "Mapping database for expense type to transport mode required for CO2 factor matching"
         meta:
@@ -54,6 +68,9 @@ sources:
         columns:
           - name: expense_type
           - name: emission_category
+            description: "Larger GHG emission group"
+            tests:
+              - not_null
       - name: mode_co2_mapper
         description: "Mapping dictionary for CO2 factor from transport mode"
         meta:
@@ -61,4 +78,7 @@ sources:
             asset_key: ["mode_co2_mapper"]
         columns:
           - name: transport_mode
+            tests:
+              - unique
           - name: CO2_factor
+            description: "CO2 emission factor based on transport mode"

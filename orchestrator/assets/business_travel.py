@@ -1,13 +1,34 @@
 from datetime import datetime
 import json
 import cpi
-from dagster import AssetExecutionContext, asset
-from dagster_aws.pipes import PipesLambdaClient
+from dagster import AssetExecutionContext, asset, get_dagster_logger
 from dagster_aws.s3 import S3Resource
-from resources.postgres_io_manager import PostgreConnResources
+from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
+import pandera as pa
+from pandera.typing import Series, DateTime
 import pytz
-import requests
+from sqlalchemy import text
+
+from resources.postgres_io_manager import PostgreConnResources
+
+
+logger = get_dagster_logger()
+
+
+class TravelSpendingData(pa.SchemaModel):
+    """Validate the output data schema of travel spending asset"""
+
+    expense_amount: Series[float] = pa.Field(description="Expense Amount")
+    expense_type: Series[str] = pa.Field(description="Expense Type")
+    trip_end_date: Series[DateTime] = pa.Field(lt="2025", description="Travel Spending Report Date")
+    cost_objects: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
+    last_update: Series[DateTime] = pa.Field(description="Date of last update")
+
+
+def empty_dataframe_from_model(Model: pa.DataFrameModel) -> pd.DataFrame:
+    schema = Model.to_schema()
+    return pd.DataFrame(columns=schema.dtypes.keys()).astype({col: str(dtype) for col, dtype in schema.dtypes.items()})
 
 
 def concatenate_csv(unprocessed, s3_client, src_bucket):
@@ -26,15 +47,19 @@ def concatenate_csv(unprocessed, s3_client, src_bucket):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_append",
     compute_kind="python",
     group_name="raw",
-    metadata={"write_method": "append"},
+    dagster_type=pandera_schema_to_dagster_type(TravelSpendingData),
 )
-def travel_spending(context: AssetExecutionContext, s3: S3Resource, pg_engine: PostgreConnResources) -> pd.DataFrame:
+def travel_spending(
+    context: AssetExecutionContext,
+    s3: S3Resource,
+    pg_engine: PostgreConnResources,
+) -> pd.DataFrame:
     # this still works because the resource is still available on the context
     source_bucket = "mitos-landing-zone"
-    target_table = "bt_spending_test"
+    target_table = "travel_spending"
 
     required_cols = [
         "Expense Amount (reimbursement currency)",
@@ -52,16 +77,18 @@ def travel_spending(context: AssetExecutionContext, s3: S3Resource, pg_engine: P
 
     # Get last update from warehouse
     engine = pg_engine.create_engine()
+    logger.info("Check last update of the travel_spending table")
     with engine.connect() as conn:
         result = conn.execute(
-            f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}');"
+            text(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}')")
         )
         table_exists = result.scalar()
         tz = pytz.timezone("America/New_York")
         last_update = datetime(2020, 1, 1, tzinfo=tz)
         if table_exists:
-            result = conn.execute(f"SELECT last_update FROM {target_table};")
-            last_update = result.scalar()
+            result = conn.execute(text(f"SELECT last_update FROM raw.{target_table}"))
+            last_update = pytz.utc.localize(result.scalar())
+        conn.commit()
     # Get s3 list
     s3_client = s3.get_client()
     objects = s3_client.list_objects_v2(Bucket=source_bucket)
@@ -72,30 +99,29 @@ def travel_spending(context: AssetExecutionContext, s3: S3Resource, pg_engine: P
     ]
 
     # Concatenate and append new rows if there are new entries, select relevant columns
-    new_entries = concatenate_csv(unprocessed, s3_client, source_bucket)
-    df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
-    df_out["trip_end_date"] = pd.to_datetime(df_out["trip_end_date"])
-    df_out = df_out.sort_values("trip_end_date")
-    ### Output to postgres
+    new_entries_count = 0
+    try:
+        new_entries = concatenate_csv(unprocessed, s3_client, source_bucket)
+        new_entries_count = len(new_entries.index)
+    except ValueError:
+        logger.info("No new entries found, appending no new entries to the travel_spending table")
+        df_out = empty_dataframe_from_model(TravelSpendingData)
+    if new_entries_count > 0:
+        logger.info(f"Adding {new_entries_count} new entries to the travel_spending table")
+        df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
+        df_out["trip_end_date"] = pd.to_datetime(df_out["trip_end_date"])
+        df_out = df_out.sort_values("trip_end_date")
     return df_out
 
 
-@asset(compute_kind="python", group_name="lambda")
-def lambda_pipes_asset(context: AssetExecutionContext, lambda_pipes_client: PipesLambdaClient):
-    return lambda_pipes_client.run(
-        context=context,
-        function_name="convert-xlsx-csv-dir",
-        event={"some_parameter_value": 5},
-    ).get_materialize_result()
-
-
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
 def annual_cpi_index():
     DEFAULT_SERIES_ID = cpi.defaults.DEFAULT_SERIES_ID
+    logger.info("Ectract the annual CPI data using the python cpi library ")
     cpi_df = cpi.series.get_by_id(DEFAULT_SERIES_ID).to_dataframe()
     cpi_sub = cpi_df[cpi_df["period_code"] == "M13"][["year", "value", "series_id", "series_title"]].sort_values("year")
     cpi_sub["last_update"] = datetime.now()
@@ -104,7 +130,7 @@ def annual_cpi_index():
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
@@ -122,7 +148,7 @@ def cost_object_dlc_mapper(s3: S3Resource):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
@@ -139,7 +165,7 @@ def expense_category_mapper(s3: S3Resource):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
@@ -156,7 +182,7 @@ def expense_emission_mapper(s3: S3Resource):
 
 
 @asset(
-    io_manager_key="postgres_pandas_io",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
 )
