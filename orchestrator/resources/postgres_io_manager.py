@@ -15,7 +15,7 @@
 from contextlib import contextmanager
 
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, Connection
 from typing import Iterator, Optional, Sequence
 
@@ -25,7 +25,11 @@ from dagster import (
     ConfigurableResource,
     InputContext,
     OutputContext,
+    get_dagster_logger,
 )
+
+
+logger = get_dagster_logger()
 
 
 # TODO, wonder how to handle different schema for asset to write to.
@@ -40,8 +44,12 @@ def connect_postgresql(config) -> Iterator[Connection]:
         database=config["database"],
     )
     conn = None
+    engine = create_engine(url)
+    with engine.begin() as precon:
+        # Force create raw schema
+        precon.execute(text("CREATE SCHEMA IF NOT EXISTS raw"))
     try:
-        conn = create_engine(url).connect()
+        conn = engine.connect()
         yield conn
     finally:
         if conn:
@@ -58,6 +66,7 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     password: Optional[str] = "test"
     database: Optional[str] = "postgres"
     dbschema: Optional[str] = "public"
+    write_method: Optional[str] = "replace"
 
     @property
     def _config(self):
@@ -66,21 +75,21 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     ## Use context to specified append or replace
     def handle_output(self, context: OutputContext, obj: pd.DataFrame):
         schema, table = self._get_schema_table(context.asset_key)
-        print(f"schema: {schema} and table: {table}")
-        write_method = context.metadata.get("write_method", "replace")
-        print(write_method)
+        logger.info(f"schema: {schema} and table: {table}")
+        logger.info(f"Write method: {self.write_method}")
         if isinstance(obj, pd.DataFrame):
-            row_count = len(obj)
-            context.log.info(f"Row count: {row_count}")
+            # row_count = len(obj)
+            # context.log.info(f"Row count: {row_count}")
             with connect_postgresql(config=self._config) as con:
                 obj.to_sql(
                     con=con,
                     name=table,
                     schema=schema,
-                    if_exists=write_method,  # TODO allow append
+                    if_exists=self.write_method,
                     chunksize=500,
                     index=False,
                 )
+                con.commit()
         else:
             raise Exception(f"Outputs of type {type(obj)} not supported.")
 

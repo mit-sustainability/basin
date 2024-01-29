@@ -4,6 +4,9 @@ services:
   dagster-webserver:
     image: ${DAGSTER_IMAGE}
     environment:
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - PG_WAREHOUSE_HOST=${PG_WAREHOUSE_HOST}
+      - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -12,9 +15,13 @@ services:
   dagster-daemon:
     image: ${DAGSTER_IMAGE}
     environment:
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - PG_WAREHOUSE_HOST=${PG_WAREHOUSE_HOST}
+      - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     command: "dagster-daemon run"
 
 # Pull an image build by github-actions? or run docker-compose up on EC2?
+# how to get environment variables

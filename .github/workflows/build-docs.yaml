@@ -1,0 +1,64 @@
+name: Build Data Catalog
+on:
+  push:
+    branches:
+      - main
+      - add_checks
+
+jobs:
+  # Build the docs
+  build:
+    runs-on: ubuntu-latest
+    environment: github-pages
+
+    steps:
+      - name: "Step 01 - Checkout current branch"
+        id: step-01
+        uses: actions/checkout@v4
+
+      - name: "Step 02 - Install dbt"
+        id: step-02
+        working-directory: ./warehouse
+        run: bash setup.sh
+
+      - name: "Step 03 - Verify dbt"
+        id: step-03
+        run: dbt --version
+
+      - name: "Step 04 - Generate dbt docs"
+        id: step-04
+        working-directory: ./warehouse
+        run: |
+          export DBT_PROFILES_DIR=$PWD
+          dbt docs generate -t docs
+          cp docstyle.css target/
+          cp MITOS_globe.png target/
+          cd target
+          echo $PWD
+          sed -i 's|<head>|<head>\n\t<link rel="stylesheet" type="text/css" href="docstyle.css" />|' index.html
+          sed -i 's/<title>dbt Docs<\/title>/<title>MITOS Data Catalog<\/title>/g' index.html
+          sed -i 's|<link rel="shortcut icon" [^>]*>|<link rel="icon" href="MITOS_globe.png" />|g' index.html
+          mkdir ${{ github.workspace }}/docs
+          cp *.json *.html *.png *.css graph.gpickle ${{ github.workspace }}/docs
+          ls -ltra ${{ github.workspace }}/docs
+
+      - name: "Step 05 - Upload pages to artifact"
+        id: step-05
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ github.workspace }}/docs
+
+  # Deploy to Github pages
+  deploy-to-github-pages:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

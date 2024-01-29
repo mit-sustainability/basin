@@ -13,11 +13,9 @@ from dagster_aws.pipes import PipesLambdaClient
 from orchestrator.assets.postgres import (
     mitos_dbt_assets,
     output_test_asset,
-    input_test_asset,
 )
 from orchestrator.assets.business_travel import (
     travel_spending,
-    lambda_pipes_asset,
     annual_cpi_index,
     cost_object_dlc_mapper,
     expense_category_mapper,
@@ -34,7 +32,6 @@ defs = Definitions(
         mitos_dbt_assets,
         output_test_asset,
         travel_spending,
-        lambda_pipes_asset,
         annual_cpi_index,
         expense_category_mapper,
         cost_object_dlc_mapper,
@@ -45,7 +42,8 @@ defs = Definitions(
     jobs=[business_asset_job],
     resources={
         "dbt": DbtCliResource(project_dir=os.fspath(dbt_project_dir)),
-        "postgres_pandas_io": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
+        "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
+        "postgres_append": PostgreSQLPandasIOManager(**PG_CREDENTIALS, write_method="append"),
         "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
