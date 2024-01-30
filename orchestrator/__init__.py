@@ -7,6 +7,7 @@ from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
     PostgreConnResources,
 )
+from orchestrator.resources.datahub import DataHubResource
 from dagster_aws.s3 import S3Resource
 from dagster_aws.pipes import PipesLambdaClient
 
@@ -21,8 +22,9 @@ from orchestrator.assets.business_travel import (
     expense_category_mapper,
     expense_emission_mapper,
     mode_co2_mapper,
+    all_scope_summary,
 )
-from orchestrator.constants import dbt_project_dir, PG_CREDENTIALS
+from orchestrator.constants import dbt_project_dir, PG_CREDENTIALS, dh_api_key
 from orchestrator.schedules.mitos_warehouse import schedules
 from orchestrator.jobs.business_travel_job import business_asset_job
 
@@ -37,6 +39,7 @@ defs = Definitions(
         cost_object_dlc_mapper,
         expense_emission_mapper,
         mode_co2_mapper,
+        all_scope_summary,
     ],
     schedules=schedules,
     jobs=[business_asset_job],
@@ -45,6 +48,7 @@ defs = Definitions(
         "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
         "postgres_append": PostgreSQLPandasIOManager(**PG_CREDENTIALS, write_method="append"),
         "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
+        "dhub": DataHubResource(auth_token=dh_api_key),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
     },

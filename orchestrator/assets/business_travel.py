@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import cpi
-from dagster import AssetExecutionContext, asset, get_dagster_logger
+from dagster import AssetExecutionContext, asset, get_dagster_logger, ResourceParam
 from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
@@ -11,6 +11,7 @@ import pytz
 from sqlalchemy import text
 
 from resources.postgres_io_manager import PostgreConnResources
+from resources.datahub import DataHubResource
 
 
 logger = get_dagster_logger()
@@ -194,3 +195,21 @@ def mode_co2_mapper(s3: S3Resource):
     mapper = pd.read_csv(obj["Body"])
     mapper = mapper.rename(columns={"Transport Mode": "transport_mode", "CO2 Factor": "CO2_factor"})
     return mapper
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def all_scope_summary(dhub: ResourceParam[DataHubResource]):
+    """This asset ingest the all_scope summary data from the Data Hub"""
+    project_id = dhub.get_project_id("Scope3 Business Travel")
+    logger.info(f"Found project id: {project_id}!")
+    download_links = dhub.search_files_from_project(project_id, "tableau_all_scope.xlsx")
+    if download_links is None:
+        logger.info("No download links found!")
+        return pd.DataFrame()
+    # Load the excel file into a pandas dataframe
+    df = pd.read_excel(download_links[0], engine="openpyxl")
+    return df

@@ -11,7 +11,7 @@ PG_CREDENTIALS = {
     "password": os.getenv("PG_PASSWORD"),
     "database": "postgres",
 }
-
+dh_api_key = os.getenv("DATAHUB_API_KEY")
 
 # If DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is set, a manifest will be created at run time.
 # Otherwise, we expect a manifest to be present in the project's target directory.
