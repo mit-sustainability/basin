@@ -11,6 +11,12 @@ PG_CREDENTIALS = {
     "password": os.getenv("PG_PASSWORD"),
     "database": "postgres",
 }
+DWRHS_CREDENTIALS = {
+    "user": os.getenv("DWRHS_USER"),
+    "host": os.getenv("DWRHS_HOST"),
+    "password": os.getenv("DWRHS_PASSWORD"),
+    "sid": os.getenv("DWRHS_SID"),
+}
 dh_api_key = os.getenv("DATAHUB_API_KEY")
 
 # If DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is set, a manifest will be created at run time.

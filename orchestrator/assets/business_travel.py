@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from resources.postgres_io_manager import PostgreConnResources
 from resources.datahub import DataHubResource
+from resources.mit_warehouse import MITWHRSResource
 
 
 logger = get_dagster_logger()
@@ -23,7 +24,7 @@ class TravelSpendingData(pa.SchemaModel):
     expense_amount: Series[float] = pa.Field(description="Expense Amount")
     expense_type: Series[str] = pa.Field(description="Expense Type")
     trip_end_date: Series[DateTime] = pa.Field(lt="2025", description="Travel Spending Report Date")
-    cost_objects: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
+    cost_object: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
@@ -73,7 +74,7 @@ def travel_spending(
         required_cols[0]: "expense_amount",
         required_cols[1]: "expense_type",
         required_cols[2]: "trip_end_date",
-        required_cols[3]: "cost_objects",
+        required_cols[3]: "cost_object",
     }
 
     # Get last update from warehouse
@@ -212,4 +213,28 @@ def all_scope_summary(dhub: ResourceParam[DataHubResource]):
         return pd.DataFrame()
     # Load the excel file into a pandas dataframe
     df = pd.read_excel(download_links[0], engine="openpyxl")
+    return df
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def cost_object_warehouse(dwhrs: MITWHRSResource):
+    """This asset ingest the all_scope summary data from the Data Hub"""
+    query = (
+        "SELECT COST_COLLECTOR_ID, DLC_NAME, SCHOOL_AREA, COST_COLLECTOR_EFFECTIVE_DATE " "FROM WAREUSER.COST_COLLECTOR"
+    )
+    rows = dwhrs.execute_query(query, chunksize=100000)
+    columns = [
+        "cost_collector_id",
+        "dlc_name",
+        "school_area",
+        "cost_collector_effective_date",
+    ]
+    df = pd.DataFrame(rows, columns=columns)
+    df["last_update"] = datetime.now()
+    n_dlcs, n_schools = df[["dlc_name", "school_area"]].nunique().values
+    logger.info(f"The current cost_object table includes {n_dlcs} dlcs and {n_schools} school areas.")
     return df

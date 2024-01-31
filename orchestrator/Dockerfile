@@ -7,10 +7,18 @@ RUN apt-get update && \
     apt-get install -y libpq-dev gcc ca-certificates build-essential curl jq git unzip
 
 
-# # Install AWS CLI
-# RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-#     unzip awscliv2.zip && \
-#     ./aws/install
+### Setup Oracle client
+RUN apt-get update \
+    && apt-get install -y libaio1 wget \
+    && wget https://download.oracle.com/otn_software/linux/instantclient/1915000/instantclient-basiclite-linux.x64-19.15.0.0.0dbru-2.zip \
+    && unzip instantclient-basiclite-linux.x64-19.15.0.0.0dbru-2.zip \
+    && rm -f instantclient-basiclite-linux.x64-19.15.0.0.0dbru-2.zip \
+    && cd /opt/oracle/instantclient_19_15 \
+    && rm -f *jdbc* *occi* *mysql* *README *jar uidrvci genezi adrci \
+    && echo /opt/oracle/instantclient_19_15 > /etc/ld.so.conf.d/oracle-instantclient.conf \
+    && ldconfig \
+    && apt-get purge -y --auto-remove wget unzip
+
 
 ENV DAGSTER_HOME=/opt/dagster/dagster_home
 RUN mkdir -p $DAGSTER_HOME

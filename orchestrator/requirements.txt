@@ -9,6 +9,7 @@ dagster-pandas==0.22.1
 dagster-pandera==0.22.1
 dagster-shell
 distributed
+oracledb==2.0.1
 pandas
 pandera==0.18.0
 pyarrow
@@ -26,5 +27,5 @@ dbt-postgres==1.7.4
 dbt-extractor==0.5.1
 dbt-semantic-interfaces==0.4.2
 pydantic==1.10.13
-psycopg2==2.9.9
+psycopg2-binary==2.9.9
 pytz

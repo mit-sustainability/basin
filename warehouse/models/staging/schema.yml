@@ -38,3 +38,16 @@ models:
         description: CO2 emission factor
       - name: mtco2
         description: CO2 emission in megatons
+  - name: stg_cost_object_rollup
+    description: "Mapping database for cost_object ID to DLC and School areas, grouped into larger school areas"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: cost_object
+        description: "Cost Object ID"
+        tests:
+          - unique
+      - name: dlc_name
+        description: "MIT Department, Lab, and Center name"
+      - name: school_area
+        description: "School Area"

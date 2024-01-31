@@ -1,3 +1,4 @@
+dbt
 dbt-postgres
 dbt-duckdb
 sqlfluff
