@@ -15,7 +15,7 @@ DWRHS_CREDENTIALS = {
     "user": os.getenv("DWRHS_USER"),
     "host": os.getenv("DWRHS_HOST"),
     "password": os.getenv("DWRHS_PASSWORD"),
-    "sid": os.getenv("DWRHS_SID"),
+    "sid": "DWRHS",
 }
 dh_api_key = os.getenv("DATAHUB_API_KEY")
 
