@@ -24,3 +24,5 @@ datasets==2.15.0
 pydantic==1.10.13
 psycopg2-binary==2.9.9
 pytz==2023.4
+openpyxl==3.1.2
+xlrd==2.0.1

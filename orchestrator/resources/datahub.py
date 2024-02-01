@@ -13,7 +13,7 @@ from dagster import (
 
 
 logger = get_dagster_logger()
-default_timeout = 5
+default_timeout = 10
 
 
 def data_hub_authorize(auth_token):
@@ -43,15 +43,17 @@ class DataHubResource:
         res = requests.get(url, headers=headers, timeout=default_timeout)
         if res.status_code == 200:
             return res.json()["data"]["projects"]
-        else:
-            logger.error("Fail to list projects.")
-            return None
+        logger.error("Fail to list projects.")
+        return None
 
     def get_project_id(self, project_name):
         projects = self.list_projects()
-        for project in projects:
-            if project["display_name"] == project_name:
-                return project["project_id"]
+        if projects is not None:
+            for project in projects:
+                if project["display_name"] == project_name:
+                    return project["project_id"]
+        else:
+            logger.error(f"Fail to find the project with name {project_name}.")
 
     def get_download_link(self, file_id):
         """Return a download link for the file"""
