@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - add_checks
+      - datahub_integration
 
 permissions:
   id-token: write
