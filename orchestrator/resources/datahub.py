@@ -23,7 +23,6 @@ def data_hub_authorize(auth_token):
     data = {"token": auth_token}
     res = requests.post(url, headers=headers, json=data, timeout=10)
     if res.status_code == 200:
-        logger.info("Successfully connected to Data Hub")
         return res.json()["data"]["jwt"]
     else:
         logger.error("Fail to authorize on Data Hub")
@@ -46,10 +45,9 @@ class DataHubResource:
     def list_projects(self):
         """Return a list of projects the user has access to."""
         url = f"{self.api_endpoint}/user"
-        logger.info(f"API endpoint: {url}")
-        res = requests.get(url, headers=self.headers)
-        logger.info(f"{res.status_code}")
+        res = requests.get(url, headers=self.headers, timeout=default_timeout)
         if res.status_code == 200:
+            logger.info("Successfully connected to Data Hub")
             return res.json()["data"]["projects"]
         logger.error("Fail to list projects.")
         return None
@@ -67,9 +65,7 @@ class DataHubResource:
         res = requests.get(url, headers=self.headers, timeout=default_timeout)
         if res.status_code == 200:
             return res.json()["data"]["temporarily_download_url"]
-        else:
-            logger.error("Fail to list projects.")
-            return None
+        return None
 
     def search_files_from_project(self, project_id, search_term):
         """Return a list of file download links matching the search term in the project"""
