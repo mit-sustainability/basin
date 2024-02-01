@@ -23,9 +23,10 @@ def data_hub_authorize(auth_token):
     data = {"token": auth_token}
     res = requests.post(url, headers=headers, json=data, timeout=10)
     if res.status_code == 200:
+        logger.info("Successfully connected to Data Hub")
         return res.json()["data"]["jwt"]
     else:
-        logger.error("Fail to authorize on Data Hub.")
+        logger.error("Fail to authorize on Data Hub")
         return
 
 
@@ -36,30 +37,31 @@ class DataHubResource:
         self.auth_token = auth_token
         self.api_endpoint = "https://data.mit.edu/api"
         self.jwt = data_hub_authorize(self.auth_token)
+        self.headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {self.jwt}",
+        }
 
     def list_projects(self):
+        """Return a list of projects the user has access to."""
         url = f"{self.api_endpoint}/user"
-        headers = {"accept": "application/json", "Authorization": f"Bearer {self.jwt}"}
-        res = requests.get(url, headers=headers, timeout=default_timeout)
+        res = requests.get(url, headers=self.headers)
         if res.status_code == 200:
             return res.json()["data"]["projects"]
         logger.error("Fail to list projects.")
         return None
 
     def get_project_id(self, project_name):
+        """Return the project_id for the project with the given name."""
         projects = self.list_projects()
-        if projects is not None:
-            for project in projects:
-                if project["display_name"] == project_name:
-                    return project["project_id"]
-        else:
-            logger.error(f"Fail to find the project with name {project_name}.")
+        for project in projects:
+            if project["display_name"] == project_name:
+                return project["project_id"]
 
     def get_download_link(self, file_id):
         """Return a download link for the file"""
         url = f"{self.api_endpoint}/file/{file_id}"
-        headers = {"accept": "application/json", "Authorization": f"Bearer {self.jwt}"}
-        res = requests.get(url, headers=headers, timeout=default_timeout)
+        res = requests.get(url, headers=self.headers, timeout=default_timeout)
         if res.status_code == 200:
             return res.json()["data"]["temporarily_download_url"]
         else:
@@ -69,13 +71,12 @@ class DataHubResource:
     def search_files_from_project(self, project_id, search_term):
         """Return a list of file download links matching the search term in the project"""
         url = f"{self.api_endpoint}/search"
-        headers = {"accept": "application/json", "Authorization": f"Bearer {self.jwt}"}
         data = {
             "term": search_term,
             "projects": [project_id],
             "paging": {"start": 0, "size": 20},
         }
-        res = requests.post(url, headers=headers, json=data, timeout=default_timeout)
+        res = requests.post(url, headers=self.headers, json=data, timeout=default_timeout)
         if res.status_code == 200:
             files = res.json()["data"]
         else:
