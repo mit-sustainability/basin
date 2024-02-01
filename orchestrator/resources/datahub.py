@@ -31,9 +31,10 @@ def data_hub_authorize(auth_token):
 
 
 class DataHubResource:
-    """This resource will create a postgresql connection engine."""
+    """This resource contains methods interacting with MIT Data Hub API"""
 
     def __init__(self, auth_token):
+        logger.info("Instantiate the DHub resource")
         self.auth_token = auth_token
         self.api_endpoint = "https://data.mit.edu/api"
         self.jwt = data_hub_authorize(self.auth_token)
@@ -45,7 +46,9 @@ class DataHubResource:
     def list_projects(self):
         """Return a list of projects the user has access to."""
         url = f"{self.api_endpoint}/user"
+        logger.info(f"API endpoint: {url}")
         res = requests.get(url, headers=self.headers)
+        logger.info(f"{res.status_code}")
         if res.status_code == 200:
             return res.json()["data"]["projects"]
         logger.error("Fail to list projects.")
