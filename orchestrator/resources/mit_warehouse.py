@@ -1,23 +1,26 @@
 from contextlib import contextmanager
-from typing import Iterator, Optional
+from typing import Optional
 
 from dagster import (
     ConfigurableResource,
     get_dagster_logger,
 )
 import oracledb
-import pandas as pd
-from sqlalchemy.exc import DatabaseError
+from oracledb import DatabaseError
 
+from orchestrator.constants import PLATFORM_ENV
 
 logger = get_dagster_logger()
 
 
-# TODO, wonder how to handle different schema for asset to write to.
 @contextmanager
 def connect_oracledb(config):
-    # init connection, don't need this if on linux
-    oracledb.init_oracle_client(lib_dir="/usr/local/opt/instantclient-basiclite/lib")
+    # init connection, required for Apple Silicon Mac
+    if PLATFORM_ENV == "local":
+        oracledb.init_oracle_client(lib_dir="/usr/local/opt/instantclient-basiclite/lib")
+    else:
+        # init connection, works for Linux/Docker container
+        oracledb.init_oracle_client()
     pool = oracledb.create_pool(
         user=config.get("user"),
         password=config.get("password"),
@@ -54,7 +57,6 @@ class MITWHRSResource(ConfigurableResource):
         try:
             with connect_oracledb(self._config) as con:
                 logger.info("Successfully connect to MIT warehouse")
-                # significantly speed up then pd.read_sql
                 with con.cursor() as cursor:
                     cursor.arraysize = chunksize
                     cursor.execute(query)

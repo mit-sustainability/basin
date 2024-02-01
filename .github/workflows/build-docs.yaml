@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - add_checks
+      - datahub_integration
 
 jobs:
   # Build the docs

@@ -36,9 +36,12 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: mitos2023
           IMAGE_TAG: basin_0.0.2
+          PG_WAREHOUSE_HOST: ${{ secrets.PG_WAREHOUSE_HOST }}
+          PG_USER: sustain
+          PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
         run: |
           echo ${PWD}
-          DOCKER_BUILDKIT=1 docker build --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          DOCKER_BUILDKIT=1 docker build --build-arg pg_pass=$PG_PASSWORD --build-arg pg_host=$PG_WAREHOUSE_HOST --build-arg pg_user=$PG_USER --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
       - name: Extract branch name
