@@ -35,7 +35,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: mitos2023
-          IMAGE_TAG: basin_0.0.2
+          IMAGE_TAG: basin_0.0.3
           PG_WAREHOUSE_HOST: ${{ secrets.PG_WAREHOUSE_HOST }}
           PG_USER: sustain
           PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
