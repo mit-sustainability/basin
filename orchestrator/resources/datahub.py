@@ -98,11 +98,12 @@ class DataHubResource:
         upload_link = self.get_upload_link(meta)
         csv_buffer = StringIO()
         df.to_csv(csv_buffer, index=False)
+        # TODO bigger file can take longer to upload, need to handle timeout or retry
         res = requests.put(
             upload_link,
             data=csv_buffer.getvalue(),
             headers={"Content-Type": "text/csv"},
-            timeout=default_timeout,
+            timeout=300,
         )
         if res.status_code == 200:
             print("Upload Successful")

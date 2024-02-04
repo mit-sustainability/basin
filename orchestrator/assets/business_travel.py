@@ -248,9 +248,9 @@ def cost_object_warehouse(dwhrs: MITWHRSResource):
 
 # AssetIn takes either key_prefix or key
 @asset(
-    ins={"dbt_table": AssetIn(key=["staging", "stg_travel_spending"], input_manager_key="postgres_replace")},
+    ins={"table": AssetIn(key=["staging", "stg_travel_spending"], input_manager_key="postgres_replace")},
     compute_kind="python",
-    group_name="dhub-sync",
+    group_name="dhub_sync",
 )
 def dhub_travel_spending(table, dhub: ResourceParam[DataHubResource]) -> None:
     logger.info(f"{len(table)} rows of travel spending data are being synced to DataHub")

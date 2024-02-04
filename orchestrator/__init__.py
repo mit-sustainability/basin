@@ -22,6 +22,7 @@ from orchestrator.assets.business_travel import (
     expense_emission_mapper,
     mode_co2_mapper,
     all_scope_summary,
+    dhub_travel_spending,
 )
 from orchestrator.constants import (
     dbt_project_dir,
@@ -45,6 +46,7 @@ defs = Definitions(
         expense_emission_mapper,
         mode_co2_mapper,
         all_scope_summary,
+        dhub_travel_spending,
     ],
     schedules=schedules,
     jobs=[business_asset_job],
