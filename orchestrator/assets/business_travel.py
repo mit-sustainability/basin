@@ -1,7 +1,13 @@
 from datetime import datetime
 import json
 import cpi
-from dagster import AssetExecutionContext, asset, get_dagster_logger, ResourceParam
+from dagster import (
+    AssetExecutionContext,
+    asset,
+    AssetIn,
+    get_dagster_logger,
+    ResourceParam,
+)
 from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
@@ -238,3 +244,28 @@ def cost_object_warehouse(dwhrs: MITWHRSResource):
     n_dlcs, n_schools = df[["dlc_name", "school_area"]].nunique().values
     logger.info(f"The current cost_object table includes {n_dlcs} dlcs and {n_schools} school areas.")
     return df
+
+
+# AssetIn takes either key_prefix or key
+@asset(
+    ins={"dbt_table": AssetIn(key=["staging", "stg_travel_spending"], input_manager_key="postgres_replace")},
+    compute_kind="python",
+    group_name="dhub-sync",
+)
+def dhub_travel_spending(table, dhub: ResourceParam[DataHubResource]) -> None:
+    logger.info(f"{len(table)} rows of travel spending data are being synced to DataHub")
+    filename = "final_travel_spending.csv"
+    project_id = dhub.get_project_id("Scope3 Business Travel")
+    logger.info(f"Sync to project: {project_id}!")
+    meta = {
+        "name": filename,
+        "mimeType": "text/csv",
+        "storageContainer": project_id,
+        "destination": "shared-project",
+        "title": "Processed Travel Spending data",
+        "description": "Travel Spending data with expense group, DLC, emission factors and more",
+        "privacy": "public",
+        "organizations": ["MITOS"],
+    }
+    ### TODO might want to provide a more elegant way to handle the config
+    dhub.sync_dataframe_to_csv(table, meta)

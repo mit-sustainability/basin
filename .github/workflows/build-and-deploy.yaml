@@ -51,14 +51,12 @@ jobs:
 
       - name: Deploy to EC2 and Start the service
         env:
-          GITHUB_REPO: ${{ github.repository }}
           PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           HOSTNAME: ${{secrets.SSH_HOST}}
-          branch: ${{ steps.extract_branch.outputs.branch }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
           scp -o StrictHostKeyChecking=no -i private_key docker-compose.yaml ubuntu@${HOSTNAME}:/home/ubuntu/
-          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} GITHUB_REPO=${GITHUB_REPO} branch=${branch} '
+          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} '
             # Load environment var from Secret Manager
             secret=$(aws secretsmanager get-secret-value --secret-id prod/dagster/envvars --query SecretString --output text) &&
             echo $secret | jq -r "to_entries|map(\"\(.key)=\(.value)\")|.[]" > .env &&

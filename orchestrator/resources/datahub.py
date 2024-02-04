@@ -2,7 +2,7 @@
 and requires authorization to get temporary credentials following the official doc
 http://dsg-datahub-apidoc.s3-website-us-east-1.amazonaws.com/
 """
-
+from io import StringIO
 import requests
 
 # from typing import Iterator, Optional, Sequence
@@ -10,7 +10,7 @@ import requests
 from dagster import (
     get_dagster_logger,
 )
-
+from pandas import DataFrame
 
 logger = get_dagster_logger()
 default_timeout = 10
@@ -87,3 +87,24 @@ class DataHubResource:
         except UnboundLocalError:
             logger.error("Fail to find any downloadable links.")
             return None
+
+    def get_upload_link(self, meta):
+        url = f"{self.api_endpoint}/file"
+        res = requests.post(url, headers=self.headers, json=meta, timeout=default_timeout)
+        if res.status_code == 200:
+            return res.json()["data"]["temporarily_upload_url"]
+
+    def sync_dataframe_to_csv(self, df: DataFrame, meta):
+        upload_link = self.get_upload_link(meta)
+        csv_buffer = StringIO()
+        df.to_csv(csv_buffer, index=False)
+        res = requests.put(
+            upload_link,
+            data=csv_buffer.getvalue(),
+            headers={"Content-Type": "text/csv"},
+            timeout=default_timeout,
+        )
+        if res.status_code == 200:
+            print("Upload Successful")
+        else:
+            logger.error(f"Failed to upload. Status code: {res.status_code}")
