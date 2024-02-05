@@ -20,7 +20,25 @@ models:
         description: Total CO2 emission of each expense group/school area
       - name: school_mtCO2_share
         description: CO2 emission share of each expense group/school area
-
+  - name: travel_FY_dlc_exp_group_summary
+    meta:
+      owner: yu_cheng@mit.edu
+    description: Business travel spending amount and CO2 emission grouped by FY, DLC and Expense Groups
+    columns:
+      - name: fiscal_year
+        description: MIT Fiscal year July-June
+      - name: dlc_name
+        description: Department, Lab or Center
+      - name: expense_group
+        description: Larger Expense Group
+      - name: dlc_expense_total
+        description: Expense total of each expense group/DLCs
+      - name: dlc_expense_amount_share
+        description: Expense share of each expense group/DLCs
+      - name: dlc_mtCO2_total
+        description: Total CO2 emission of each expense group/DLCs
+      - name: dlc_mtCO2_share
+        description: CO2 emission share of each expense group/DLCs
   - name: travel_FY_exp_group_summary
     meta:
       owner: yu_cheng@mit.edu
