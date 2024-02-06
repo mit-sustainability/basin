@@ -56,7 +56,6 @@ def connect_postgresql(config) -> Iterator[Connection]:
             conn.close()
 
 
-## Todo modify all print to logger
 class PostgreSQLPandasIOManager(ConfigurableIOManager):
     """This IOManager will take in a pandas dataframe and store it in postgresql."""
 
@@ -135,6 +134,8 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
 
 
 class PostgreConnResources(ConfigurableResource):
+    """This resource will create a postgresql connection engine."""
+
     host: Optional[str] = "localhost"
     port: Optional[int] = 5432
     user: Optional[str] = "postgres"

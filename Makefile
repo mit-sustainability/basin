@@ -10,7 +10,7 @@ build-dagster-docker:
 	docker push ${DAGSTER_IMAGE_ECR}
 
 setup-dagster:
-	cd orchestrator && pip install -r requirements.txt
+	cd orchestrator && pip install -r requirements.txt && pip install -e .
 
 setup-dbt:
 	cd warehouse && bash setup.sh

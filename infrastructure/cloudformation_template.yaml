@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation Template For MITOS Basin data-platform'
+
+Resources:
+  EC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Allow access to EC2 instance
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0 # Warning: This is open to the internet, restrict as needed
+        # More inbound rules here
+        # - IpProtocol: tcp
+        #   FromPort: '22'
+        #   ToPort: '22'
+        #   CidrIp: 0.0.0.0/0 # Warning: This is open to the internet, restrict as needed
+
+  RDSSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+        GroupDescription: Allow access to RDS instance
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: '5432'
+            ToPort: '5432'
+            SourceSecurityGroupName: !Ref EC2SecurityGroup # Allow incoming from EC2 security group
+
+  EC2Host:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: ami-04ab94c703fb30101 # Ubuntu 22.04
+      InstanceType: t2.micro
+      KeyName: mitos-stream # Replace with your key pair name, created using CLI or Console
+      SecurityGroups:
+        - Ref: EC2SecurityGroup
+      IamInstanceProfile: !Ref EC2InstanceProfile # Associate with the EC2 instance profile
+      Tags:
+        - Key: Name
+          Value: basin-prod
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # Update the package repository and install dependencies
+          sudo apt-get update -y
+
+          # Install Docker Compose
+          sudo snap install docker
+          sudo snap start docker
+          sudo groupadd docker
+          sudo usermod -a -G docker $USER
+
+          # Install AWS Cli
+          sudo apt install awscli -y
+
+  RDSWarehouse:
+    Type: 'AWS::RDS::DBInstance'
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceClass: db.t3.small
+      AllocatedStorage: '20'
+      Engine: 'postgres'
+      EngineVersion: '15.4'
+      MasterUsername: sustain # Replace with your username
+      MasterUserPassword: "{{resolve:secretsmanager:prod/dagster/envvars:SecretString:PG_PASSWORD}}" # Setup password in Secrets Manager
+      DBName: postgres
+      VPCSecurityGroups: # if not assigend, use default security group
+        - !GetAtt RDSSecurityGroup.GroupId
+
+  LogsBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'basin-logs'
+
+  StorageBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'basin-storage'
+
+  ECRRegistry:
+    Type: 'AWS::ECR::Repository'
+    Properties:
+      RepositoryName: 'basin' # Replace with your desired repository name
+
+  EC2Role:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: EC2AccessRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EC2AccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - arn:aws:s3:::basin-logs/*
+                  - arn:aws:s3:::basin-storage/*
+              - Effect: Allow
+                Action:
+                  - rds-db:connect
+                Resource: !Sub arn:aws:rds-db:${AWS::Region}::${AWS::AccountId}:dbuser:${RDSWarehouse}/sustain
+              - Effect: Allow
+                Action:
+                  - ecr:PutLifecyclePolicy
+                  - ecr:PutImageTagMutability
+                  - ecr:StartImageScan
+                  - ecr:CreateRepository
+                  - ecr:PutImageScanningConfiguration
+                  - ecr:UploadLayerPart
+                  - ecr:BatchDeleteImage
+                  - ecr:DeleteLifecyclePolicy
+                  - ecr:DeleteRepository
+                  - ecr:PutImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:StartLifecyclePolicyPreview
+                  - ecr:InitiateLayerUpload
+                  - ecr:DeleteRepositoryPolicy
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource:
+                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ECRRegistry} # Replace with your ECR repository ARN
+                  - arn:aws:ecr:us-east-1:860551228838:repository/mitos2023
+              - Effect: Allow
+                Action: "ecr:GetAuthorizationToken"
+                Resource: "*"
+              - Effect: Allow
+                Action: "ecr:BatchCheckLayerAvailability"
+                Resource:
+                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ECRRegistry} # Replace with your ECR repository ARN
+                  - arn:aws:ecr:us-east-1:860551228838:repository/mitos2023
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:prod/dagster/envvars # Replace with your Secrets Manager ARN
+
+  EC2InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: EC2InstanceProfile
+      Roles:
+        - !Ref EC2Role
+
+Outputs:
+  EC2InstanceId:
+    Description: The Instance ID of the EC2 instance
+    Value: !Ref EC2Host
+
+  RDSInstanceEndpoint:
+    Description: The connection endpoint for the RDS instance
+    Value: !GetAtt RDSWarehouse.Endpoint.Address

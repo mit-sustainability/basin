@@ -17,15 +17,23 @@ from orchestrator.assets.postgres import (
 from orchestrator.assets.business_travel import (
     travel_spending,
     annual_cpi_index,
-    cost_object_dlc_mapper,
+    cost_object_warehouse,
     expense_category_mapper,
     expense_emission_mapper,
     mode_co2_mapper,
+    all_scope_summary,
+    dhub_travel_spending,
 )
-from orchestrator.constants import dbt_project_dir, PG_CREDENTIALS
-from orchestrator.schedules.mitos_warehouse import schedules
+from orchestrator.constants import (
+    dbt_project_dir,
+    DWRHS_CREDENTIALS,
+    PG_CREDENTIALS,
+    dh_api_key,
+)
 from orchestrator.jobs.business_travel_job import business_asset_job
-
+from orchestrator.resources.datahub import DataHubResource
+from orchestrator.resources.mit_warehouse import MITWHRSResource
+from orchestrator.schedules.mitos_warehouse import schedules
 
 defs = Definitions(
     assets=[
@@ -34,9 +42,11 @@ defs = Definitions(
         travel_spending,
         annual_cpi_index,
         expense_category_mapper,
-        cost_object_dlc_mapper,
+        cost_object_warehouse,
         expense_emission_mapper,
         mode_co2_mapper,
+        all_scope_summary,
+        dhub_travel_spending,
     ],
     schedules=schedules,
     jobs=[business_asset_job],
@@ -45,6 +55,8 @@ defs = Definitions(
         "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
         "postgres_append": PostgreSQLPandasIOManager(**PG_CREDENTIALS, write_method="append"),
         "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
+        "dhub": DataHubResource(auth_token=dh_api_key),
+        "dwhrs": MITWHRSResource(**DWRHS_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
     },

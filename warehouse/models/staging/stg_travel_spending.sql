@@ -4,7 +4,7 @@ WITH lab AS (
     SELECT
         expense_type,
         expense_amount,
-        cost_objects,
+        cost_object,
         trip_end_date,
         CASE
             WHEN EXTRACT(MONTH FROM trip_end_date) < 7
@@ -41,16 +41,16 @@ adjusted AS (
         expense_amount,
         trip_end_date,
         expense_type,
-        CAST(cost_objects AS INTEGER) AS cost_object
+        CAST(cost_object AS INTEGER) AS cost_object
     FROM attached
 ),
 
 dlc AS (
     SELECT
-        "DLC_NAME" AS dlc_name,
-        "SCHOOL_AREA" AS school_area,
-        CAST(cost_object AS INT) AS cost_object
-    FROM {{ source('raw', 'cost_object_dlc_mapper') }}
+        cost_object,
+        dlc_name,
+        school_area
+    FROM {{ref('stg_cost_object_rollup')}}
 ),
 
 tagged AS (

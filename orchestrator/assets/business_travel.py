@@ -1,7 +1,13 @@
 from datetime import datetime
 import json
 import cpi
-from dagster import AssetExecutionContext, asset, get_dagster_logger
+from dagster import (
+    AssetExecutionContext,
+    asset,
+    AssetIn,
+    get_dagster_logger,
+    ResourceParam,
+)
 from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
@@ -11,6 +17,8 @@ import pytz
 from sqlalchemy import text
 
 from resources.postgres_io_manager import PostgreConnResources
+from resources.datahub import DataHubResource
+from resources.mit_warehouse import MITWHRSResource
 
 
 logger = get_dagster_logger()
@@ -22,7 +30,7 @@ class TravelSpendingData(pa.SchemaModel):
     expense_amount: Series[float] = pa.Field(description="Expense Amount")
     expense_type: Series[str] = pa.Field(description="Expense Type")
     trip_end_date: Series[DateTime] = pa.Field(lt="2025", description="Travel Spending Report Date")
-    cost_objects: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
+    cost_object: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
@@ -72,7 +80,7 @@ def travel_spending(
         required_cols[0]: "expense_amount",
         required_cols[1]: "expense_type",
         required_cols[2]: "trip_end_date",
-        required_cols[3]: "cost_objects",
+        required_cols[3]: "cost_object",
     }
 
     # Get last update from warehouse
@@ -194,3 +202,70 @@ def mode_co2_mapper(s3: S3Resource):
     mapper = pd.read_csv(obj["Body"])
     mapper = mapper.rename(columns={"Transport Mode": "transport_mode", "CO2 Factor": "CO2_factor"})
     return mapper
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def all_scope_summary(dhub: ResourceParam[DataHubResource]):
+    """This asset ingest the all_scope summary data from the Data Hub"""
+    project_id = dhub.get_project_id("Scope3 Business Travel")
+    logger.info(f"Found project id: {project_id}!")
+    download_links = dhub.search_files_from_project(project_id, "tableau_all_scope.xlsx")
+    if download_links is None:
+        logger.info("No download links found!")
+        return pd.DataFrame()
+    # Load the excel file into a pandas dataframe
+    df = pd.read_excel(download_links[0], engine="openpyxl")
+    return df
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def cost_object_warehouse(dwhrs: MITWHRSResource):
+    """This asset ingest the all_scope summary data from the Data Hub"""
+    query = (
+        "SELECT COST_COLLECTOR_ID, DLC_NAME, SCHOOL_AREA, COST_COLLECTOR_EFFECTIVE_DATE " "FROM WAREUSER.COST_COLLECTOR"
+    )
+    rows = dwhrs.execute_query(query, chunksize=100000)
+    columns = [
+        "cost_collector_id",
+        "dlc_name",
+        "school_area",
+        "cost_collector_effective_date",
+    ]
+    df = pd.DataFrame(rows, columns=columns)
+    df["last_update"] = datetime.now()
+    n_dlcs, n_schools = df[["dlc_name", "school_area"]].nunique().values
+    logger.info(f"The current cost_object table includes {n_dlcs} dlcs and {n_schools} school areas.")
+    return df
+
+
+# AssetIn takes either key_prefix or key
+@asset(
+    ins={"table": AssetIn(key=["staging", "stg_travel_spending"], input_manager_key="postgres_replace")},
+    compute_kind="python",
+    group_name="dhub_sync",
+)
+def dhub_travel_spending(table, dhub: ResourceParam[DataHubResource]) -> None:
+    logger.info(f"{len(table)} rows of travel spending data are being synced to DataHub")
+    filename = "final_travel_spending.csv"
+    project_id = dhub.get_project_id("Scope3 Business Travel")
+    logger.info(f"Sync to project: {project_id}!")
+    meta = {
+        "name": filename,
+        "mimeType": "text/csv",
+        "storageContainer": project_id,
+        "destination": "shared-project",
+        "title": "Processed Travel Spending data",
+        "description": "Travel Spending data with expense group, DLC, emission factors and more",
+        "privacy": "public",
+        "organizations": ["MITOS"],
+    }
+    ### TODO might want to provide a more elegant way to handle the config
+    dhub.sync_dataframe_to_csv(table, meta)

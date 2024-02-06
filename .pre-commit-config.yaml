@@ -7,12 +7,18 @@ ci:
   autoupdate_schedule: quarterly
 
 repos:
+  # - repo: https://github.com/aws-cloudformation/cfn-lint
+  #   rev: v0.85.0  # The version of cfn-lint to use
+  #   hooks:
+  #     - id: cfn-lint
+  #       files: infrastructure/.*\.(json|yml|yaml)$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-yaml
+        exclude: ^infrastructure/.*
       - id: check-docstring-first
       - id: check-toml
       - id: check-case-conflict
