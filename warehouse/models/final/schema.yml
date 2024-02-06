@@ -20,6 +20,7 @@ models:
         description: CO2 emission share of each expense group/school area
       - name: share_of_total_expense_amount
         description: Expense share of each expense group/school area
+
   - name: travel_FY_dlc_exp_group_summary
     meta:
       owner: yu_cheng@mit.edu

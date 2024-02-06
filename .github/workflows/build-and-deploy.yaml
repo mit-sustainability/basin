@@ -35,13 +35,13 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: mitos2023
-          IMAGE_TAG: basin_0.0.3
+          IMAGE_TAG: basin_0.0.4
           PG_WAREHOUSE_HOST: ${{ secrets.PG_WAREHOUSE_HOST }}
           PG_USER: sustain
           PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
         run: |
           echo ${PWD}
-          DOCKER_BUILDKIT=1 docker build --build-arg pg_pass=$PG_PASSWORD --build-arg pg_host=$PG_WAREHOUSE_HOST --build-arg pg_user=$PG_USER --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          DOCKER_BUILDKIT=1 docker build --build-arg pg_pass=$PG_PASSWORD --build-arg pg_host=$PG_WAREHOUSE_HOST --build-arg pg_user=$PG_USER --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG . --no-cache
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
       - name: Extract branch name
@@ -63,8 +63,8 @@ jobs:
             source .env &&
             # Pull the latest image and restart the service
             docker-compose down &&
-            docker-compose pull &&
-            docker-compose up -d &&
-            docker system prune -a --force
+            docker system prune -a --force &&
+            docker-compose pull --policy=always &&
+            docker-compose up -d
             '
       - run: echo "🍏 This job's status is ${{ job.status }}."
