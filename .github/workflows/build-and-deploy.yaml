@@ -57,13 +57,8 @@ jobs:
           branch: ${{ steps.extract_branch.outputs.branch }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
-          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} GITHUB_REPO=${GITHUB_REPO} branch=${branch} '
-            cd /home/ubuntu/ &&
-            rm -rf basin &&
-            echo "Pulling from git@github.com:${GITHUB_REPO}.git" &&
-            git clone git@github.com:${GITHUB_REPO}.git &&
-            cd basin &&
-            git checkout ${branch} &&
+          scp -o StrictHostKeyChecking=no -i private_key docker-compose.yaml ubuntu@${HOSTNAME}:/home/ubuntu/
+          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} '
             # Load environment var from Secret Manager
             secret=$(aws secretsmanager get-secret-value --secret-id prod/dagster/envvars --query SecretString --output text) &&
             echo $secret | jq -r "to_entries|map(\"\(.key)=\(.value)\")|.[]" > .env &&
