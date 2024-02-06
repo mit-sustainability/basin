@@ -61,10 +61,10 @@ jobs:
             secret=$(aws secretsmanager get-secret-value --secret-id prod/dagster/envvars --query SecretString --output text) &&
             echo $secret | jq -r "to_entries|map(\"\(.key)=\(.value)\")|.[]" > .env &&
             source .env &&
-            # Running docker services
+            # Pull the latest image and restart the service
             docker-compose down &&
             docker-compose pull &&
             docker-compose up -d &&
-            docker system prune -a
+            docker system prune -a --force
             '
       - run: echo "🍏 This job's status is ${{ job.status }}."
