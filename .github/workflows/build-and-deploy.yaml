@@ -68,6 +68,7 @@ jobs:
             secret=$(aws secretsmanager get-secret-value --secret-id prod/dagster/envvars --query SecretString --output text) &&
             echo $secret | jq -r "to_entries|map(\"\(.key)=\(.value)\")|.[]" > .env &&
             source .env &&
+            docker-compose down &&
             docker-compose pull &&
             docker-compose up -d
             '

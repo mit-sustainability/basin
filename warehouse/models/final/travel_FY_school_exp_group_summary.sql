@@ -1,11 +1,25 @@
 SELECT
-    fiscal_year,
     school_area,
+    fiscal_year,
     expense_group,
-    SUM(inflated_exp_amount) AS school_expense_total,
-    SUM(inflated_exp_amount)
-    / SUM(SUM(inflated_exp_amount)) OVER (PARTITION BY fiscal_year) AS school_expense_amount_share,
-    SUM(mtco2) AS school_mtco2_total,
-    SUM(mtco2) / SUM(SUM(mtco2)) OVER (PARTITION BY fiscal_year) AS school_mtco2_share
+    SUM(mtco2) AS group_mtco2,
+    SUM(expense_amount) AS group_expense_amount,
+    CASE
+        WHEN SUM(SUM(mtco2)) OVER (PARTITION BY school_area, fiscal_year) = 0 THEN 0
+        ELSE SUM(mtco2) / SUM(SUM(mtco2)) OVER (PARTITION BY school_area, fiscal_year)
+    END AS share_of_total_mtco2,
+    CASE
+        WHEN SUM(SUM(expense_amount)) OVER (PARTITION BY school_area, fiscal_year) = 0 THEN 0
+        ELSE
+            SUM(expense_amount)
+            / SUM(SUM(expense_amount)) OVER (PARTITION BY school_area, fiscal_year)
+    END AS share_of_total_expense_amount
 FROM {{ref('stg_travel_spending')}}
-GROUP BY fiscal_year, school_area, expense_group
+GROUP BY
+    school_area,
+    fiscal_year,
+    expense_group
+ORDER BY
+    school_area,
+    fiscal_year,
+    expense_group
