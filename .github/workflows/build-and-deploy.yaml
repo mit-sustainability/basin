@@ -62,6 +62,7 @@ jobs:
             echo $secret | jq -r "to_entries|map(\"\(.key)=\(.value)\")|.[]" > .env &&
             source .env &&
             # Running docker services
+            docker-compose down &&
             docker-compose pull &&
             docker-compose up -d &&
             docker system prune -a
