@@ -36,19 +36,24 @@ sources:
             description: "Consumer Price Index ID"
           - name: series_title
             description: "Consumer Price Index name"
-      - name: cost_object_dlc_mapper
-        description: "Mapping database for cost_object ID to DLC and School area"
+      - name: cost_object_warehouse
+        description: "Mapping database for cost_object ID to DLC and School area from MIT data warehouse"
         meta:
           dagster:
-            asset_key: ["cost_object_dlc_mapper"]
+            asset_key: ["cost_object_warehouse"]
         columns:
           - name: cost_object
             description: "Cost Object ID"
             tests:
               - unique
-          - name: DLC_NAME
+          - name: dlc_name
             description: "MIT Department, Lab, and Center name"
-          - name: SCHOOL_AREA
+          - name: school_area
+            description: "School Area"
+          - name: cost_collector_effective_date
+            description: "Cost Collector ID effective since"
+          - name: last_update
+            description: "Date of last update"
       - name: expense_category_mapper
         description: "Mapping database for expense type to larger categories"
         meta:

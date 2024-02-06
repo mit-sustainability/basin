@@ -8,8 +8,12 @@ services:
       - PG_WAREHOUSE_HOST=${PG_WAREHOUSE_HOST}
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
+      - DWRHS_HOST=${DWRHS_HOST}
+      - DWRHS_USER=${DWRHS_USER}
+      - DWRHS_PASSWORD=${DWRHS_PASSWORD}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - DATAHUB_API_KEY=${DATAHUB_API_KEY}
     ports:
       - 3000:3000
   dagster-daemon:
@@ -19,8 +23,12 @@ services:
       - PG_WAREHOUSE_HOST=${PG_WAREHOUSE_HOST}
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
+      - DWRHS_HOST=${DWRHS_HOST}
+      - DWRHS_USER=${DWRHS_USER}
+      - DWRHS_PASSWORD=${DWRHS_PASSWORD}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - DATAHUB_API_KEY=${DATAHUB_API_KEY}
     command: "dagster-daemon run"
 
 # Pull an image build by github-actions? or run docker-compose up on EC2?

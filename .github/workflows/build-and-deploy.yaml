@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - add_checks
+      - cloud_formation
 
 permissions:
   id-token: write
@@ -35,10 +35,13 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: mitos2023
-          IMAGE_TAG: basin_0.0.2
+          IMAGE_TAG: basin_0.0.4
+          PG_WAREHOUSE_HOST: ${{ secrets.PG_WAREHOUSE_HOST }}
+          PG_USER: sustain
+          PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
         run: |
           echo ${PWD}
-          DOCKER_BUILDKIT=1 docker build --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          DOCKER_BUILDKIT=1 docker build --build-arg pg_pass=$PG_PASSWORD --build-arg pg_host=$PG_WAREHOUSE_HOST --build-arg pg_user=$PG_USER --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG . --no-cache
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
       - name: Extract branch name
@@ -48,24 +51,20 @@ jobs:
 
       - name: Deploy to EC2 and Start the service
         env:
-          GITHUB_REPO: ${{ github.repository }}
           PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           HOSTNAME: ${{secrets.SSH_HOST}}
-          branch: ${{ steps.extract_branch.outputs.branch }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
-          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} GITHUB_REPO=${GITHUB_REPO} branch=${branch} '
-            cd /home/ubuntu/ &&
-            rm -rf basin &&
-            echo "Pulling from git@github.com:${GITHUB_REPO}.git" &&
-            git clone git@github.com:${GITHUB_REPO}.git &&
-            cd basin &&
-            git checkout ${branch} &&
+          scp -o StrictHostKeyChecking=no -i private_key docker-compose.yaml ubuntu@${HOSTNAME}:/home/ubuntu/
+          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@${HOSTNAME} '
             # Load environment var from Secret Manager
             secret=$(aws secretsmanager get-secret-value --secret-id prod/dagster/envvars --query SecretString --output text) &&
             echo $secret | jq -r "to_entries|map(\"\(.key)=\(.value)\")|.[]" > .env &&
             source .env &&
-            docker-compose pull &&
+            # Pull the latest image and restart the service
+            docker-compose down &&
+            docker system prune -a --force &&
+            docker-compose pull --policy=always &&
             docker-compose up -d
             '
       - run: echo "🍏 This job's status is ${{ job.status }}."

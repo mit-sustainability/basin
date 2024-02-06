@@ -4,25 +4,31 @@ FROM --platform=linux/amd64 python:3.11-slim
 
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y libpq-dev gcc ca-certificates build-essential curl jq git unzip
+    apt-get install -y libpq-dev gcc ca-certificates build-essential curl jq git unzip wget
 
 
-# # Install AWS CLI
-# RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-#     unzip awscliv2.zip && \
-#     ./aws/install
+# Setup Oracle client
+ENV ORACLE_HOME=/opt/oracle
+RUN mkdir -p $ORACLE_HOME
+WORKDIR $ORACLE_HOME
+RUN apt-get update -y && \
+    apt-get upgrade -y && \
+    apt-get install -y libaio1 wget  && \
+    wget https://download.oracle.com/otn_software/linux/instantclient/1922000/instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip  && \
+    unzip instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip && \
+    rm -f instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip && \
+    echo /opt/oracle/instantclient_19_22 > /etc/ld.so.conf.d/oracle-instantclient.conf && \
+    ldconfig && \
+    apt-get purge -y --auto-remove wget unzip
 
+
+# Setup Dagster Environment
 ENV DAGSTER_HOME=/opt/dagster/dagster_home
 RUN mkdir -p $DAGSTER_HOME
+WORKDIR /opt/dagster/app
 
 COPY orchestrator/dagster.yaml $DAGSTER_HOME
-
 RUN pip install --upgrade pip
-
-# Install orchestrator dependencies
-WORKDIR /opt/dagster/app
-COPY orchestrator/requirements.txt requirements.txt
-RUN pip install -r requirements.txt
 
 
 # Copy DBT project in
@@ -32,21 +38,24 @@ RUN cd warehouse && bash setup.sh
 # Set dbt build env vars
 ARG pg_host
 ARG pg_user
+ARG pg_pass
 ENV PG_WAREHOUSE_HOST=${pg_host}
 ENV PG_USER=${pg_user}
-
+ENV PG_PASSWORD=${pg_pass}
 
 # Compile DBT manifest file
-RUN --mount=type=secret,id=pgpass \
-     PG_PASSWORD=$(cat /run/secrets/pgpass |grep 'PG_PASSWORD' | awk -F '=' '{print $2}') && \
-    dbt \
+RUN dbt \
     --no-use-colors \
-    --log-format json  \
+    --log-format json \
     ls \
     --project-dir warehouse \
     --profiles-dir warehouse \
-    --select * \
+    --select '*' \
     --output json
+
+# Install orchestrator dependencies
+COPY orchestrator/requirements.txt requirements.txt
+RUN pip install -r requirements.txt
 
 # # Copy libs in and install w3b_dp package
 # # COPY libs libs
