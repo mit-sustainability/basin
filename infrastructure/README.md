@@ -19,5 +19,9 @@ Once code changes are merged into the `main` branch, two GitHub Actions are trig
 
 Since the codes are packaged into a Docker image, it is possible to deploy the image to other container services, such as AWS Elastic Container Service (ECS) or Kubernetes engines (EKS). Regarding the data warehouse, it is also possible to swap the RDS Postgres instance for other database technologies such as AWS Redshift or Google Cloud BigQuery.
 
-
 For more details, please refer to `https://docs.dagster.io/deployment`.
+
+## Tentative Deployment Steps
+1. Create a `stack` using the `cloudformation_template.yaml`.
+2. Create a `secret` to store neccessary environment variables using AWS secret manager.
+3. Add `secrets` for github actions for some environment variables used in CI/CD.
