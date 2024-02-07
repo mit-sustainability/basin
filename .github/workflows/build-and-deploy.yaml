@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - cloud_formation
 
 permissions:
   id-token: write
@@ -43,11 +42,6 @@ jobs:
           echo ${PWD}
           DOCKER_BUILDKIT=1 docker build --build-arg pg_pass=$PG_PASSWORD --build-arg pg_host=$PG_WAREHOUSE_HOST --build-arg pg_user=$PG_USER --file ./orchestrator/Dockerfile -t $REGISTRY/$REPOSITORY:$IMAGE_TAG . --no-cache
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-
-      - name: Extract branch name
-        shell: bash
-        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-        id: extract_branch
 
       - name: Deploy to EC2 and Start the service
         env:
