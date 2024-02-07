@@ -1,4 +1,4 @@
-## What type of PR is this?
+## What type of PR is this? (check all applicable)
 - [ ] :star2: Feature
 - [ ] :bug: Bug Fix
 - [ ] :memo: Dcoumentation Update
