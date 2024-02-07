@@ -1,10 +1,10 @@
 ## What type of PR is this?
 - [ ] :star2: Feature
 - [ ] :bug: Bug Fix
-- [ ] :notebook: Dcoumentation Update
+- [ ] :memo: Dcoumentation Update
 - [ ] :computer: Code Refactor
-- [ ] :eyeglasses: Test
-- [ ] :traffic_light: CI/CD
+- [ ] :mag: Test
+- [ ] :truck: CI/CD
 
 ## Describe your changes
 
