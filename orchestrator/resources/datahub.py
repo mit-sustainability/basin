@@ -2,6 +2,7 @@
 and requires authorization to get temporary credentials following the official doc
 http://dsg-datahub-apidoc.s3-website-us-east-1.amazonaws.com/
 """
+
 from io import StringIO
 import requests
 
@@ -10,7 +11,7 @@ import requests
 from dagster import (
     get_dagster_logger,
 )
-from pandas import DataFrame
+import pandas as pd
 
 logger = get_dagster_logger()
 default_timeout = 10
@@ -94,7 +95,7 @@ class DataHubResource:
         if res.status_code == 200:
             return res.json()["data"]["temporarily_upload_url"]
 
-    def sync_dataframe_to_csv(self, df: DataFrame, meta):
+    def sync_dataframe_to_csv(self, df: pd.DataFrame, meta):
         upload_link = self.get_upload_link(meta)
         csv_buffer = StringIO()
         df.to_csv(csv_buffer, index=False)
