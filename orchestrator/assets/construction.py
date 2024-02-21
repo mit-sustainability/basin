@@ -130,6 +130,7 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
 
 
 @asset(
+    deps=[emission_factor_useeio_v2],
     io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
