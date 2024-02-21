@@ -20,7 +20,7 @@ target_cpi AS (
     SELECT
         year,
         value
-    FROM raw.annual_cpi_index ORDER BY year DESC LIMIT 1
+    FROM {{ source('raw', 'annual_cpi_index') }} ORDER BY year DESC LIMIT 1
 ), --checked
 
 attached AS (

@@ -25,9 +25,10 @@ from orchestrator.assets.business_travel import (
     dhub_travel_spending,
 )
 from orchestrator.assets.construction import (
-    emission_factor_USEEIOv2,
+    emission_factor_useeio_v2,
     construction_expense,
     dof_maintenance_cost,
+    emission_factor_naics,
 )
 from orchestrator.constants import (
     dbt_project_dir,
@@ -52,9 +53,10 @@ defs = Definitions(
         mode_co2_mapper,
         all_scope_summary,
         dhub_travel_spending,
-        emission_factor_USEEIOv2,
+        emission_factor_useeio_v2,
         construction_expense,
         dof_maintenance_cost,
+        emission_factor_naics,
     ],
     schedules=schedules,
     jobs=[business_asset_job],

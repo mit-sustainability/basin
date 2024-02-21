@@ -58,3 +58,20 @@ models:
         description: Total CO2 emission of each expense group
       - name: mtCO2_share
         description: Total CO2 emission of each expense group
+
+  - name: construction_expense_emission
+    meta:
+      owner: yu_cheng@mit.edu
+    description: Construction expense and GHG emission broken down by expense type
+    columns:
+      - name: fiscal_year
+        description: MIT Fiscal year July-June
+      - name: expense_type
+        description: Type of construction expense
+        tests:
+          - accepted_values:
+              values: ['New Construction', 'Maintenance material and Services', 'Renovation and Renewal']
+      - name: expense_2021
+        description: Expense in million dollars adjusted to 2021 dollars
+      - name: ghg_emission
+        description: Total CO2 emission of each expense type

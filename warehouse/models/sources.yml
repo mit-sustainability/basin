@@ -87,3 +87,54 @@ sources:
               - unique
           - name: CO2_factor
             description: "CO2 emission factor based on transport mode"
+      - name: construction_expense
+        description: "Construction expense data from VPCSS"
+        meta:
+          dagster:
+            asset_key: ["construction_expense"]
+        columns:
+          - name: fiscal_year
+            tests:
+              - unique
+          - name: "Renovations and Renewal*"
+            description: "Renovation and Renewal expense in Million"
+          - name: "New Construction"
+            description: "New construction expense in Million"
+      - name: dof_maintenance_cost
+        description: "Maintenance and service cost data from Facilities"
+        meta:
+          dagster:
+            asset_key: ["dof_maintenance_cost"]
+        columns:
+          - name: fiscal_year
+            tests:
+              - unique
+          - name: Work Orders Within DOF
+            description: "Work Orders within Department of Facilities"
+          - name: Sales Work Orders
+            description: "Sales work orders from Department of Facilities"
+          - name: DOF Ops Costs Outside of Wos
+            description: "Operation costs outside of work orders"
+      - name: emission_factor_naics
+        description: "NAICS Supply chain Emission factor (v1.2) merged with USEEIO code"
+        meta:
+          dagster:
+            asset_key: ["emission_factor_naics"]
+        columns:
+          - name: ID
+            description: "USEEIO code with region"
+            tests:
+              - unique
+          - name: emission_factor
+            description: "eCO2 emission factor in kg/$ from USEEIOv2.0 (2012 dollars)"
+          - name: Name
+            description: "USEEIO description"
+          - name: Code
+            description: "USEEIO Code"
+          - name: Category
+            description: "USEEIO Category"
+          - name: Description
+            description: "BEA code and name"
+          - name: Supply Chain Emission Factors without Margins
+          - name: Margins of Emission Factors
+          - name: Supply Chain Emission Factors with Margins from NAICSv1.2 (2021 dollars)
