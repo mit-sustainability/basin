@@ -10,9 +10,7 @@ from orchestrator.resources.postgres_io_manager import (
 from dagster_aws.s3 import S3Resource
 from dagster_aws.pipes import PipesLambdaClient
 
-from orchestrator.assets.postgres import (
-    mitos_dbt_assets,
-)
+from orchestrator.assets.postgres import mitos_dbt_assets
 from orchestrator.assets import construction, business_travel
 
 from orchestrator.jobs.business_travel_job import business_asset_job
@@ -30,7 +28,6 @@ from orchestrator.schedules.mitos_warehouse import schedules
 
 construction_assets = load_assets_from_modules([construction])
 business_travel_assets = load_assets_from_modules([business_travel])
-
 defs = Definitions(
     assets=[mitos_dbt_assets] + construction_assets + business_travel_assets,
     schedules=schedules,

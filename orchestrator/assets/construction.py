@@ -1,5 +1,4 @@
 from dagster import (
-    AssetExecutionContext,
     asset,
     AssetIn,
     get_dagster_logger,
@@ -8,14 +7,23 @@ from dagster import (
 from dagster_pandera import pandera_schema_to_dagster_type
 import numpy as np
 import pandas as pd
-from sqlalchemy import text
+import pandera as pa
+from pandera.typing import Series
 
-from resources.postgres_io_manager import PostgreConnResources
-from resources.datahub import DataHubResource
-from resources.mit_warehouse import MITWHRSResource
+from orchestrator.assets.utils import empty_dataframe_from_model
+from orchestrator.resources.postgres_io_manager import PostgreConnResources
+from orchestrator.resources.datahub import DataHubResource
 
 
 logger = get_dagster_logger()
+
+
+class ConstructionExpenseData(pa.SchemaModel):
+    """Validate the output data schema of construction cost asset"""
+
+    new_construction: Series[int] = pa.Field(description="New Construction Cost in Million")
+    renovation_and_renewal: Series[int] = pa.Field(description="Renovation Cost in Million")
+    fiscal_year: Series[int] = pa.Field(lt=2025, description="Fiscal Year")
 
 
 @asset(
@@ -30,8 +38,8 @@ def emission_factor_useeio_v2(dhub: ResourceParam[DataHubResource]):
     download_links = dhub.search_files_from_project(
         project_id, "USEEIOv2.0.1"
     )  # some special charater will fail the search request
-    if download_links is None:
-        logger.info("No download links found!")
+    if len(download_links) == 0:
+        logger.error("No download links found!")
         return pd.DataFrame()
     # Load the emission factor
     workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
@@ -51,6 +59,7 @@ def emission_factor_useeio_v2(dhub: ResourceParam[DataHubResource]):
     io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
+    dagster_type=pandera_schema_to_dagster_type(ConstructionExpenseData),
 )
 def construction_expense(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the construction expense data from the Data Hub"""
@@ -59,7 +68,7 @@ def construction_expense(dhub: ResourceParam[DataHubResource]):
     download_links = dhub.search_files_from_project(project_id, "Expense project FY16-FY23")
     if download_links is None:
         logger.info("No download links found!")
-        return pd.DataFrame()
+        return empty_dataframe_from_model(ConstructionExpenseData)
     # Load the Construction Expense excel file
     workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
     df_expense = pd.read_excel(
@@ -70,7 +79,7 @@ def construction_expense(dhub: ResourceParam[DataHubResource]):
     )
     # Prepare for output
     df_out = df_expense.T.reset_index(drop=True)
-    df_out.columns = ["New Construction", "Renovations and Renewal*"]
+    df_out.columns = ["new_construction", "renovation_and_renewal"]
     df_out["fiscal_year"] = range(2015, 2024)
     return df_out
 
@@ -85,7 +94,7 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
     project_id = dhub.get_project_id("Scope3 Construction")
     logger.info(f"Found project id: {project_id}!")
     download_links = dhub.search_files_from_project(project_id, "MITOSRequest_DOFOpsCostsv2")
-    if download_links is None:
+    if len(download_links) == 0:
         logger.info("No download links found!")
         return pd.DataFrame()
     workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
@@ -139,7 +148,7 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     """Ingest and combine NAICS and USEEIO emission factors for Scope3 purchased goods"""
     project_id = dhub.get_project_id("Scope3 General")
     download_links = dhub.search_files_from_project(project_id, "SupplyChainGHGEmissionFactors_v1.2_NAICS_CO2e_USD2021")
-    if download_links is None:
+    if len(download_links) == 0:
         logger.info("No download links found!")
         return pd.DataFrame()
     # Load the NAICS_v1.2 emission factors related maintenance cost
@@ -172,6 +181,7 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     # Drop the naics categories that may be included in others(Land Subdvision),
     # and average the emission factor of the rest naics categories of the same eeio code
     ref2 = explode.copy()
+    print(len(ref2))
     ref2 = ref2[ref2["NAICS"] != ref2.iloc[23, 5]].reset_index(drop=True)
     ref2 = ref2[ref2["NAICS"] != "Land Subdivision"].reset_index(drop=True)
     ref2.drop(columns=["freq", "NAICS"], inplace=True)  # drop non-numeric columns
@@ -181,3 +191,32 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     factor_eeio_new = factor_eeio_new.merge(ref2, left_on="Code", right_on="Reference USEEIO Code", how="left")
     factor_eeio_new.drop(columns=["Reference USEEIO Code"], inplace=True)
     return factor_eeio_new
+
+
+# AssetIn takes either key_prefix or key
+@asset(
+    ins={
+        "table": AssetIn(
+            key=["final", "construction_expense_emission"],
+            input_manager_key="postgres_replace",
+        )
+    },
+    compute_kind="python",
+    group_name="dhub_sync",
+)
+def dhub_construction_cost(table, dhub: ResourceParam[DataHubResource]) -> None:
+    logger.info(f"{len(table)} rows of construction cost data are being synced to DataHub")
+    filename = "final_construction_cost.csv"
+    project_id = dhub.get_project_id("Scope3 Construction")
+    logger.info(f"Sync to project: {project_id}!")
+    meta = {
+        "name": filename,
+        "mimeType": "text/csv",
+        "storageContainer": project_id,
+        "destination": "shared-project",
+        "title": "Processed Construction Cost data",
+        "description": "Construction data with expense type and GHG emission",
+        "privacy": "public",
+        "organizations": ["MITOS"],
+    }
+    dhub.sync_dataframe_to_csv(table, meta)

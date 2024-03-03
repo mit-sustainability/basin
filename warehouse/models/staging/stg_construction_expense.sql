@@ -1,7 +1,7 @@
 WITH expense AS (
 
     SELECT
-        "New Construction" AS expense,
+        new_construction AS expense,
         'New Construction' AS expense_type,
         '233262' AS eeio_code,
         fiscal_year
@@ -10,7 +10,7 @@ WITH expense AS (
     UNION ALL
 
     SELECT
-        "Renovations and Renewal*" AS expense,
+        renovation_and_renewal AS expense,
         'Renovation and Renewal' AS expense_type,
         '230301' AS eeio_code,
         fiscal_year

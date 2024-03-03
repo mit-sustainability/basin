@@ -16,9 +16,10 @@ from pandera.typing import Series, DateTime
 import pytz
 from sqlalchemy import text
 
-from resources.postgres_io_manager import PostgreConnResources
-from resources.datahub import DataHubResource
-from resources.mit_warehouse import MITWHRSResource
+from orchestrator.assets.utils import empty_dataframe_from_model
+from orchestrator.resources.postgres_io_manager import PostgreConnResources
+from orchestrator.resources.datahub import DataHubResource
+from orchestrator.resources.mit_warehouse import MITWHRSResource
 
 
 logger = get_dagster_logger()
@@ -32,11 +33,6 @@ class TravelSpendingData(pa.SchemaModel):
     trip_end_date: Series[DateTime] = pa.Field(lt="2025", description="Travel Spending Report Date")
     cost_object: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
-
-
-def empty_dataframe_from_model(Model: pa.DataFrameModel) -> pd.DataFrame:
-    schema = Model.to_schema()
-    return pd.DataFrame(columns=schema.dtypes.keys()).astype({col: str(dtype) for col, dtype in schema.dtypes.items()})
 
 
 def concatenate_csv(unprocessed, s3_client, src_bucket):

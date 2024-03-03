@@ -13,6 +13,6 @@ setup(
     ],
     extras_require={
         "dev": ["dagster-webserver", "pytest"],
-        "tests": ["pytest"],
+        "tests": ["pytest", "pytest-mock"],
     },
 )

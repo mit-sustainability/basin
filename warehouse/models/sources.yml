@@ -93,13 +93,13 @@ sources:
           dagster:
             asset_key: ["construction_expense"]
         columns:
+          - name: new_construction
+            description: "New construction expense in Million"
+          - name: renovation_and_renewal
+            description: "Renovation and Renewal expense in Million"
           - name: fiscal_year
             tests:
               - unique
-          - name: "Renovations and Renewal*"
-            description: "Renovation and Renewal expense in Million"
-          - name: "New Construction"
-            description: "New construction expense in Million"
       - name: dof_maintenance_cost
         description: "Maintenance and service cost data from Facilities"
         meta:
@@ -136,5 +136,5 @@ sources:
           - name: Description
             description: "BEA code and name"
           - name: Supply Chain Emission Factors without Margins
-          - name: Margins of Emission Factors
-          - name: Supply Chain Emission Factors with Margins from NAICSv1.2 (2021 dollars)
+          - name: Margins of Supply Chain Emission Factors
+          - name: Supply Chain Emission Factors with Margins
