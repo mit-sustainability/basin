@@ -8,14 +8,12 @@ from dagster import AssetKey
 @pytest.fixture
 def mock_engine():
     with patch("orchestrator.resources.postgres_io_manager.create_engine") as mock:
-        # Mock the engine's connect method to return another mock
         mock.return_value.connect.return_value.__enter__.return_value = MagicMock()
         yield mock
 
 
 @pytest.fixture
 def io_manager():
-    # You can adjust the configuration here if needed
     return PostgreSQLPandasIOManager()
 
 
