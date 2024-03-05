@@ -37,7 +37,7 @@ jobs:
           PG_USER: sustain
           PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
         run: |
-          DAGSTER_DBT_PARSE_PROJECT_ON_LOAD=1 pytest tests
+          DAGSTER_DBT_PARSE_PROJECT_ON_LOAD=1 pytest --cov=orchestrator tests
   Build-And-Push-Dagster-Image:
     runs-on: ubuntu-latest
     needs: Run-Unit-Tests
