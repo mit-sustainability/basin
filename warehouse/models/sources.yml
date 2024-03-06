@@ -138,3 +138,55 @@ sources:
           - name: Supply Chain Emission Factors without Margins
           - name: Margins of Supply Chain Emission Factors
           - name: Supply Chain Emission Factors with Margins
+      - name: historical_waste_recycle
+        description: "Waste recycle data from 2010 to 2023 June"
+        meta:
+          dagster:
+            asset_key: ["historical_waste_recycle"]
+        columns:
+          - name: "Date (YYYY-MM-DD)"
+            description: "Service Date"
+          - name: "Building Name"
+            description: "Name of te service site"
+          - name: "Waste Stream"
+            description: "Waste category"
+          - name: "Disposed Tonnage"
+            description: "Tons being disposed"
+          - name: "Diverted Tonnage"
+            description: "Tons being diverted"
+          - name: "Total Tonnage"
+            description: "Total tonnage of waste collected"
+      - name: newbatch_waste_recycle
+        description: "Waste recycle data from 2023 July to December"
+        meta:
+          dagster:
+            asset_key: ["newbatch_waste_recycle"]
+        columns:
+          - name: "Customer Key"
+            description: "Waste collection building id"
+          - name: "Customer Name"
+            description: "Waste collection building name"
+          - name: "Service Street"
+            description: "Waste collection site street"
+          - name: "Service Date"
+            description: "Service Date"
+          - name: "Material"
+            description: "Waste category"
+          - name: "Tons"
+            description: "Total tonnage of waste collected"
+      - name: small_stream_recycle
+        description: "Small Stream recycle data collected an maintained by Facilities, currently only ingest 2023"
+        meta:
+          dagster:
+            asset_key: ["small_stream_recycle"]
+        columns:
+          - name: "service_date"
+            description: "Service Date"
+          - name: "customer_name"
+            description: "Name of te service site"
+          - name: "material"
+            description: "Waste category"
+          - name: "diverted"
+            description: "Tons being diverted"
+          - name: "tons"
+            description: "Total tonnage of waste collected"
