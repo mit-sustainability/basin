@@ -15,7 +15,6 @@ from orchestrator.assets import construction, business_travel, waste
 
 from orchestrator.jobs.business_travel_job import business_asset_job
 from orchestrator.jobs.construction_job import construction_asset_job
-
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,

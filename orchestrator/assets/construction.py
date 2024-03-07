@@ -35,9 +35,7 @@ def emission_factor_useeio_v2(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the USEEIOv2.0.1 emission factor data from the Data Hub"""
     project_id = dhub.get_project_id("Scope3 General")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(
-        project_id, "USEEIOv2.0.1"
-    )  # some special charater will fail the search request
+    download_links = dhub.search_files_from_project(project_id, "USEEIOv2.0.1")
     if len(download_links) == 0:
         logger.error("No download links found!")
         return pd.DataFrame()
@@ -48,7 +46,7 @@ def emission_factor_useeio_v2(dhub: ResourceParam[DataHubResource]):
     ef_df = ef.reset_index()
     ef_df.columns = ["ID", "emission_factor"]
 
-    # Load the category to emission facto code mapping
+    # Load the category to emission factor code mapping
     df_code = pd.read_excel(workbook, sheet_name="commodities_meta", index_col=0)
     merged = pd.merge(ef_df, df_code, on="ID", how="inner")
     columns = ["ID", "emission_factor", "Name", "Code", "Category", "Description"]
@@ -102,7 +100,7 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
     dof1 = pd.read_excel(
         workbook,
         usecols="B:F",
-        sheet_name="Summary",  # Only load columns B:F
+        sheet_name="Summary",
         skiprows=33,
         nrows=1,
         header=None,
@@ -110,7 +108,7 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
     dof2 = pd.read_excel(
         workbook,
         usecols="B:F",
-        sheet_name="Summary",  # Only load columns B:F
+        sheet_name="Summary",
         skiprows=83,
         nrows=1,
         header=None,
@@ -118,8 +116,8 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
     dof3 = pd.read_excel(
         workbook,
         usecols="P:T",
-        sheet_name="Summary",  # Only load columns B, C, D
-        skiprows=89,  # Skip the first 2 rows
+        sheet_name="Summary",
+        skiprows=89,
         nrows=1,
         header=None,
     )
@@ -155,7 +153,7 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     df_naics = pd.read_csv(download_links[0])
     df_naics.drop(columns=["GHG", "Unit"], inplace=True)
 
-    # Load EEIO emission factors
+    # Load USEEIO emission factors
     engine = pg_engine.create_engine()
     df_eeio = pd.read_sql_query("SELECT * FROM raw.emission_factor_useeio_v2", engine)
 
@@ -186,14 +184,12 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     ref2 = ref2[ref2["NAICS"] != "Land Subdivision"].reset_index(drop=True)
     ref2.drop(columns=["freq", "NAICS"], inplace=True)  # drop non-numeric columns
     ref2 = ref2.groupby("Reference USEEIO Code").mean().reset_index()
-    # get updated supply chain GHG emisison factor by eeio categories
     factor_eeio_new = df_eeio.copy()
     factor_eeio_new = factor_eeio_new.merge(ref2, left_on="Code", right_on="Reference USEEIO Code", how="left")
     factor_eeio_new.drop(columns=["Reference USEEIO Code"], inplace=True)
     return factor_eeio_new
 
 
-# AssetIn takes either key_prefix or key
 @asset(
     ins={
         "table": AssetIn(
@@ -205,6 +201,7 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     group_name="dhub_sync",
 )
 def dhub_construction_cost(table, dhub: ResourceParam[DataHubResource]) -> None:
+    """Sync the construction cost data to DataHub"""
     logger.info(f"{len(table)} rows of construction cost data are being synced to DataHub")
     filename = "final_construction_cost.csv"
     project_id = dhub.get_project_id("Scope3 Construction")
