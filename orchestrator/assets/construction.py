@@ -1,6 +1,5 @@
 from dagster import (
     asset,
-    AssetIn,
     get_dagster_logger,
     ResourceParam,
 )
