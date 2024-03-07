@@ -32,7 +32,6 @@ from dagster import (
 logger = get_dagster_logger()
 
 
-# TODO, wonder how to handle different schema for asset to write to.
 @contextmanager
 def connect_postgresql(config) -> Iterator[Connection]:
     url = URL.create(

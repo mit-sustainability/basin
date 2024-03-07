@@ -1,12 +1,12 @@
-dagster-webserver==1.6.1
-dagster==1.6.1
-dagster-graphql==1.6.1
-dagster-postgres==0.22.1
-dagster-docker==0.22.1
-dagster-aws==0.22.1
-dagster-dbt==0.22.1
-dagster-pandas==0.22.1
-dagster-pandera==0.22.1
+dagster==1.6.7
+dagster-webserver==1.6.7
+dagster-graphql==1.6.7
+dagster-postgres==0.22.7
+dagster-docker==0.22.7
+dagster-aws==0.22.7
+dagster-dbt==0.22.7
+dagster-pandas==0.22.7
+dagster-pandera==0.22.7
 dagster-shell
 distributed
 oracledb==2.0.1
@@ -14,6 +14,7 @@ pandas
 pandera==0.18.0
 pyarrow
 requests
+requests_mock==1.11.0
 cpi==1.1.1
 datasets
 python-dateutil
@@ -22,6 +23,7 @@ tenacity
 sqlalchemy==2.0.25
 datasets==2.15.0
 pydantic==1.10.13
+pytest-mock==3.12.0
 psycopg2-binary==2.9.9
 pytz==2023.4
 openpyxl==3.1.2

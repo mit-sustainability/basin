@@ -1,7 +1,7 @@
 import os
 
 import boto3
-from dagster import Definitions
+from dagster import Definitions, load_assets_from_modules
 from dagster_dbt import DbtCliResource
 from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
@@ -10,46 +10,26 @@ from orchestrator.resources.postgres_io_manager import (
 from dagster_aws.s3 import S3Resource
 from dagster_aws.pipes import PipesLambdaClient
 
-from orchestrator.assets.postgres import (
-    mitos_dbt_assets,
-    output_test_asset,
-)
-from orchestrator.assets.business_travel import (
-    travel_spending,
-    annual_cpi_index,
-    cost_object_warehouse,
-    expense_category_mapper,
-    expense_emission_mapper,
-    mode_co2_mapper,
-    all_scope_summary,
-    dhub_travel_spending,
-)
+from orchestrator.assets.postgres import mitos_dbt_assets
+from orchestrator.assets import construction, business_travel
+from orchestrator.jobs.business_travel_job import business_asset_job
+from orchestrator.jobs.construction_job import construction_asset_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
     PG_CREDENTIALS,
     dh_api_key,
 )
-from orchestrator.jobs.business_travel_job import business_asset_job
 from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.mit_warehouse import MITWHRSResource
 from orchestrator.schedules.mitos_warehouse import schedules
 
+construction_assets = load_assets_from_modules([construction])
+business_travel_assets = load_assets_from_modules([business_travel])
 defs = Definitions(
-    assets=[
-        mitos_dbt_assets,
-        output_test_asset,
-        travel_spending,
-        annual_cpi_index,
-        expense_category_mapper,
-        cost_object_warehouse,
-        expense_emission_mapper,
-        mode_co2_mapper,
-        all_scope_summary,
-        dhub_travel_spending,
-    ],
+    assets=[mitos_dbt_assets] + construction_assets + business_travel_assets,
     schedules=schedules,
-    jobs=[business_asset_job],
+    jobs=[business_asset_job, construction_asset_job],
     resources={
         "dbt": DbtCliResource(project_dir=os.fspath(dbt_project_dir)),
         "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),

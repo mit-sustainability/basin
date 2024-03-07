@@ -26,3 +26,6 @@ serve-dbt-catalog:
 
 setup-dev:  setup-dbt  setup-dagster  # setup-libs setup-pants
 	@echo "Done, enjoy building! 🎉"
+
+run-tests:
+	cd orchestrator && ./execute_unit_tests.sh

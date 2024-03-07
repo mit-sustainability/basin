@@ -51,3 +51,29 @@ models:
         description: "MIT Department, Lab, and Center name"
       - name: school_area
         description: "School Area"
+  - name: stg_construction_expense
+    description: "Adjusted fiscal year construction cost and GHG emission"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: fiscal_year
+        description: "Fiscal Year"
+      - name: expense_type
+        description: "Type of expense, relevant for emission factor selection"
+      - name: expense_in_million_2021_equivalent
+        description: "expense in million dollars adjusted to 2021 dollars"
+      - name: ghg_emission
+        description: "eCO2 GHG emission in megatons"
+  - name: stg_dof_mainenance_cost
+    description: "Adjusted fiscal year maintenance cost and GHG emission"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: fiscal_year
+        description: "Fiscal Year"
+      - name: expense_type
+        description: "Type of expense, relevant for emission factor selection and understanding"
+      - name: expense_2021_equivalent
+        description: "maintenance cost from DOF adjusted to 2021 dollars"
+      - name: ghg_emission
+        description: "eCO2 GHG emission in megatons"

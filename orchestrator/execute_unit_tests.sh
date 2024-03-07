@@ -1,0 +1,1 @@
+DAGSTER_DBT_PARSE_PROJECT_ON_LOAD=1 pytest tests/
