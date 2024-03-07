@@ -6,8 +6,8 @@ from dagster_dbt import DbtCliResource
 
 @pytest.fixture(autouse=True)
 def dbt_cli_resource(tmp_path):
+    """For Pytest to use the docs dbt profile"""
     # Set the environment variable for the duration of the test session
-    # Define the dbt project directory and the target name
     dbt_project_dir = Path(__file__).joinpath("..", "..", "..", "warehouse").resolve()
     dbt_target = "docs"  # Replace with your target name
     # Create an instance of DbtCliResource with the project directory

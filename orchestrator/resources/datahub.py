@@ -6,15 +6,13 @@ http://dsg-datahub-apidoc.s3-website-us-east-1.amazonaws.com/
 from io import StringIO
 import requests
 
-# from typing import Iterator, Optional, Sequence
-
-from dagster import (
-    get_dagster_logger,
-)
+from dagster import get_dagster_logger
 import pandas as pd
 
 logger = get_dagster_logger()
 default_timeout = 10
+
+## TODO: Use asyncio and aiohttp to handle async requests
 
 
 def data_hub_authorize(auth_token):
@@ -90,16 +88,18 @@ class DataHubResource:
             return None
 
     def get_upload_link(self, meta):
+        """Get upload link to datahub"""
         url = f"{self.api_endpoint}/file"
         res = requests.post(url, headers=self.headers, json=meta, timeout=default_timeout)
         if res.status_code == 200:
             return res.json()["data"]["temporarily_upload_url"]
 
     def sync_dataframe_to_csv(self, df: pd.DataFrame, meta):
+        """Sync the dataframe to target csv on datahub"""
         upload_link = self.get_upload_link(meta)
         csv_buffer = StringIO()
         df.to_csv(csv_buffer, index=False)
-        # TODO bigger file can take longer to upload, need to handle timeout or retry
+        # TODO handle retry
         res = requests.put(
             upload_link,
             data=csv_buffer.getvalue(),

@@ -1,3 +1,5 @@
+"""Unit tests for the construction assets"""
+
 from unittest.mock import patch, MagicMock, Mock
 
 import pandas as pd
@@ -45,6 +47,7 @@ mock_pg_engine = Mock()
 )
 @patch("orchestrator.assets.construction.DataHubResource")
 def test_emission_factor_useeio_v2_success(mock_dhub, mock_read_excel, mock_excel_file):
+    """Test the emission_factor_useeio_v2 asset function with a successful download"""
     # Setup mock DataHubResource
     mock_dhub_instance = MagicMock()
     mock_dhub_instance.get_project_id.return_value = "test_project_id"
@@ -113,6 +116,7 @@ sample_eeio_data = pd.DataFrame(
 
 @pytest.fixture
 def setup_mocks(mocker):
+    """Setup mocks for the emission_factor_naics asset function"""
     # Mock the dhub object's methods
     mocker.patch.object(mock_dhub, "get_project_id", return_value="project123")
     mocker.patch.object(mock_dhub, "search_files_from_project", return_value=sample_download_link)
@@ -124,12 +128,14 @@ def setup_mocks(mocker):
 
 
 def test_emission_factor_naics_no_download_links_found(setup_mocks):
+    """Test the exception that no files were found from Datahub"""
     mock_dhub.search_files_from_project.return_value = []  # No download links found
     result = emission_factor_naics(mock_dhub, mock_pg_engine)
     assert result.empty, "Expected an empty DataFrame when no download links are found"
 
 
 def test_emission_factor_naics_with_data(setup_mocks):
+    """Test the emission_factor_naics asset function with a successful download"""
     result = emission_factor_naics(mock_dhub, mock_pg_engine)
     # Assert the result is not empty and contains expected columns
     assert not result.empty, "Expected a non-empty DataFrame"
