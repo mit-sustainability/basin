@@ -3,14 +3,30 @@ from dagster import (
     get_dagster_logger,
     ResourceParam,
 )
+from dagster_pandera import pandera_schema_to_dagster_type
+import pandera as pa
+from pandera.typing import Series, DateTime
 
-import numpy as np
 import pandas as pd
 
 from orchestrator.assets.utils import empty_dataframe_from_model, add_dhub_sync
 from orchestrator.resources.datahub import DataHubResource
 
 logger = get_dagster_logger()
+
+
+class WasteNewbatchData(pa.SchemaModel):
+    """Validate the output data schema of newbatch waste asset"""
+
+    customer_key: Series[str] = pa.Field(alias="Customer Key", description="Waste collection building id")
+    customer_name: Series[str] = pa.Field(alias="Customer Name", description="Waste collection building name")
+    service_street: Series[str] = pa.Field(alias="Service Street", description="Waste collection site street")
+    service_date: Series[DateTime] = pa.Field(alias="Service Date", description="Service Date")
+    Material: Series[str] = pa.Field(
+        isin=["Trash", "Compost", "Recycling", "C & D", "Yard Waste", "Other"],
+        description="Waste category",
+    )
+    Tons: Series[float] = pa.Field(description="Total tonnage of waste collected")
 
 
 @asset(
@@ -37,6 +53,7 @@ def historical_waste_recycle(dhub: ResourceParam[DataHubResource]):
     io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
+    dagster_type=pandera_schema_to_dagster_type(WasteNewbatchData),
 )
 def newbatch_waste_recycle(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the new batch of waste data from the Data Hub"""
@@ -45,7 +62,7 @@ def newbatch_waste_recycle(dhub: ResourceParam[DataHubResource]):
     download_links = dhub.search_files_from_project(project_id, "MIT Data 7.1.23-12.31.23")
     if len(download_links) == 0:
         logger.error("No download links found!")
-        return pd.DataFrame()
+        return empty_dataframe_from_model(WasteNewbatchData)
     # Load the data
     workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
     sheet1 = pd.read_excel(workbook, sheet_name=0)
@@ -59,6 +76,7 @@ def newbatch_waste_recycle(dhub: ResourceParam[DataHubResource]):
         "Tons",
     ]
     combined = pd.concat([sheet1[cols], sts[cols]], axis=0)
+    combined.dropna(inplace=True)
     return combined
 
 
