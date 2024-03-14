@@ -8,6 +8,8 @@ dagster-dbt==0.22.7
 dagster-pandas==0.22.7
 dagster-pandera==0.22.7
 dagster-shell
+dask==2024.3.0
+dask-expr==1.0.2
 distributed
 oracledb==2.0.1
 pandas
