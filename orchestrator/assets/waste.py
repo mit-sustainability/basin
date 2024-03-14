@@ -22,7 +22,7 @@ def historical_waste_recycle(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the historical_waste_recycle data from the Data Hub"""
     project_id = dhub.get_project_id("Material Matters")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "Historical_Waste_Recycle")
+    download_links = dhub.search_files_from_project(project_id, "historical_waste_recyle_june2023")
     if len(download_links) == 0:
         logger.error("No download links found!")
         return pd.DataFrame()
@@ -71,7 +71,7 @@ def small_stream_recycle(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the hard-to-recycle data from the Data Hub"""
     project_id = dhub.get_project_id("Material Matters")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "MIT_small_stream.xlsx")
+    download_links = dhub.search_files_from_project(project_id, "MIT_small_stream_waste")
     if len(download_links) == 0:
         logger.error("No download links found!")
         return pd.DataFrame()
