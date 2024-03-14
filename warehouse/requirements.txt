@@ -1,5 +1,6 @@
 dbt-core==1.7.6
 dbt-postgres==1.7.6
 dbt-extractor==0.5.1
+protobuf==4.25.3
 dbt-duckdb
 sqlfluff
