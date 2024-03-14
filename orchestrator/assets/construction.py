@@ -1,6 +1,5 @@
 from dagster import (
     asset,
-    AssetIn,
     get_dagster_logger,
     ResourceParam,
 )
@@ -10,7 +9,7 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import Series
 
-from orchestrator.assets.utils import empty_dataframe_from_model
+from orchestrator.assets.utils import empty_dataframe_from_model, add_dhub_sync
 from orchestrator.resources.postgres_io_manager import PostgreConnResources
 from orchestrator.resources.datahub import DataHubResource
 
@@ -190,30 +189,14 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     return factor_eeio_new
 
 
-@asset(
-    ins={
-        "table": AssetIn(
-            key=["final", "construction_expense_emission"],
-            input_manager_key="postgres_replace",
-        )
-    },
-    compute_kind="python",
-    group_name="dhub_sync",
-)
-def dhub_construction_cost(table, dhub: ResourceParam[DataHubResource]) -> None:
-    """Sync the construction cost data to DataHub"""
-    logger.info(f"{len(table)} rows of construction cost data are being synced to DataHub")
-    filename = "final_construction_cost.csv"
-    project_id = dhub.get_project_id("Scope3 Construction")
-    logger.info(f"Sync to project: {project_id}!")
-    meta = {
-        "name": filename,
-        "mimeType": "text/csv",
-        "storageContainer": project_id,
-        "destination": "shared-project",
-        "title": "Processed Construction Cost data",
+# Sync to datahub using the factory function
+dhub_construction_cost = add_dhub_sync(
+    asset_name="dhub_construction_cost",
+    table_key=["final", "construction_expense_emission"],
+    config={
+        "filename": "final_construction_cost.csv",
+        "project_name": "Scope3 Construction",
         "description": "Construction data with expense type and GHG emission",
-        "privacy": "public",
-        "organizations": ["MITOS"],
-    }
-    dhub.sync_dataframe_to_csv(table, meta)
+        "title": "Processed Construction Cost data",
+    },
+)

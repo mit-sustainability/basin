@@ -75,3 +75,19 @@ models:
         description: Expense in million dollars adjusted to 2021 dollars
       - name: ghg_emission
         description: Total CO2 emission of each expense type
+
+  - name: final_waste_recycle
+    description: "Up-to-date waste collection and recycling data from Facilities including small streams"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "service_date"
+        description: "Service Date"
+      - name: "customer_name"
+        description: "Name of te service site"
+      - name: "material"
+        description: "Waste category"
+      - name: "diverted"
+        description: "Tons being diverted"
+      - name: "tons"
+        description: "Total tonnage of waste collected"

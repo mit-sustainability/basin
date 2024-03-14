@@ -1,6 +1,7 @@
 """
 To add a daily schedule that materializes your dbt assets, uncomment the following lines.
 """
+
 from dagster import ScheduleDefinition
 from dagster_dbt import build_schedule_from_dbt_selection
 
