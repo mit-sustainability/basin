@@ -72,7 +72,7 @@ class DataHubResource:
         data = {
             "term": search_term,
             "projects": [project_id],
-            "paging": {"start": 0, "size": 20},
+            "paging": {"start": 0, "size": 50},
         }
         res = requests.post(url, headers=self.headers, json=data, timeout=default_timeout)
         if res.status_code == 200:
