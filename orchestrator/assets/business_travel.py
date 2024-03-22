@@ -14,9 +14,10 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime
 import pytz
+import requests
 from sqlalchemy import text
 
-from orchestrator.assets.utils import empty_dataframe_from_model
+from orchestrator.assets.utils import empty_dataframe_from_model, add_dhub_sync
 from orchestrator.resources.postgres_io_manager import PostgreConnResources
 from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.mit_warehouse import MITWHRSResource
@@ -87,8 +88,7 @@ def travel_spending(
             text(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}')")
         )
         table_exists = result.scalar()
-        tz = pytz.timezone("America/New_York")
-        last_update = datetime(2020, 1, 1, tzinfo=tz)
+        last_update = datetime(2020, 1, 1, tzinfo=pytz.UTC)
         if table_exists:
             result = conn.execute(text(f"SELECT last_update FROM raw.{target_table}"))
             last_update = pytz.utc.localize(result.scalar())
@@ -124,6 +124,7 @@ def travel_spending(
     group_name="raw",
 )
 def annual_cpi_index():
+    """Get annual CPI index from python cpi library"""
     DEFAULT_SERIES_ID = cpi.defaults.DEFAULT_SERIES_ID
     logger.info("Ectract the annual CPI data using the python cpi library ")
     cpi_df = cpi.series.get_by_id(DEFAULT_SERIES_ID).to_dataframe()
@@ -138,31 +139,17 @@ def annual_cpi_index():
     compute_kind="python",
     group_name="raw",
 )
-def cost_object_dlc_mapper(s3: S3Resource):
-    ref_bucket = "mitos-resources"
-    file_key = "reference/cost_collector_export.csv"
-    s3_client = s3.get_client()
-    obj = s3_client.get_object(Bucket=ref_bucket, Key=file_key)
-    mapper = pd.read_csv(obj["Body"])
-    mapper["Cost Object"] = mapper["Cost Object"].dropna().map(lambda x: str(x).replace("S", ""))
-    mapper["Cost Object"] = mapper["Cost Object"].fillna(0)
-    mapper["Cost Object"] = mapper["Cost Object"].astype("int64")
-    mapper.rename(columns={"Cost Object": "cost_object"}, inplace=True)
-    return mapper
-
-
-@asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
-def expense_category_mapper(s3: S3Resource):
-    ref_bucket = "mitos-resources"
-    file_key = "reference/expense_type_to_category.json"
-    s3_client = s3.get_client()
-    obj = s3_client.get_object(Bucket=ref_bucket, Key=file_key)
-    file_content = obj["Body"].read().decode("utf-8")
-    payload = json.loads(file_content)
+def expense_category_mapper(dhub: ResourceParam[DataHubResource]):
+    """This asset ingest the expense_type_to_category.json from the Data Hub"""
+    project_id = dhub.get_project_id("Scope3 Business Travel")
+    logger.info(f"Found project id: {project_id}!")
+    download_links = dhub.search_files_from_project(project_id, "expense_type_to_category.json")
+    if download_links is None:
+        logger.info("No download links found!")
+        return pd.DataFrame()
+    response = requests.get(download_links[0], timeout=10)
+    if response.status_code == 200:
+        payload = json.loads(response.text)
     mapper = {v: key for key, value in payload.items() for v in value}
     df = pd.DataFrame(list(mapper.items()), columns=["type", "category"])
     return df
@@ -173,13 +160,17 @@ def expense_category_mapper(s3: S3Resource):
     compute_kind="python",
     group_name="raw",
 )
-def expense_emission_mapper(s3: S3Resource):
-    ref_bucket = "mitos-resources"
-    file_key = "reference/expense_type_to_emissions.json"
-    s3_client = s3.get_client()
-    obj = s3_client.get_object(Bucket=ref_bucket, Key=file_key)
-    file_content = obj["Body"].read().decode("utf-8")
-    payload = json.loads(file_content)
+def expense_emission_mapper(dhub: ResourceParam[DataHubResource]):
+    """This asset ingest the expense_type_to_emissions.json from the Data Hub"""
+    project_id = dhub.get_project_id("Scope3 Business Travel")
+    logger.info(f"Found project id: {project_id}!")
+    download_links = dhub.search_files_from_project(project_id, "expense_type_to_emissions.json")
+    if download_links is None:
+        logger.info("No download links found!")
+        return pd.DataFrame()
+    response = requests.get(download_links[0], timeout=10)
+    if response.status_code == 200:
+        payload = json.loads(response.text)
     mapper = {v: key for key, value in payload.items() for v in value}
     df = pd.DataFrame(list(mapper.items()), columns=["expense_type", "emission_category"])
     return df
@@ -190,12 +181,15 @@ def expense_emission_mapper(s3: S3Resource):
     compute_kind="python",
     group_name="raw",
 )
-def mode_co2_mapper(s3: S3Resource):
-    ref_bucket = "mitos-resources"
-    file_key = "reference/transport_co2_factors.json"
-    s3_client = s3.get_client()
-    obj = s3_client.get_object(Bucket=ref_bucket, Key=file_key)
-    mapper = pd.read_csv(obj["Body"])
+def mode_co2_mapper(dhub: ResourceParam[DataHubResource]):
+    """This asset ingest the transport_co2_factors.csv from the Data Hub"""
+    project_id = dhub.get_project_id("Scope3 Business Travel")
+    logger.info(f"Found project id: {project_id}!")
+    download_links = dhub.search_files_from_project(project_id, "transport_co2_factors.csv")
+    if download_links is None:
+        logger.info("No download links found!")
+        return pd.DataFrame()
+    mapper = pd.read_csv(download_links[0])
     mapper = mapper.rename(columns={"Transport Mode": "transport_mode", "CO2 Factor": "CO2_factor"})
     return mapper
 
@@ -242,26 +236,14 @@ def cost_object_warehouse(dwhrs: MITWHRSResource):
     return df
 
 
-# AssetIn takes either key_prefix or key
-@asset(
-    ins={"table": AssetIn(key=["staging", "stg_travel_spending"], input_manager_key="postgres_replace")},
-    compute_kind="python",
-    group_name="dhub_sync",
-)
-def dhub_travel_spending(table, dhub: ResourceParam[DataHubResource]) -> None:
-    logger.info(f"{len(table)} rows of travel spending data are being synced to DataHub")
-    filename = "final_travel_spending.csv"
-    project_id = dhub.get_project_id("Scope3 Business Travel")
-    logger.info(f"Sync to project: {project_id}!")
-    meta = {
-        "name": filename,
-        "mimeType": "text/csv",
-        "storageContainer": project_id,
-        "destination": "shared-project",
-        "title": "Processed Travel Spending data",
+# Sync processed table back to datahub
+dhub_travel_spending = add_dhub_sync(
+    asset_name="dhub_travel_spending",
+    table_key=["staging", "stg_travel_spending"],
+    config={
+        "filename": "final_travel_spending.csv",
+        "project_name": "Scope3 Business Travel",
         "description": "Travel Spending data with expense group, DLC, emission factors and more",
-        "privacy": "public",
-        "organizations": ["MITOS"],
-    }
-    ### TODO might want to provide a more elegant way to handle the config
-    dhub.sync_dataframe_to_csv(table, meta)
+        "title": "Processed Travel Spending data",
+    },
+)

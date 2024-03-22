@@ -1,9 +1,10 @@
 """Shared objects and functions for all assets."""
 
+from datetime import datetime
 from dagster import asset, AssetIn, ResourceParam, get_dagster_logger
+import pytz
 
-
-from typing import List, NoReturn
+from typing import List
 import pandas as pd
 import pandera as pa
 from orchestrator.resources.datahub import DataHubResource
@@ -52,3 +53,8 @@ def add_dhub_sync(asset_name: str, table_key: List[str], config: dict):
         dhub.sync_dataframe_to_csv(table, meta)
 
     return dhub_ingest
+
+
+def str2datetime(tstring: str, fmat: str = "%Y-%m-%dT%H:%M:%S") -> datetime:
+    """Convert string to datetime"""
+    return datetime.strptime(tstring, fmat).replace(tzinfo=pytz.UTC)
