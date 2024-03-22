@@ -88,8 +88,7 @@ def travel_spending(
             text(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}')")
         )
         table_exists = result.scalar()
-        tz = pytz.timezone("America/New_York")
-        last_update = datetime(2020, 1, 1, tzinfo=tz)
+        last_update = datetime(2020, 1, 1, tzinfo=pytz.UTC)
         if table_exists:
             result = conn.execute(text(f"SELECT last_update FROM raw.{target_table}"))
             last_update = pytz.utc.localize(result.scalar())

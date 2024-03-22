@@ -66,7 +66,7 @@ class DataHubResource:
             return res.json()["data"]["temporarily_download_url"]
         return None
 
-    def search_files_from_project(self, project_id, search_term):
+    def search_files_from_project(self, project_id, search_term, **kwargs):
         """Return a list of file download links matching the search term in the project"""
         url = f"{self.api_endpoint}/search"
         data = {
@@ -74,6 +74,8 @@ class DataHubResource:
             "projects": [project_id],
             "paging": {"start": 0, "size": 50},
         }
+        # Allow advance search with additional parameters
+        data.update(kwargs)
         res = requests.post(url, headers=self.headers, json=data, timeout=default_timeout)
         if res.status_code == 200:
             files = res.json()["data"]
