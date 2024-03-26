@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "dagster dev",
+            "type": "python",
+            "request": "launch",
+            "module": "dagster",
+            "args": [
+                "dev",
+                "-w",
+                "workspace.yaml"
+            ],
+            "env": {
+                "DAGSTER_HOME": "${workspaceFolder}/orchestrator/.dagster",
+                "DAGSTER_LOCAL_MODE": "true"
+            },
+            "cwd": "${workspaceFolder}/orchestrator"
+        }
+    ]
+}
