@@ -19,7 +19,7 @@ models:
       - name: cal_year
         description: Expense record year
       - name: inflated_exp_amount
-        description: Adjusted by the latest annual CPI index
+        description: Adjusted to 2012 dollar using annual CPI index
       - name: dlc_name
         description: Department, Lab and Center name
       - name: school_area
@@ -35,7 +35,7 @@ models:
           - accepted_values:
               values: ['misc.', 'housing', 'meals', 'car', 'train', 'ferry', 'air']
       - name: co2_factor
-        description: CO2 emission factor
+        description: CO2 emission factor in kg/$ from USEEIO_v2
       - name: mtco2
         description: CO2 emission in megatons
   - name: stg_cost_object_rollup

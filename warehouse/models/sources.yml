@@ -138,6 +138,27 @@ sources:
           - name: Supply Chain Emission Factors without Margins
           - name: Margins of Supply Chain Emission Factors
           - name: Supply Chain Emission Factors with Margins
+            description: "eCO2 emission factor in kg/$ of NAICSv1.2 (2021 dollars)"
+      - name: emission_factor_useeio_v2
+        description: "USEEIO_v2 The US Environmentally-Extended Input-Output Model"
+        meta:
+          dagster:
+            asset_key: ["emission_factor_useeio_v2"]
+        columns:
+          - name: ID
+            description: "USEEIO code with region"
+            tests:
+              - unique
+          - name: emission_factor
+            description: "eCO2 emission factor in kg/$ from USEEIOv2.0 (2012 dollars)"
+          - name: Name
+            description: "USEEIO description"
+          - name: Code
+            description: "USEEIO Code"
+          - name: Category
+            description: "USEEIO Category"
+          - name: Description
+            description: "BEA code and name"
       - name: historical_waste_recycle
         description: "Waste recycle data from 2010 to 2023 June"
         meta:

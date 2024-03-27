@@ -16,17 +16,25 @@ WITH lab AS (
     FROM {{ source('raw', 'travel_spending') }}
 ),
 
-target_cpi AS (
+current_cpi AS (
     SELECT
         year,
         value
     FROM {{ source('raw', 'annual_cpi_index') }} ORDER BY year DESC LIMIT 1
 ),
 
+target_cpi AS (
+    SELECT
+        year,
+        value
+    FROM {{ source('raw', 'annual_cpi_index') }}
+    WHERE "year" = 2012
+),
+
 attached AS (
     SELECT
         l.*,
-        COALESCE(cpi.value, (SELECT value FROM target_cpi)) AS src
+        COALESCE(cpi.value, (SELECT value FROM current_cpi)) AS src
     FROM lab AS l
     LEFT JOIN {{ source('raw', 'annual_cpi_index') }} AS cpi
         ON l.cal_year = cpi.year
@@ -63,49 +71,70 @@ tagged AS (
         ON adj.cost_object = dlc.cost_object
 ),
 
-cat AS (
-    SELECT
-        t.*,
-        COALESCE(c.category, 'Other') AS expense_group,
-        ROW_NUMBER() OVER (PARTITION BY t.transaction_id ORDER BY LENGTH(c.type) DESC) AS rn1
-    FROM tagged AS t
-    LEFT JOIN {{ source('raw', 'expense_category_mapper') }} AS c
-        ON LOWER(t.expense_type) LIKE '%' || c.type || '%'
-),
 
 em AS (
     SELECT
-        c.*,
+        t.*,
         COALESCE(e.emission_category, 'misc.') AS transport_mode,
         ROW_NUMBER()
-            OVER (PARTITION BY c.transaction_id ORDER BY LENGTH(e.expense_type) DESC)
-        AS rn2
-    FROM (SELECT * FROM cat WHERE rn1 = 1) AS c
+            OVER (PARTITION BY t.transaction_id ORDER BY LENGTH(e.expense_type) DESC)
+        AS rn
+    FROM tagged AS t
     LEFT JOIN {{ source('raw', 'expense_emission_mapper') }} AS e
-        ON LOWER(c.expense_type) LIKE '%' || e.expense_type || '%'
+        ON LOWER(t.expense_type) LIKE '%' || e.expense_type || '%'
+),
+
+ef AS (
+    SELECT
+        CASE
+            WHEN "Code" = '721000' THEN 'housing'
+            WHEN "Code" = '311990' THEN 'meals'
+            WHEN "Code" = '481000' THEN 'air'
+            WHEN "Code" = '482000' THEN 'train'
+            WHEN "Code" = '483000' THEN 'ferry'
+            WHEN "Code" = '485000' THEN 'car'
+            ELSE 'misc.'
+        END AS transport_mode,
+        emission_factor
+    FROM {{ source('raw', 'emission_factor_useeio_v2') }}
+    WHERE "Code" IN ('721000', '311990', '481000', '482000', '483000', '485000')
 ),
 
 factor AS (
     SELECT
         e.*,
-        m."CO2_factor" AS co2_factor
-    FROM (SELECT * FROM em WHERE rn2 = 1) AS e
-    INNER JOIN {{ source('raw', 'mode_co2_mapper') }} AS m
-        ON e.transport_mode = m.transport_mode
+        COALESCE(ef."emission_factor", 0) AS co2_factor
+    FROM (SELECT * FROM em WHERE rn = 1) AS e
+    LEFT JOIN ef
+        ON e.transport_mode = ef.transport_mode
+),
+
+-- Add expense group for visualization from transport mode
+cat AS (
+    SELECT
+        *,
+        CASE
+            WHEN transport_mode = 'air' THEN 'Air Travel'
+            WHEN transport_mode = 'housing' THEN 'Accommodations'
+            WHEN transport_mode = 'meals' THEN 'Food'
+            WHEN transport_mode IN ('car', 'train', 'ferry') THEN 'Ground Travel'
+            ELSE 'Other'
+        END AS expense_group
+    FROM factor
 )
 
 SELECT
-    f.expense_amount,
-    f.expense_type,
-    f.trip_end_date,
-    f.cost_object,
-    f.fiscal_year,
-    f.cal_year,
-    f.inflated_exp_amount,
-    f.dlc_name,
-    f.school_area,
-    f.expense_group,
-    f.transport_mode,
-    f.co2_factor,
-    f.co2_factor * f.inflated_exp_amount AS mtco2
-FROM factor AS f
+    c.expense_amount,
+    c.expense_type,
+    c.trip_end_date,
+    c.cost_object,
+    c.fiscal_year,
+    c.cal_year,
+    c.inflated_exp_amount,
+    c.dlc_name,
+    c.school_area,
+    c.expense_group,
+    c.transport_mode,
+    c.co2_factor,
+    c.co2_factor * c.inflated_exp_amount / 1000 AS mtco2
+FROM cat AS c
