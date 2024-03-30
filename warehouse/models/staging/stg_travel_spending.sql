@@ -40,10 +40,12 @@ attached AS (
         ON l.cal_year = cpi.year
 ),
 
+-- Maybe still display the Most current Dollar amount, but use a different column fo Emission Calculation
 adjusted AS (
     SELECT
         transaction_id,
-        expense_amount * (SELECT value FROM target_cpi) / src AS inflated_exp_amount,
+        expense_amount * (SELECT value FROM target_cpi) / src AS inflated_exp_2012,
+        expense_amount * (SELECT value FROM current_cpi) / src AS inflated_exp_amount,
         cal_year,
         fiscal_year,
         expense_amount,
@@ -88,7 +90,7 @@ ef AS (
     SELECT
         CASE
             WHEN "Code" = '721000' THEN 'housing'
-            WHEN "Code" = '311990' THEN 'meals'
+            WHEN "Code" = '722211' THEN 'meals'
             WHEN "Code" = '481000' THEN 'air'
             WHEN "Code" = '482000' THEN 'train'
             WHEN "Code" = '483000' THEN 'ferry'
@@ -97,7 +99,7 @@ ef AS (
         END AS transport_mode,
         emission_factor
     FROM {{ source('raw', 'emission_factor_useeio_v2') }}
-    WHERE "Code" IN ('721000', '311990', '481000', '482000', '483000', '485000')
+    WHERE "Code" IN ('721000', '722211', '481000', '482000', '483000', '485000')
 ),
 
 factor AS (
@@ -136,5 +138,5 @@ SELECT
     c.expense_group,
     c.transport_mode,
     c.co2_factor,
-    c.co2_factor * c.inflated_exp_amount / 1000 AS mtco2
+    c.co2_factor * c.inflated_exp_2012 / 1000 AS mtco2
 FROM cat AS c
