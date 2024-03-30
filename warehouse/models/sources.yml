@@ -54,17 +54,6 @@ sources:
             description: "Cost Collector ID effective since"
           - name: last_update
             description: "Date of last update"
-      - name: expense_category_mapper
-        description: "Mapping database for expense type to larger categories"
-        meta:
-          dagster:
-            asset_key: ["expense_category_mapper"]
-        columns:
-          - name: type
-          - name: category
-            description: "Larger expense group"
-            tests:
-              - not_null
       - name: expense_emission_mapper
         description: "Mapping database for expense type to transport mode required for CO2 factor matching"
         meta:
@@ -76,17 +65,6 @@ sources:
             description: "Larger GHG emission group"
             tests:
               - not_null
-      - name: mode_co2_mapper
-        description: "Mapping dictionary for CO2 factor from transport mode"
-        meta:
-          dagster:
-            asset_key: ["mode_co2_mapper"]
-        columns:
-          - name: transport_mode
-            tests:
-              - unique
-          - name: CO2_factor
-            description: "CO2 emission factor based on transport mode"
       - name: construction_expense
         description: "Construction expense data from VPCSS"
         meta:
