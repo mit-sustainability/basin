@@ -54,17 +54,6 @@ sources:
             description: "Cost Collector ID effective since"
           - name: last_update
             description: "Date of last update"
-      - name: expense_category_mapper
-        description: "Mapping database for expense type to larger categories"
-        meta:
-          dagster:
-            asset_key: ["expense_category_mapper"]
-        columns:
-          - name: type
-          - name: category
-            description: "Larger expense group"
-            tests:
-              - not_null
       - name: expense_emission_mapper
         description: "Mapping database for expense type to transport mode required for CO2 factor matching"
         meta:
@@ -76,17 +65,6 @@ sources:
             description: "Larger GHG emission group"
             tests:
               - not_null
-      - name: mode_co2_mapper
-        description: "Mapping dictionary for CO2 factor from transport mode"
-        meta:
-          dagster:
-            asset_key: ["mode_co2_mapper"]
-        columns:
-          - name: transport_mode
-            tests:
-              - unique
-          - name: CO2_factor
-            description: "CO2 emission factor based on transport mode"
       - name: construction_expense
         description: "Construction expense data from VPCSS"
         meta:
@@ -138,6 +116,27 @@ sources:
           - name: Supply Chain Emission Factors without Margins
           - name: Margins of Supply Chain Emission Factors
           - name: Supply Chain Emission Factors with Margins
+            description: "eCO2 emission factor in kg/$ of NAICSv1.2 (2021 dollars)"
+      - name: emission_factor_useeio_v2
+        description: "USEEIO_v2 The US Environmentally-Extended Input-Output Model"
+        meta:
+          dagster:
+            asset_key: ["emission_factor_useeio_v2"]
+        columns:
+          - name: ID
+            description: "USEEIO code with region"
+            tests:
+              - unique
+          - name: emission_factor
+            description: "eCO2 emission factor in kg/$ from USEEIOv2.0 (2012 dollars)"
+          - name: Name
+            description: "USEEIO description"
+          - name: Code
+            description: "USEEIO Code"
+          - name: Category
+            description: "USEEIO Category"
+          - name: Description
+            description: "BEA code and name"
       - name: historical_waste_recycle
         description: "Waste recycle data from 2010 to 2023 June"
         meta:

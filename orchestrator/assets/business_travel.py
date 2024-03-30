@@ -139,27 +139,6 @@ def annual_cpi_index():
     compute_kind="python",
     group_name="raw",
 )
-def expense_category_mapper(dhub: ResourceParam[DataHubResource]):
-    """This asset ingest the expense_type_to_category.json from the Data Hub"""
-    project_id = dhub.get_project_id("Scope3 Business Travel")
-    logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "expense_type_to_category.json")
-    if download_links is None:
-        logger.info("No download links found!")
-        return pd.DataFrame()
-    response = requests.get(download_links[0], timeout=10)
-    if response.status_code == 200:
-        payload = json.loads(response.text)
-    mapper = {v: key for key, value in payload.items() for v in value}
-    df = pd.DataFrame(list(mapper.items()), columns=["type", "category"])
-    return df
-
-
-@asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
 def expense_emission_mapper(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the expense_type_to_emissions.json from the Data Hub"""
     project_id = dhub.get_project_id("Scope3 Business Travel")
@@ -174,24 +153,6 @@ def expense_emission_mapper(dhub: ResourceParam[DataHubResource]):
     mapper = {v: key for key, value in payload.items() for v in value}
     df = pd.DataFrame(list(mapper.items()), columns=["expense_type", "emission_category"])
     return df
-
-
-@asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
-def mode_co2_mapper(dhub: ResourceParam[DataHubResource]):
-    """This asset ingest the transport_co2_factors.csv from the Data Hub"""
-    project_id = dhub.get_project_id("Scope3 Business Travel")
-    logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "transport_co2_factors.csv")
-    if download_links is None:
-        logger.info("No download links found!")
-        return pd.DataFrame()
-    mapper = pd.read_csv(download_links[0])
-    mapper = mapper.rename(columns={"Transport Mode": "transport_mode", "CO2 Factor": "CO2_factor"})
-    return mapper
 
 
 @asset(
