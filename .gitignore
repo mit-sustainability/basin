@@ -158,3 +158,4 @@ orchestrator/.dagster/*
 /.pants.*
 /dist/
 /.pids
+.vscode/
