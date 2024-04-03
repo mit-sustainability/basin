@@ -79,11 +79,13 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
             # row_count = len(obj)
             # context.log.info(f"Row count: {row_count}")
             with connect_postgresql(config=self._config) as con:
+                if self.write_method == "replace":
+                    con.execute(text(f"TRUNCATE {schema}.{table} RESTART IDENTITY;"))
                 obj.to_sql(
                     con=con,
                     name=table,
                     schema=schema,
-                    if_exists=self.write_method,
+                    if_exists="append",
                     chunksize=500,
                     index=False,
                 )

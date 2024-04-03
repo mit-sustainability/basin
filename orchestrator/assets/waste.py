@@ -38,14 +38,14 @@ def historical_waste_recycle(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the historical_waste_recycle data from the Data Hub"""
     project_id = dhub.get_project_id("Material Matters")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "historical_waste_recyle_june2023")
+    download_links = dhub.search_files_from_project(project_id, "historical_waste_recycle_june2023")
     if len(download_links) == 0:
         logger.error("No download links found!")
         return pd.DataFrame()
     # Load the data
     workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
     df = pd.read_excel(workbook, usecols="A:F", sheet_name="Sheet1")
-
+    logger.info(f"Loaded historical waste recycle data with shape: {df.shape}!")
     return df
 
 
