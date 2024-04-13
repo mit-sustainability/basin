@@ -112,3 +112,14 @@ models:
         description: "Commute mode"
       - name: mtco2
         description: "Anual equivalent CO2 emission in metric tons"
+  - name: stg_commuting_survey_2023
+    description: "Estimated GHG emissions from Commuting Survey 2023."
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "mode"
+        description: "Commute mode"
+      - name: "miles"
+        description: "Weekly commute miles by mode"
+      - name: mtco2
+        description: "Anual equivalent CO2 emission in metric tons"
