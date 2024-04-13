@@ -213,14 +213,14 @@ def commuting_survey_2023(dhub: ResourceParam[DataHubResource]):
     return df_out[out_cols].fillna(0)
 
 
-# # Sync to datahub using the factory function
-# dhub_waste_sync = add_dhub_sync(
-#     asset_name="dhub_waste_sync",
-#     table_key=["final", "final_waste_recycle"],
-#     config={
-#         "filename": "final_waste_update",
-#         "project_name": "Material Matters",
-#         "description": "Processed waste data including historical, Casella and small stream",
-#         "title": "Processed Waste Data till 2023",
-#     },
-# )
+# Sync to datahub using the factory function
+dhub_commute_sync = add_dhub_sync(
+    asset_name="dhub_commute_sync",
+    table_key=["final", "commuting_emission"],
+    config={
+        "filename": "scope3_commuting_emission",
+        "project_name": "Scope3 Commuting",
+        "description": "Estimate of CO2eq emissions from commuting survey 2018, 2021, 2023",
+        "title": "scope3_commuting_emission",
+    },
+)
