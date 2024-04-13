@@ -4,14 +4,23 @@
 
 WITH distance AS (
     SELECT
-        "drove alone" * 21 * commute_time_average_hours AS drove_alone,
-        "carpooled(2-6)" * 21 * commute_time_average_hours AS carpooled,
-        "vanpooled(7+)" * 21 * commute_time_average_hours AS vanpooled,
-        shuttle * 12 * commute_time_average_hours AS shuttle,
-        "public transportation" / 4 * 65 * commute_time_average_hours AS subway,
-        "public transportation" / 4 * 65 * commute_time_average_hours AS commuter_rail,
-        "public transportation" / 4 * 12 * commute_time_average_hours AS bus,
-        "public transportation" / 4 * 125 * commute_time_average_hours AS intercity
+        "drove alone" * {{ var('car_speed') }} * commute_time_average_hours AS drove_alone,
+        "carpooled(2-6)" * {{ var('car_speed') }} * commute_time_average_hours AS carpooled,
+        "vanpooled(7+)" * {{ var('car_speed') }} * commute_time_average_hours AS vanpooled,
+        shuttle * {{ var('bus_speed') }} * commute_time_average_hours AS shuttle,
+        "public transportation"
+        / 4
+        * {{ var('transit_speed') }}
+        * commute_time_average_hours AS subway,
+        "public transportation"
+        / 4
+        * {{ var('transit_speed') }}
+        * commute_time_average_hours AS commuter_rail,
+        "public transportation" / 4 * {{ var('bus_speed') }} * commute_time_average_hours AS bus,
+        "public transportation"
+        / 4
+        * {{ var('rail_speed') }}
+        * commute_time_average_hours AS intercity
     FROM {{ source('raw', 'commuting_survey_2023') }}
 ),
 
@@ -28,7 +37,6 @@ total_mileage AS (
     FROM distance
 ),
 
-
 emission_factors AS (
     SELECT
         vehicle_type,
@@ -36,7 +44,6 @@ emission_factors AS (
         ROW_NUMBER() OVER (ORDER BY vehicle_type) AS mode_id
     FROM {{source('raw', 'commuting_emission_factors_EPA')}}
 ),
-
 
 -- combine and transpose the mileage CTEs and attach a mode_id
 mileage_with_mode AS (
