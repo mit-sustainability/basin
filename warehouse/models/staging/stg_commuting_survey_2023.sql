@@ -117,7 +117,7 @@ ghg AS (
 -- Average GHG across various public transport methods
 transit_ghg AS (
     SELECT
-        'public_transport' AS "mode",
+        'public_transportation' AS "mode",
         SUM(g.mile) AS mile,
         SUM(g.ghg) AS ghg
     FROM ghg AS g
