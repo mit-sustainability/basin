@@ -92,3 +92,34 @@ models:
         description: "Tons being diverted"
       - name: "tons"
         description: "Total tonnage of waste collected"
+  - name: stg_commuting_survey_2018
+    description: "Estimated GHG emissions from Commuting Survey 2018."
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "mode"
+        description: "Commute mode"
+      - name: "miles"
+        description: "Daily commute miles by mode"
+      - name: mtco2
+        description: "Anual equivalent CO2 emission in metric tons"
+  - name: stg_commuting_survey_2021
+    description: "Estimated GHG emissions from Commuting Survey 2021."
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "mode"
+        description: "Commute mode"
+      - name: mtco2
+        description: "Anual equivalent CO2 emission in metric tons"
+  - name: stg_commuting_survey_2023
+    description: "Estimated GHG emissions from Commuting Survey 2023."
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "mode"
+        description: "Commute mode"
+      - name: "miles"
+        description: "Weekly commute miles by mode"
+      - name: mtco2
+        description: "Anual equivalent CO2 emission in metric tons"

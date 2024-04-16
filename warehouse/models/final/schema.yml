@@ -91,3 +91,17 @@ models:
         description: "Tons being diverted"
       - name: "tons"
         description: "Total tonnage of waste collected"
+  - name: commuting_emission
+    description: "Estimated GHG Scope3 commuting emissions"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "mode"
+        description: "Commute mode"
+      - name: mtco2
+        description: "Anual equivalent CO2 emission in metric tons"
+      - name: year
+        description: "Survey year"
+        tests:
+          - accepted_values:
+              values: [2018, 2021, 2023]

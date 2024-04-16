@@ -189,3 +189,97 @@ sources:
             description: "Tons being diverted"
           - name: "tons"
             description: "Total tonnage of waste collected"
+      - name: commuting_survey_2018
+        description: "Commuting Survey 2018 from IR, commuting time broken down by commuting modes"
+        meta:
+          dagster:
+            asset_key: ["commuting_survey_2018"]
+        columns:
+          - name: "commute_time"
+            description: "Commute time bins"
+          - name: "drive_alone"
+            description: "Count of people driving alone"
+          - name: "drive_alone_and_public_transport"
+            description: "Count of people driving alone and using public transport"
+          - name: "walk_and_public_transport"
+            description: "Count of people walking and using public transport"
+          - name: "drop_off_and_public_transport"
+            description: "Count of people being dropped off and using public transport"
+          - name: "bike_and_public_transport"
+            description: "Count of people biking and using public transport"
+          - name: "carpooled(2-6)"
+            description: "Count of people carpooling with 2-6 people"
+          - name: "vanpooled(7+)"
+            description: "Count of people vanpooling with 7+ people"
+          - name: "dropped_off"
+            description: "Count of people being dropped off"
+          - name: "taxi_and_ride_service"
+            description: "Count of people using taxi and ride service"
+          - name: "bicycled"
+            description: "Count of people biking"
+          - name: "walked"
+            description: "Count of people walking"
+          - name: "Remote"
+            description: "Count of people working remotely"
+          - name: "other"
+            description: "Count of people using other commuting modes"
+          - name: "unknown"
+            description: "Count of people with unknown commuting modes"
+          - name: "no_answer"
+            description: "Count of people not answering"
+          - name: "commute_time_average_hours"
+            description: "Average commute time in hours"
+      - name: commuting_emission_factors_EPA
+        description: "Emission factors for commuting modes from EPA 2024 data"
+        meta:
+          dagster:
+            asset_key: ["commuting_emission_factors_EPA"]
+        columns:
+          - name: "vehicle_type"
+            description: "Vehicle type"
+          - name: "CO2_kg"
+            description: "Emission factors of CO2 in kg/mile"
+          - name: "CH4_g"
+            description: "Emission factors of CH4 in g/mile"
+          - name: "N2O_g"
+            description: "Emission factors of N2O in g/mile"
+          - name: "units"
+            description: "Emission factors units"
+          - name: "CO2eq_kg"
+            description: "Emission factors of equivalent CO2 combining three GHGs using GWP in kg/mile"
+          - name: last_update
+            description: "Timestamp of the entry being added"
+      - name: commuting_survey_2021
+        description: "Commuting Survey 2021 from IR, total commuting time of different roles broken down by commuting modes"
+        meta:
+          dagster:
+            asset_key: ["commuting_survey_2021"]
+        columns:
+          - name: "drove_alone"
+            description: "Minutes of driving alone"
+          - name: "carpooled(2-6)"
+            description: "Minutes of carpooling with 2-6 people"
+          - name: "vanpooled(7+)"
+            description: "Minutes of vanpooling with 7+ people"
+          - name: "shuttle"
+            description: "Minutes of using shuttle"
+          - name: "public transportation"
+            description: "Minutes of using public transportation"
+      - name: commuting_survey_2023
+        description: "Commuting Survey 2023 from IR, commuting time broken down by commuting modes"
+        meta:
+          dagster:
+            asset_key: ["commuting_survey_2023"]
+        columns:
+          - name: "commute_time_average"
+            description: "Average commute time in hours"
+          - name: "drove_alone"
+            description: "Count of people driving alone"
+          - name: "carpooled(2-6)"
+            description: "Count of people carpooling with 2-6 people"
+          - name: "vanpooled(7+)"
+            description: "Count of people vanpooling with 7+ people"
+          - name: "shuttle"
+            description: "Count of people using shuttle"
+          - name: "public transportation"
+            description: "Count of people using public transportation"
