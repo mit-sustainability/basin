@@ -64,7 +64,7 @@ models:
         description: "expense in million dollars adjusted to 2021 dollars"
       - name: ghg_emission
         description: "eCO2 GHG emission in megatons"
-  - name: stg_dof_mainenance_cost
+  - name: stg_dof_maintenance_cost
     description: "Adjusted fiscal year maintenance cost and GHG emission"
     meta:
       owner: yu_cheng@mit.edu

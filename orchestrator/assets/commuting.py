@@ -5,29 +5,12 @@ from dagster import (
     get_dagster_logger,
     ResourceParam,
 )
-from dagster_pandera import pandera_schema_to_dagster_type
-import pandera as pa
-from pandera.typing import Series, DateTime
 import pandas as pd
 
-from orchestrator.assets.utils import empty_dataframe_from_model, add_dhub_sync
+from orchestrator.assets.utils import add_dhub_sync
 from orchestrator.resources.datahub import DataHubResource
 
 logger = get_dagster_logger()
-
-
-class CommutingSurvey(pa.SchemaModel):
-    """Validate the output data schema of newbatch waste asset"""
-
-    customer_key: Series[str] = pa.Field(alias="Customer Key", description="Waste collection building id")
-    customer_name: Series[str] = pa.Field(alias="Customer Name", description="Waste collection building name")
-    service_street: Series[str] = pa.Field(alias="Service Street", description="Waste collection site street")
-    service_date: Series[DateTime] = pa.Field(alias="Service Date", description="Service Date")
-    Material: Series[str] = pa.Field(
-        isin=["Trash", "Compost", "Recycling", "C & D", "Yard Waste", "Other"],
-        description="Waste category",
-    )
-    Tons: Series[float] = pa.Field(description="Total tonnage of waste collected")
 
 
 @asset(
