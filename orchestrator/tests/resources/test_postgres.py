@@ -41,7 +41,6 @@ def mock_dataframe():
 def mock_context(mocker):
     mock_context = MagicMock(spec=OutputContext)
     mock_context.asset_key = AssetKey(["public", "test_table"])
-    mock_context.log = MagicMock()
     return mock_context
 
 

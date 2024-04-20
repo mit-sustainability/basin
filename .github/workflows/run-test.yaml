@@ -1,0 +1,39 @@
+name: Build and Deploy
+on:
+    pull_request:
+        branches:
+            - main
+
+permissions:
+    id-token: write
+    contents: read
+jobs:
+    Run-Unit-Tests:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                python-version: ["3.11"]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v5
+              with:
+                python-version: ${{ matrix.python-version }}
+            - name: Configure AWS Authentication
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                role-to-assume: arn:aws:iam::860551228838:role/github-action-access
+                aws-region: us-east-1
+                role-session-name: GitHub_to_AWS_via_FederatedOIDC
+            - name: Install dependencies
+              run: |
+                make setup-dev
+            - name: Run tests
+              working-directory: ./orchestrator
+              env:
+                PG_WAREHOUSE_HOST: ${{ secrets.PG_WAREHOUSE_HOST }}
+                PG_USER: sustain
+                PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+              run: |
+                DAGSTER_DBT_PARSE_PROJECT_ON_LOAD=1 pytest tests
