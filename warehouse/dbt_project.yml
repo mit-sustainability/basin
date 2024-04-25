@@ -22,7 +22,7 @@ require-dbt-version: [">=1.0.0", "<2.0.0"]
 
 vars:
   car_speed: 21
-  transit_speed: 65
+  transit_speed: 25 # consider T speed, and average of Commuter rail
   rail_speed: 125
   bus_speed: 12
 

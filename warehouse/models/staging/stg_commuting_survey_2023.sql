@@ -110,7 +110,7 @@ ghg AS (
     SELECT
         "mode",
         mile,
-        mile * "CO2eq_kg" * 2 * {{work_week}} AS ghg -- TO AND FROM, 50 working weeks
+        mile * "CO2eq_kg" * 2 * 5 * {{work_week}} AS ghg -- TO AND FROM, 5 days * 50 working weeks
     FROM attached
 ),
 
