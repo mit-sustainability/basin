@@ -36,49 +36,49 @@ duration_with_mode AS (
     SELECT
         'carpooled' AS "mode",
         11 AS mode_id,
-        carpooled / 3 AS duration,
+        carpooled * {{ var('car_share_ratio') }} AS duration,
         {{ var('car_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'vanpooled' AS "mode",
         11 AS mode_id,
-        vanpooled / 7 AS duration,
+        vanpooled * {{ var('van_share_ratio') }} AS duration,
         {{ var('car_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'shuttle' AS "mode",
         4 AS mode_id,
-        shuttle AS duration,
+        shuttle AS duration, -- shuttle emission factor is per passenger mile
         {{ var('bus_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'subway' AS "mode",
         12 AS mode_id,
-        transit / 4 AS duration,
-        {{ var('transit_speed') }} AS speed_factor
+        transit * {{ var('t_ratio') }} AS duration,
+        {{ var('t_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'commuter_rail' AS "mode",
         5 AS mode_id,
-        transit / 4 AS duration,
-        {{ var('transit_speed') }} AS speed_factor
+        transit * {{ var('rail_ratio') }} AS duration,
+        {{ var('rail_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'intercity' AS "mode",
         7 AS mode_id,
-        transit / 4 AS duration,
-        {{ var('rail_speed') }} AS speed_factor
+        transit * {{ var('intercity_ratio') }} AS duration,
+        {{ var('intercity_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'bus' AS "mode",
         4 AS mode_id,
-        transit / 4 AS duration,
+        transit * {{ var('bus_ratio') }} AS duration,
         {{ var('bus_speed') }} AS speed_factor
     FROM total_time
 ),

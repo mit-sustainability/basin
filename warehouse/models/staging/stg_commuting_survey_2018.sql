@@ -1,9 +1,8 @@
 -- set static variables using jinja2 syntax
-{% set reply_rate = 0.5 %}
+{% set reply_rate = 0.49 %}
 {% set transit_ratio = 0.5 %}
-{% set car_share_ratio = 0.4 %}
-{% set van_share_ratio = 0.2 %}
 {% set work_week = 50 %}
+{% set transit_speed = 40 %}
 
 WITH distance AS (
     SELECT
@@ -12,34 +11,34 @@ WITH distance AS (
         * drive_alone_and_public_transport
         * (
             {{ var('car_speed') }} * {{ transit_ratio }}
-            + (1 - {{ transit_ratio }}) * {{ var('transit_speed') }}
+            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
         ) AS drive_and_public_transport,
         walk_and_public_transport
         * commute_time_average_hours
         * (1 - {{ transit_ratio }})
-        * {{ var('transit_speed') }} AS walk_and_public_transport,
+        * {{ transit_speed }} AS walk_and_public_transport,
         drop_off_and_public_transport
         * commute_time_average_hours
         * (
-            {{ var('car_speed') }} * {{ transit_ratio }} * {{ car_share_ratio }}
-            + (1 - {{ transit_ratio }}) * {{ var('transit_speed') }}
+            {{ var('car_speed') }} * {{ transit_ratio }} * {{ var("car_share_ratio") }}
+            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
         ) AS dropoff_and_public_transport,
         bike_and_public_transport
         * commute_time_average_hours
         * (1 - {{ transit_ratio }})
-        * {{ var('transit_speed') }} AS bike_and_public_transport,
+        * {{ transit_speed }} AS bike_and_public_transport,
         "carpooled(2-6)"
         * commute_time_average_hours
         * {{ var('car_speed') }}
-        * {{ car_share_ratio }} AS "carpooled(2-6)",
+        * {{ var("car_share_ratio") }} AS "carpooled(2-6)",
         "vanpooled(7+)"
         * commute_time_average_hours
         * {{ var('car_speed') }}
-        * {{ van_share_ratio }} AS "vanpooled(7+)",
+        * {{ var("van_share_ratio") }} AS "vanpooled(7+)",
         dropped_off
         * commute_time_average_hours
         * {{ var('car_speed') }}
-        * {{ van_share_ratio }} AS dropped_off,
+        * {{ var("car_share_ratio") }} AS dropped_off,
         taxi_and_ride_service * {{ var('car_speed') }} * commute_time_average_hours AS taxi
     FROM {{ source('raw', 'commuting_survey_2018') }}
 ),
@@ -62,18 +61,18 @@ subway_mileage AS (
     SELECT
         d_pt
         * (1 - {{ transit_ratio }})
-        * {{var('transit_speed')}}
+        * {{ transit_speed }}
         / (
             {{ transit_ratio }} * {{var('car_speed')}}
-            + (1 - {{ transit_ratio }}) * {{var('transit_speed')}}
+            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
         )
         + w_pt
         + r_pt
         * (1 - {{ transit_ratio }})
-        * {{var('transit_speed')}}
+        * {{ transit_speed }}
         / (
-            {{ transit_ratio }} * {{var('car_speed')}} * {{car_share_ratio}}
-            + (1 - {{ transit_ratio }}) * {{var('transit_speed')}}
+            {{ transit_ratio }} * {{var('car_speed')}} * {{var("car_share_ratio")}}
+            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
         )
         + b_pt AS subway
     FROM daily_mileage
@@ -83,8 +82,8 @@ transit_mileage AS (
     SELECT
         subway,
         subway AS commuter_rail,
-        subway * {{var('rail_speed')}} / {{var('transit_speed')}} AS intercity,
-        subway * {{var('bus_speed')}} / {{var('transit_speed')}} AS bus
+        subway * {{var('intercity_speed')}} / {{ transit_speed }} AS intercity,
+        subway * {{var('bus_speed')}} / {{ transit_speed }} AS bus
     FROM subway_mileage
 ),
 
@@ -96,15 +95,15 @@ mileage AS (
         * {{var('car_speed')}}
         / (
             {{ transit_ratio }} * {{var('car_speed')}}
-            + (1 - {{ transit_ratio }}) * {{var('transit_speed')}}
+            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
         )
         + dm.r_pt
         * {{ transit_ratio }}
         * {{var('car_speed')}}
-        * {{car_share_ratio}}
+        * {{var("car_share_ratio")}}
         / (
-            {{ transit_ratio }} * {{var('car_speed')}} * {{car_share_ratio}}
-            + (1 - {{ transit_ratio }}) * {{var('transit_speed')}}
+            {{ transit_ratio }} * {{var('car_speed')}} * {{var("car_share_ratio")}}
+            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
         )
         + dm.dropped_off
         + dm.taxi AS drive,
