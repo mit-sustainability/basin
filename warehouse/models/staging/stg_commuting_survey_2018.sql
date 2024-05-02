@@ -9,7 +9,9 @@ WITH binned_count AS (
     SELECT
         drive_alone
         + (1 - {{ transit_ratio }}) * drive_alone_and_public_transport
-        + taxi_and_ride_service AS drive,
+        + taxi_and_ride_service
+        + dropped_off
+        + (1 - {{ transit_ratio }}) * drop_off_and_public_transport AS drive,
         (
             drive_alone_and_public_transport
             + walk_and_public_transport
@@ -17,9 +19,7 @@ WITH binned_count AS (
             + drop_off_and_public_transport
         )
         * {{ transit_ratio }} AS public_transportation,
-        "carpooled(2-6)"
-        + dropped_off
-        + (1 - {{ transit_ratio }}) * drop_off_and_public_transport AS "carpooled(2-6)",
+        "carpooled(2-6)" AS "carpooled(2-6)",
         "vanpooled(7+)",
         commute_time_average_hours
     FROM {{ source('raw', 'commuting_survey_2018') }}
