@@ -283,3 +283,15 @@ sources:
             description: "Count of people using shuttle"
           - name: "public transportation"
             description: "Count of people using public transportation"
+      - name: commuting_survey_modes
+        description: "Commuting modes breakdown from commuting survey 2018, 2021 and 2023"
+        meta:
+          dagster:
+            asset_key: ["commuting_survey_modes"]
+        columns:
+          - name: "mode"
+            description: "Commute mode"
+          - name: "count"
+            description: "Daily average of people using the mode"
+          - name: "year"
+            description: "Year of the survey"

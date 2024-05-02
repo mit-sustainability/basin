@@ -124,6 +124,26 @@ emission AS (
         "mode",
         ghg * 2 * {{work_week}} / {{reply_rate}} / 1000 AS mtco2
     FROM public_transit_ghg
+),
+
+-- Mode share
+ms AS (
+    SELECT
+        year,
+        "mode",
+        count,
+        (count / SUM(count) OVER (PARTITION BY year)) AS share
+    FROM
+        {{ source('raw', 'commuting_survey_modes') }}
+    WHERE year = 2021
+    ORDER BY
+        "mode"
 )
 
-SELECT * FROM emission
+-- Validate, significant change in emission factors from 2018 subway 0.094, intercity 0.06, Bus 0.07, commuter 0.134
+SELECT
+    m."mode",
+    m."share",
+    COALESCE(e.mtco2, 0) AS mtco2
+FROM ms AS m
+LEFT JOIN emission AS e ON m."mode" = e."mode"

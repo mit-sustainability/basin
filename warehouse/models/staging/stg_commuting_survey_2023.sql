@@ -150,11 +150,27 @@ emission AS (
         t.mile,
         t.ghg * (1 - {{remote_rate}}) / {{ reply_rate }} / 1000 AS mtco2
     FROM transit_ghg AS t
+),
+
+-- Mode share
+ms AS (
+    SELECT
+        year,
+        "mode",
+        count,
+        (count / SUM(count) OVER (PARTITION BY year)) AS share
+    FROM
+        {{ source('raw', 'commuting_survey_modes') }}
+    WHERE year = 2023
+    ORDER BY
+        "mode"
 )
 
--- Validated, significant change in emission factors from 2018 subway 0.094, intercity 0.06, Bus 0.07, commuter 0.134
+-- Validate, significant change in emission factors from 2018 subway 0.094, intercity 0.06, Bus 0.07, commuter 0.134
 SELECT
-    "mode",
-    mile,
-    mtco2
-FROM emission
+    m."mode",
+    m."share",
+    COALESCE(e.mile, 0) AS mile,
+    COALESCE(e.mtco2, 0) AS mtco2
+FROM ms AS m
+LEFT JOIN emission AS e ON m."mode" = e."mode"

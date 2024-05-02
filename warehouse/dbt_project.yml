@@ -22,14 +22,14 @@ require-dbt-version: [">=1.0.0", "<2.0.0"]
 
 vars:
   car_speed: 21
-  t_speed: 15
+  t_speed: 20
   rail_speed: 40
   intercity_speed: 125
   bus_speed: 12
   t_ratio: 0.5
-  bus_ratio: 0.19
-  rail_ratio: 0.3
-  intercity_ratio: 0.02
+  bus_ratio: 0.14
+  rail_ratio: 0.35
+  intercity_ratio: 0.01
   car_share_ratio: 0.4
   van_share_ratio: 0.2
 

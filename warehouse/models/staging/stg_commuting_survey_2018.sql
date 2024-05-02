@@ -1,32 +1,34 @@
 -- set static variables using jinja2 syntax
 {% set reply_rate = 0.49 %}
-{% set transit_ratio = 0.5 %}
+{% set transit_ratio = 0.8 %}
 {% set work_week = 50 %}
-{% set transit_speed = 40 %}
 
-WITH distance AS (
+
+
+WITH binned_count AS (
     SELECT
-        drive_alone * {{ var('car_speed') }} * commute_time_average_hours AS drive_alone,
+        drive_alone
+        + (1 - {{ transit_ratio }}) * drive_alone_and_public_transport
+        + taxi_and_ride_service AS drive,
+        (
+            drive_alone_and_public_transport
+            + walk_and_public_transport
+            + bike_and_public_transport
+            + drop_off_and_public_transport
+        )
+        * {{ transit_ratio }} AS public_transportation,
+        "carpooled(2-6)"
+        + dropped_off
+        + (1 - {{ transit_ratio }}) * drop_off_and_public_transport AS "carpooled(2-6)",
+        "vanpooled(7+)",
         commute_time_average_hours
-        * drive_alone_and_public_transport
-        * (
-            {{ var('car_speed') }} * {{ transit_ratio }}
-            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
-        ) AS drive_and_public_transport,
-        walk_and_public_transport
-        * commute_time_average_hours
-        * (1 - {{ transit_ratio }})
-        * {{ transit_speed }} AS walk_and_public_transport,
-        drop_off_and_public_transport
-        * commute_time_average_hours
-        * (
-            {{ var('car_speed') }} * {{ transit_ratio }} * {{ var("car_share_ratio") }}
-            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
-        ) AS dropoff_and_public_transport,
-        bike_and_public_transport
-        * commute_time_average_hours
-        * (1 - {{ transit_ratio }})
-        * {{ transit_speed }} AS bike_and_public_transport,
+    FROM {{ source('raw', 'commuting_survey_2018') }}
+),
+
+
+distance AS (
+    SELECT
+        drive * {{ var('car_speed') }} * commute_time_average_hours AS drive,
         "carpooled(2-6)"
         * commute_time_average_hours
         * {{ var('car_speed') }}
@@ -35,84 +37,37 @@ WITH distance AS (
         * commute_time_average_hours
         * {{ var('car_speed') }}
         * {{ var("van_share_ratio") }} AS "vanpooled(7+)",
-        dropped_off
-        * commute_time_average_hours
-        * {{ var('car_speed') }}
-        * {{ var("car_share_ratio") }} AS dropped_off,
-        taxi_and_ride_service * {{ var('car_speed') }} * commute_time_average_hours AS taxi
-    FROM {{ source('raw', 'commuting_survey_2018') }}
-),
-
-daily_mileage AS (
-    SELECT
-        SUM(drive_alone) AS d,
-        SUM(drive_and_public_transport) AS d_pt,
-        SUM(walk_and_public_transport) AS w_pt,
-        SUM(dropoff_and_public_transport) AS r_pt,
-        SUM(bike_and_public_transport) AS b_pt,
-        SUM("carpooled(2-6)") AS carpooled,
-        SUM("vanpooled(7+)") AS vanpooled,
-        SUM(dropped_off) AS dropped_off,
-        SUM(taxi) AS taxi
-    FROM distance
-),
-
-subway_mileage AS (
-    SELECT
-        d_pt
-        * (1 - {{ transit_ratio }})
-        * {{ transit_speed }}
-        / (
-            {{ transit_ratio }} * {{var('car_speed')}}
-            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
-        )
-        + w_pt
-        + r_pt
-        * (1 - {{ transit_ratio }})
-        * {{ transit_speed }}
-        / (
-            {{ transit_ratio }} * {{var('car_speed')}} * {{var("car_share_ratio")}}
-            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
-        )
-        + b_pt AS subway
-    FROM daily_mileage
-),
-
-transit_mileage AS (
-    SELECT
-        subway,
-        subway AS commuter_rail,
-        subway * {{var('intercity_speed')}} / {{ transit_speed }} AS intercity,
-        subway * {{var('bus_speed')}} / {{ transit_speed }} AS bus
-    FROM subway_mileage
+        "public_transportation"
+        * {{ var('t_ratio') }}
+        * {{ var('t_speed') }}
+        * commute_time_average_hours AS subway,
+        "public_transportation"
+        * {{ var('rail_ratio') }}
+        * {{ var('rail_speed') }}
+        * commute_time_average_hours AS commuter_rail,
+        "public_transportation"
+        * {{ var('bus_ratio') }}
+        * {{ var('bus_speed') }}
+        * commute_time_average_hours AS bus,
+        "public_transportation"
+        * {{ var('intercity_ratio') }}
+        * {{ var('intercity_speed') }}
+        * commute_time_average_hours AS intercity
+    FROM binned_count
 ),
 
 mileage AS (
     SELECT
-        dm.d
-        + dm.d_pt
-        * {{ transit_ratio }}
-        * {{var('car_speed')}}
-        / (
-            {{ transit_ratio }} * {{var('car_speed')}}
-            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
-        )
-        + dm.r_pt
-        * {{ transit_ratio }}
-        * {{var('car_speed')}}
-        * {{var("car_share_ratio")}}
-        / (
-            {{ transit_ratio }} * {{var('car_speed')}} * {{var("car_share_ratio")}}
-            + (1 - {{ transit_ratio }}) * {{ transit_speed }}
-        )
-        + dm.dropped_off
-        + dm.taxi AS drive,
-        (t.subway + t.intercity + t.commuter_rail + t.bus) / 4 AS public_transport,
-        dm.carpooled,
-        dm.vanpooled
-    FROM daily_mileage AS dm
-    INNER JOIN transit_mileage AS t ON 1 = 1
+        SUM(drive) AS drive,
+        SUM("carpooled(2-6)") AS carpooled,
+        SUM("vanpooled(7+)") AS vanpooled,
+        SUM(subway) AS subway,
+        SUM(commuter_rail) AS commuter_rail,
+        SUM(bus) AS bus,
+        SUM(intercity) AS intercity
+    FROM distance
 ),
+
 
 emission_factors AS (
     SELECT
@@ -147,25 +102,25 @@ mileage_with_mode AS (
         'subway' AS "mode",
         12 AS mode_id,
         subway AS mile
-    FROM transit_mileage
+    FROM mileage
     UNION ALL
     SELECT
         'commuter_rail' AS "mode",
         5 AS mode_id,
         commuter_rail AS mile
-    FROM transit_mileage
+    FROM mileage
     UNION ALL
     SELECT
         'intercity' AS "mode",
         7 AS mode_id,
         intercity AS mile
-    FROM transit_mileage
+    FROM mileage
     UNION ALL
     SELECT
         'bus' AS "mode",
         4 AS mode_id,
         bus AS mile
-    FROM transit_mileage
+    FROM mileage
 ),
 
 attached AS (
@@ -190,8 +145,8 @@ emission AS (
 transit_ghg AS (
     SELECT
         'public_transportation' AS "mode",
-        AVG(mile) AS mile,
-        AVG(ghg) AS ghg
+        SUM(mile) AS mile,
+        SUM(ghg) AS ghg
     FROM emission
     WHERE "mode" IN ('bus', 'commuter_rail', 'intercity', 'subway')
 
@@ -211,11 +166,27 @@ scaled AS (
         t.mile,
         t.ghg / {{ reply_rate }} / 1000 AS mtco2
     FROM transit_ghg AS t
+),
+
+-- Mode share
+ms AS (
+    SELECT
+        year,
+        "mode",
+        count,
+        (count / SUM(count) OVER (PARTITION BY year)) AS share
+    FROM
+        {{ source('raw', 'commuting_survey_modes') }}
+    WHERE year = 2018
+    ORDER BY
+        "mode"
 )
 
 -- Validate, significant change in emission factors from 2018 subway 0.094, intercity 0.06, Bus 0.07, commuter 0.134
 SELECT
-    "mode",
-    mile,
-    mtco2
-FROM scaled
+    m."mode",
+    m."share",
+    COALESCE(s.mile, 0) AS mile,
+    COALESCE(s.mtco2, 0) AS mtco2
+FROM ms AS m
+LEFT JOIN scaled AS s ON m."mode" = s."mode"
