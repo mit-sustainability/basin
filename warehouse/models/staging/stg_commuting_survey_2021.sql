@@ -36,49 +36,49 @@ duration_with_mode AS (
     SELECT
         'carpooled' AS "mode",
         11 AS mode_id,
-        carpooled / 3 AS duration,
+        carpooled * {{ var('car_share_ratio') }} AS duration,
         {{ var('car_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'vanpooled' AS "mode",
         11 AS mode_id,
-        vanpooled / 7 AS duration,
+        vanpooled * {{ var('van_share_ratio') }} AS duration,
         {{ var('car_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'shuttle' AS "mode",
         4 AS mode_id,
-        shuttle AS duration,
+        shuttle AS duration, -- shuttle emission factor is per passenger mile
         {{ var('bus_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'subway' AS "mode",
         12 AS mode_id,
-        transit / 4 AS duration,
-        {{ var('transit_speed') }} AS speed_factor
+        transit * {{ var('t_ratio') }} AS duration,
+        {{ var('t_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'commuter_rail' AS "mode",
         5 AS mode_id,
-        transit / 4 AS duration,
-        {{ var('transit_speed') }} AS speed_factor
+        transit * {{ var('rail_ratio') }} AS duration,
+        {{ var('rail_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'intercity' AS "mode",
         7 AS mode_id,
-        transit / 4 AS duration,
-        {{ var('rail_speed') }} AS speed_factor
+        transit * {{ var('intercity_ratio') }} AS duration,
+        {{ var('intercity_speed') }} AS speed_factor
     FROM total_time
     UNION ALL
     SELECT
         'bus' AS "mode",
         4 AS mode_id,
-        transit / 4 AS duration,
+        transit * {{ var('bus_ratio') }} AS duration,
         {{ var('bus_speed') }} AS speed_factor
     FROM total_time
 ),
@@ -124,6 +124,26 @@ emission AS (
         "mode",
         ghg * 2 * {{work_week}} / {{reply_rate}} / 1000 AS mtco2
     FROM public_transit_ghg
+),
+
+-- Mode share
+ms AS (
+    SELECT
+        year,
+        "mode",
+        count,
+        (count / SUM(count) OVER (PARTITION BY year)) AS share
+    FROM
+        {{ source('raw', 'commuting_survey_modes') }}
+    WHERE year = 2021
+    ORDER BY
+        "mode"
 )
 
-SELECT * FROM emission
+-- Validate, significant change in emission factors from 2018 subway 0.094, intercity 0.06, Bus 0.07, commuter 0.134
+SELECT
+    m."mode",
+    m."share",
+    COALESCE(e.mtco2, 0) AS mtco2
+FROM ms AS m
+LEFT JOIN emission AS e ON m."mode" = e."mode"

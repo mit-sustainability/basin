@@ -98,6 +98,8 @@ models:
     columns:
       - name: "mode"
         description: "Commute mode"
+      - name: "share"
+        description: "Share of people using the mode in the year"
       - name: mtco2
         description: "Anual equivalent CO2 emission in metric tons"
       - name: year

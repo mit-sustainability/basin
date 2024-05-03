@@ -99,6 +99,8 @@ models:
     columns:
       - name: "mode"
         description: "Commute mode"
+      - name: "share"
+        description: "Share of people using the mode in the year"
       - name: "miles"
         description: "Daily commute miles by mode"
       - name: mtco2
@@ -110,6 +112,8 @@ models:
     columns:
       - name: "mode"
         description: "Commute mode"
+      - name: "share"
+        description: "Share of people using the mode in the year"
       - name: mtco2
         description: "Anual equivalent CO2 emission in metric tons"
   - name: stg_commuting_survey_2023
@@ -119,6 +123,8 @@ models:
     columns:
       - name: "mode"
         description: "Commute mode"
+      - name: "share"
+        description: "Share of people using the mode in the year"
       - name: "miles"
         description: "Weekly commute miles by mode"
       - name: mtco2

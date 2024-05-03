@@ -1,25 +1,35 @@
 -- set static variables using jinja2 syntax
 {% set reply_rate = 0.33 %}
 {% set work_week = 50 %}
+{% set remote_rate = 0.21 %}
 
 WITH distance AS (
     SELECT
         "drove alone" * {{ var('car_speed') }} * commute_time_average_hours AS drove_alone,
-        "carpooled(2-6)" * {{ var('car_speed') }} * commute_time_average_hours AS carpooled,
-        "vanpooled(7+)" * {{ var('car_speed') }} * commute_time_average_hours AS vanpooled,
+        "carpooled(2-6)"
+        * {{ var('car_speed') }}
+        * {{ var('car_share_ratio') }}
+        * commute_time_average_hours AS carpooled,
+        "vanpooled(7+)"
+        * {{ var('car_speed') }}
+        * {{ var('van_share_ratio') }}
+        * commute_time_average_hours AS vanpooled,
         shuttle * {{ var('bus_speed') }} * commute_time_average_hours AS shuttle,
         "public transportation"
-        / 4
-        * {{ var('transit_speed') }}
+        * {{ var('t_ratio') }}
+        * {{ var('t_speed') }}
         * commute_time_average_hours AS subway,
         "public transportation"
-        / 4
-        * {{ var('transit_speed') }}
-        * commute_time_average_hours AS commuter_rail,
-        "public transportation" / 4 * {{ var('bus_speed') }} * commute_time_average_hours AS bus,
-        "public transportation"
-        / 4
+        * {{ var('rail_ratio') }}
         * {{ var('rail_speed') }}
+        * commute_time_average_hours AS commuter_rail,
+        "public transportation"
+        * {{ var('bus_ratio') }}
+        * {{ var('bus_speed') }}
+        * commute_time_average_hours AS bus,
+        "public transportation"
+        * {{ var('intercity_ratio') }}
+        * {{ var('intercity_speed') }}
         * commute_time_average_hours AS intercity
     FROM {{ source('raw', 'commuting_survey_2023') }}
 ),
@@ -106,15 +116,16 @@ attached AS (
 
 ),
 
+-- TO AND FROM, 5 days * 50 working weeks
 ghg AS (
     SELECT
         "mode",
         mile,
-        mile * "CO2eq_kg" * 2 * {{work_week}} AS ghg -- TO AND FROM, 50 working weeks
+        mile * "CO2eq_kg" * 2 * 5 * {{work_week}} AS ghg
     FROM attached
 ),
 
--- Average GHG across various public transport methods
+-- Sum GHG across various public transport methods
 transit_ghg AS (
     SELECT
         'public_transportation' AS "mode",
@@ -130,20 +141,36 @@ emission AS (
     SELECT
         g."mode",
         g.mile,
-        g.ghg / {{ reply_rate }} / 1000 AS mtco2
+        g.ghg * (1 - {{remote_rate}}) / {{ reply_rate }} / 1000 AS mtco2
     FROM ghg AS g
     WHERE g."mode" IN ('drive', 'vanpooled', 'carpooled', 'shuttle')
     UNION ALL
     SELECT
         t."mode",
         t.mile,
-        t.ghg / {{ reply_rate }} / 1000 AS mtco2
+        t.ghg * (1 - {{remote_rate}}) / {{ reply_rate }} / 1000 AS mtco2
     FROM transit_ghg AS t
+),
+
+-- Mode share
+ms AS (
+    SELECT
+        year,
+        "mode",
+        count,
+        (count / SUM(count) OVER (PARTITION BY year)) AS share
+    FROM
+        {{ source('raw', 'commuting_survey_modes') }}
+    WHERE year = 2023
+    ORDER BY
+        "mode"
 )
 
--- Validated, significant change in emission factors from 2018 subway 0.094, intercity 0.06, Bus 0.07, commuter 0.134
+-- Validate, significant change in emission factors from 2018 subway 0.094, intercity 0.06, Bus 0.07, commuter 0.134
 SELECT
-    "mode",
-    mile,
-    mtco2
-FROM emission
+    m."mode",
+    m."share",
+    COALESCE(e.mile, 0) AS mile,
+    COALESCE(e.mtco2, 0) AS mtco2
+FROM ms AS m
+LEFT JOIN emission AS e ON m."mode" = e."mode"

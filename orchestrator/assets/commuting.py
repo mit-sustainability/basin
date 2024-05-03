@@ -196,6 +196,46 @@ def commuting_survey_2023(dhub: ResourceParam[DataHubResource]):
     return df_out[out_cols].fillna(0)
 
 
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def commuting_survey_modes(dhub: ResourceParam[DataHubResource]):
+    """This asset ingests the mode breakdown across year from Commuting Survey data conducted by IR."""
+    project_id = dhub.get_project_id("Scope3 Commuting")
+    logger.info(f"Found project id: {project_id}!")
+    dl_2018 = dhub.search_files_from_project(project_id, "commuting_survey_2018")
+    dl_2021 = dhub.search_files_from_project(project_id, "commuting_survey_2021")
+    dl_2023 = dhub.search_files_from_project(project_id, "commuting_survey_2023")
+
+    # Load 2018 breakdown
+    book = pd.ExcelFile(dl_2018[0], engine="openpyxl")
+    df_2018 = pd.read_excel(
+        book,
+        sheet_name="mode_daily",
+    )
+    df_2018["year"] = 2018
+    # Load 2021 breakdown
+    book = pd.ExcelFile(dl_2021[0], engine="openpyxl")
+    df_2021 = pd.read_excel(
+        book,
+        sheet_name="mode_daily",
+    )
+    df_2021["year"] = 2021
+    # Load 2023 breakdown
+    book = pd.ExcelFile(dl_2023[0], engine="openpyxl")
+    df_2023 = pd.read_excel(
+        book,
+        sheet_name="mode_daily",
+    )
+    df_2023["year"] = 2023
+
+    # Concat and label the years
+    df_out = pd.concat([df_2018, df_2021, df_2023]).reset_index(drop=True)
+    return df_out
+
+
 # Sync to datahub using the factory function
 dhub_commute_sync = add_dhub_sync(
     asset_name="dhub_commute_sync",
