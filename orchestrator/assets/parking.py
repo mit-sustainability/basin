@@ -2,14 +2,16 @@ from datetime import datetime
 
 from dagster import (
     asset,
+    AssetExecutionContext,
+    AssetIn,
     get_dagster_logger,
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandera as pa
 from pandera.typing import Series, DateTime
-
 import pandas as pd
+from prophet import Prophet
 
 from orchestrator.assets.utils import add_dhub_sync
 from orchestrator.resources.datahub import DataHubResource
@@ -45,7 +47,20 @@ def historical_parking_daily(dhub: ResourceParam[DataHubResource]):
     df = pd.read_csv(download_links[0])
     df["date"] = pd.to_datetime(df["date"])
     logger.info(f"Loaded historical parking data till: {df.date.max()}!")
-    return df
+    sel_columns = [
+        "date",
+        "unique_1016",
+        "unique_1018",
+        "unique_1022",
+        "unique_1024",
+        "unique_1025",
+        "unique_1030",
+        "unique_1035",
+        "unique_1037",
+        "unique_1038",
+        "total_unique",
+    ]
+    return df[sel_columns]
 
 
 @asset(
@@ -78,6 +93,88 @@ def newbatch_parking_daily(dwhrs: MITWHRSResource):
     df["last_update"] = datetime.now()
     logger.info(f"Last updated batch parking transaction data since date: {df.date.min()}")
     return df
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def mit_holidays(dwhrs: MITWHRSResource):
+    """This asset ingest the new batch of parking activity data from MIT Warehouse"""
+    query = """
+            SELECT HOLIDAY_CLOSING_DATE AS "date",
+                HOLIDAY_CLOSING_DESCRIPTION AS holiday,
+                HOLIDAY_CLOSING_TYPE AS holiday_type
+            FROM WAREUSER.MIT_HOLIDAY_CLOSING_CALENDAR
+            WHERE HOLIDAY_CLOSING_TYPE IN ('Standard Holiday', 'Special Holiday/Closing')
+                AND HOLIDAY_CLOSING_DATE > TO_DATE('2015-09-01', 'YYYY-MM-DD')
+                AND HOLIDAY_CLOSING_DATE < SYSDATE
+            ORDER BY HOLIDAY_CLOSING_DATE
+            """
+    rows = dwhrs.execute_query(query, chunksize=100000)
+    columns = [
+        "date",
+        "holiday",
+        "holiday_type",
+    ]
+    df = pd.DataFrame(rows, columns=columns)
+    df["last_update"] = datetime.now()
+    logger.info(f"Last updated of MIT holidays: {df.last_update.max()}")
+    return df
+
+
+@asset(
+    compute_kind="python",
+    group_name="final",
+    io_manager_key="postgres_replace",
+    ins={
+        "df": AssetIn(
+            key=["staging", "stg_parking_daily"],
+        ),
+        "holidays": AssetIn(
+            key=["raw", "mit_holidays"],
+        ),
+    },
+)
+def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
+    """This asset takes in the combined parking data and MIT holidays table
+    to forecast the parking trend"""
+    df["ds"] = pd.to_datetime(df["date"], utc=True).dt.tz_localize(None)
+    filtered = df[df["date"].dt.dayofweek < 5]
+    holidays["ds"] = pd.to_datetime(holidays["date"], utc=True).dt.tz_localize(None)
+
+    logger.info("Fit a Prophet model using total_unique")
+    ts = filtered[["ds", "total_unique"]].rename(columns={"total_unique": "y"})
+    m = Prophet(
+        holidays=holidays,
+        daily_seasonality=False,
+        changepoint_range=0.99,
+        n_changepoints=500,
+        changepoint_prior_scale=0.4,
+    )
+    m.fit(ts)
+
+    all_time = pd.DataFrame({"ds": pd.date_range(start="2015-09-15", end="2024-01-01", freq="D")})
+    prediction = m.predict(all_time)
+    df_out = pd.merge(filtered, prediction, on="ds", how="left")
+    logger.info(f"Successfully merge and predict parking trends till {df_out.ds.max()}")
+
+    sel_columns = [
+        "date",
+        "unique_1016",
+        "unique_1018",
+        "unique_1022",
+        "unique_1024",
+        "unique_1025",
+        "unique_1030",
+        "unique_1035",
+        "unique_1037",
+        "unique_1038",
+        "total_unique",
+        "trend",
+    ]
+    return df_out[sel_columns]
 
 
 # # Sync to datahub using the factory function

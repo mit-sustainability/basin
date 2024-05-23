@@ -295,3 +295,61 @@ sources:
             description: "Daily average of people using the mode"
           - name: "year"
             description: "Year of the survey"
+      - name: historical_parking_daily
+        description: "Parking data till June 25 2021"
+        meta:
+          dagster:
+            asset_key: ["historical_parking_daily"]
+        columns:
+          - name: "date"
+            description: "Service Date"
+          - name: "unique_1016"
+            description: "Daily unique parker for lot 1016"
+          - name: "unique_1018"
+            description: "Daily unique parker for lot 1018"
+          - name: "unique_1022"
+            description: "Daily unique parker for lot 1022"
+          - name: "unique_1024"
+            description: "Daily unique parker for lot 1024"
+          - name: "unique_1025"
+            description: "Daily unique parker for lot 1025"
+          - name: "unique_1030"
+            description: "Daily unique parker for lot 1030"
+          - name: "unique_1035"
+            description: "Daily unique parker for lot 1035"
+          - name: "unique_1037"
+            description: "Daily unique parker for lot 1037"
+          - name: "unique_1038"
+            description: "Daily unique parker for lot 1038"
+          - name: "total_unique"
+            description: "Daily unique parker for all lots"
+      - name: newbatch_parking_daily
+        description: "New daily parking activity since 2023 June 25"
+        meta:
+          dagster:
+            asset_key: ["newbatch_parking_daily"]
+        columns:
+          - name: "date"
+            description: "Date of the parking activity"
+          - name: "parking_lot"
+            description: "Parking lot ID"
+          - name: "total"
+            description: "Total parking count"
+          - name: "unique"
+            description: "Unique parking count"
+          - name: "last_update"
+            description: "update timestamp"
+      - name: mit_holidays
+        description: "MIT holidays since 2015, required for Prophet model"
+        meta:
+          dagster:
+            asset_key: ["mit_holidays"]
+        columns:
+          - name: "date"
+            description: "date of the holiday"
+          - name: "holiday"
+            description: "holiday description"
+          - name: "holiday_type"
+            description: "Type of holiday"
+          - name: "last_update"
+            description: "update timestamp"

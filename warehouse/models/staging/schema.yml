@@ -129,3 +129,30 @@ models:
         description: "Weekly commute miles by mode"
       - name: mtco2
         description: "Anual equivalent CO2 emission in metric tons"
+  - name: stg_parking_daily
+    description: "Merged parking data from selected lots"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "date"
+        description: "Service Date"
+      - name: "unique_1016"
+        description: "Daily unique parker for lot 1016"
+      - name: "unique_1018"
+        description: "Daily unique parker for lot 1018"
+      - name: "unique_1022"
+        description: "Daily unique parker for lot 1022"
+      - name: "unique_1024"
+        description: "Daily unique parker for lot 1024"
+      - name: "unique_1025"
+        description: "Daily unique parker for lot 1025"
+      - name: "unique_1030"
+        description: "Daily unique parker for lot 1030"
+      - name: "unique_1035"
+        description: "Daily unique parker for lot 1035"
+      - name: "unique_1037"
+        description: "Daily unique parker for lot 1037"
+      - name: "unique_1038"
+        description: "Daily unique parker for lot 1038"
+      - name: "total_unique"
+        description: "Daily unique parker for all lots"
