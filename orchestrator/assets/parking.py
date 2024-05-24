@@ -101,7 +101,7 @@ def newbatch_parking_daily(dwhrs: MITWHRSResource):
     group_name="raw",
 )
 def mit_holidays(dwhrs: MITWHRSResource):
-    """This asset ingest the new batch of parking activity data from MIT Warehouse"""
+    """This asset ingest the MIT holidays data from MIT Warehouse"""
     query = """
             SELECT HOLIDAY_CLOSING_DATE AS "date",
                 HOLIDAY_CLOSING_DESCRIPTION AS holiday,
@@ -127,23 +127,20 @@ def mit_holidays(dwhrs: MITWHRSResource):
 @asset(
     compute_kind="python",
     group_name="final",
+    key_prefix="final",
     io_manager_key="postgres_replace",
     ins={
-        "df": AssetIn(
-            key=["staging", "stg_parking_daily"],
-        ),
-        "holidays": AssetIn(
-            key=["raw", "mit_holidays"],
-        ),
+        "df": AssetIn(key=["staging", "stg_parking_daily"], input_manager_key="postgres_replace"),
+        "holidays": AssetIn(key=["mit_holidays"], input_manager_key="postgres_replace"),
     },
 )
 def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
     """This asset takes in the combined parking data and MIT holidays table
     to forecast the parking trend"""
     df["ds"] = pd.to_datetime(df["date"], utc=True).dt.tz_localize(None)
-    filtered = df[df["date"].dt.dayofweek < 5]
+    filtered = df[df["ds"].dt.dayofweek < 5]
+    filtered["ds"] = filtered["ds"].dt.normalize()
     holidays["ds"] = pd.to_datetime(holidays["date"], utc=True).dt.tz_localize(None)
-
     logger.info("Fit a Prophet model using total_unique")
     ts = filtered[["ds", "total_unique"]].rename(columns={"total_unique": "y"})
     m = Prophet(
@@ -154,7 +151,6 @@ def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
         changepoint_prior_scale=0.4,
     )
     m.fit(ts)
-
     all_time = pd.DataFrame({"ds": pd.date_range(start="2015-09-15", end="2024-01-01", freq="D")})
     prediction = m.predict(all_time)
     df_out = pd.merge(filtered, prediction, on="ds", how="left")
@@ -177,14 +173,13 @@ def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
     return df_out[sel_columns]
 
 
-# # Sync to datahub using the factory function
-# dhub_waste_sync = add_dhub_sync(
-#     asset_name="dhub_waste_sync",
-#     table_key=["final", "final_waste_recycle"],
-#     config={
-#         "filename": "final_waste_update",
-#         "project_name": "Material Matters",
-#         "description": "Processed waste data including historical, Casella and small stream",
-#         "title": "Processed Waste Data till 2023",
-#     },
-# )
+dhub_waste_sync = add_dhub_sync(
+    asset_name="dhub_parking_daily",
+    table_key=["final", "daily_parking_trend"],
+    config={
+        "filename": "daily_parking_trend",
+        "project_name": "Parking",
+        "description": "Daily Parking activity data with forecasted trends",
+        "title": "Daily Parking activity data since 2015",
+    },
+)

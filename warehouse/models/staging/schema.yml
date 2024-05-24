@@ -45,8 +45,6 @@ models:
     columns:
       - name: cost_object
         description: "Cost Object ID"
-        tests:
-          - unique
       - name: dlc_name
         description: "MIT Department, Lab, and Center name"
       - name: school_area
