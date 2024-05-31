@@ -58,3 +58,11 @@ def add_dhub_sync(asset_name: str, table_key: List[str], config: dict):
 def str2datetime(tstring: str, fmat: str = "%Y-%m-%dT%H:%M:%S") -> datetime:
     """Convert string to datetime"""
     return datetime.strptime(tstring, fmat).replace(tzinfo=pytz.UTC)
+
+
+def normalize_column_name(col_name):
+    """Normalize column name to lowercase and replace special characters"""
+    col_name = col_name.lower()
+    col_name = col_name.replace(" ", "_")
+    col_name = col_name.replace("#", "number")
+    return col_name
