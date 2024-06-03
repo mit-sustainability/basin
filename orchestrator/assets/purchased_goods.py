@@ -58,7 +58,7 @@ class InvoiceConfig(Config):
 
 
 @asset(
-    io_manager_key="postgres_replace",
+    io_manager_key="postgres_replace",  # only use this when loading from scratch, else "postgres_append"
     compute_kind="python",
     group_name="raw",
 )

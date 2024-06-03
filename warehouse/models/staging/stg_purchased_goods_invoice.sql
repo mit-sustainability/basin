@@ -49,7 +49,6 @@ target_cpi AS (
     WHERE "year" = 2021
 ),
 
-
 tagged_cpi AS (
     SELECT
         ef.*,

@@ -35,6 +35,10 @@ vars:
 
 models:
   mitos:
+    quoting:
+      database: true
+      schema: true
+      identifier: true
     +persist_docs:
       relation: true
       columns: true
