@@ -14,12 +14,33 @@ import pandas as pd
 
 from orchestrator.assets.utils import (
     empty_dataframe_from_model,
-    add_dhub_sync,
     normalize_column_name,
 )
 from orchestrator.resources.datahub import DataHubResource
 
 logger = get_dagster_logger()
+
+
+class InvoiceSchema(pa.SchemaModel):
+    sap_invoice_number: Series[str] = pa.Field(description="SAP Invoice Number")
+    invoice_number: Series[str] = pa.Field(description="Invoice Number")
+    invoice_date: Series[DateTime] = pa.Field(description="Date of Invoice")
+    header_status: Series[str] = pa.Field(description="Status of the Invoice Header")
+    po_number: Series[str] = pa.Field(description="Purchase Order Number")
+    po_order_date: Series[DateTime] = pa.Field(description="Purchase Order Date")
+    po_status: Series[str] = pa.Field(description="Status of the Purchase Order")
+    commodity: Series[str] = pa.Field(description="Commodity Type")
+    po_line_commodity: Series[str] = pa.Field(description="Commodity Type at PO Line")
+    category: Series[str] = pa.Field(description="Category of the Item")
+    line_number: Series[int] = pa.Field(ge=0, description="Line Number")
+    total: Series[float] = pa.Field(description="Total Amount")
+    po_line_number: Series[int] = pa.Field(ge=0, description="Purchase Order Line Number")
+    po_line_total: Series[float] = pa.Field(description="Total at PO Line")
+    description: Series[str] = pa.Field(description="Description of the Item")
+    supplier: Series[str] = pa.Field(description="Supplier Name")
+    supplier_number: Series[str] = pa.Field(description="Supplier Number")
+    billing: Series[float] = pa.Field(description="Billing Description")
+    cost_object: Series[str] = pa.Field(description="Cost Object ID")
 
 
 def parse_billing(row):
@@ -61,6 +82,7 @@ class InvoiceConfig(Config):
     io_manager_key="postgres_replace",  # only use this when loading from scratch, else "postgres_append"
     compute_kind="python",
     group_name="raw",
+    dagster_type=pandera_schema_to_dagster_type(InvoiceSchema),
 )
 def purchased_goods_invoice(config: InvoiceConfig, dhub: ResourceParam[DataHubResource]):
     """This asset ingest the specified pruchased goods invoice files
@@ -71,7 +93,8 @@ def purchased_goods_invoice(config: InvoiceConfig, dhub: ResourceParam[DataHubRe
     for file in config.files_to_download:
         download_links = dhub.search_files_from_project(project_id, file, tags=["invoice"])
         if len(download_links) == 0:
-            logger.error("No download links found!")
+            logger.info("No download links found!")
+            return empty_dataframe_from_model(InvoiceSchema)
         # Load the data
         logger.info(f"Downloading {file}...")
         df = pd.read_csv(download_links[0])

@@ -8,11 +8,31 @@ import requests
 
 from dagster import get_dagster_logger
 import pandas as pd
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+from requests.exceptions import SSLError
 
 logger = get_dagster_logger()
 default_timeout = 10
 
-## TODO: Use asyncio and aiohttp to handle async requests
+
+## TODO: handle retry for the upload function
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(2),
+    retry=retry_if_exception_type(SSLError),
+)
+def upload_data_to_dhub(url, data):
+    """Upload data to datahub using the given url with retries for SSL error."""
+    res = requests.put(
+        url,
+        data=data.getvalue().encode("utf-8"),
+        headers={"Content-Type": "text/csv"},
+        timeout=1000,
+    )
+    if res.status_code == 200:
+        print("Upload Successful")
+    else:
+        logger.error(f"Failed to upload. Status code: {res.status_code}")
 
 
 def data_hub_authorize(auth_token):
@@ -101,14 +121,5 @@ class DataHubResource:
         upload_link = self.get_upload_link(meta)
         csv_buffer = StringIO()
         df.to_csv(csv_buffer, index=False)
-        # TODO handle retry
-        res = requests.put(
-            upload_link,
-            data=csv_buffer.getvalue(),
-            headers={"Content-Type": "text/csv"},
-            timeout=300,
-        )
-        if res.status_code == 200:
-            print("Upload Successful")
-        else:
-            logger.error(f"Failed to upload. Status code: {res.status_code}")
+        csv_buffer.seek(0)
+        upload_data_to_dhub(upload_link, csv_buffer)
