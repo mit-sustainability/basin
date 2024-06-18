@@ -399,6 +399,8 @@ sources:
         description: "Mapping table for purchased goods invoice to different category levels and EEIO codes"
         meta:
           owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["purchased_goods_mapping"]
         columns:
           - name: "Level 3 Categories"
             description: "The most granular category level within the organizational hierarchy."
