@@ -4,7 +4,6 @@ import cpi
 from dagster import (
     AssetExecutionContext,
     asset,
-    AssetIn,
     get_dagster_logger,
     ResourceParam,
 )

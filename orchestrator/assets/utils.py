@@ -20,7 +20,14 @@ def empty_dataframe_from_model(Model: pa.DataFrameModel) -> pd.DataFrame:
 
 
 def add_dhub_sync(asset_name: str, table_key: List[str], config: dict):
-    """Create the asset that sync a table to DataHub providing config"""
+    """Create the asset that sync a table to DataHub providing config
+    Args:
+        asset_name: name of the resulting asset.
+        table_key: Dagster asset key to be synced to DataHub.
+        config: configuration for dhub target object.
+    Returns:
+        dagster asset syncing the input asset key to the datahub.
+    """
 
     @asset(
         name=asset_name,
@@ -40,6 +47,7 @@ def add_dhub_sync(asset_name: str, table_key: List[str], config: dict):
         description = config.get("description")
         project_id = dhub.get_project_id(project_name)
         logger.info(f"Sync to project: {project_id}!")
+        ext = config.get("ext", "csv")
         meta = {
             "name": filename,
             "mimeType": "text/csv",
@@ -50,7 +58,9 @@ def add_dhub_sync(asset_name: str, table_key: List[str], config: dict):
             "privacy": "public",
             "organizations": ["MITOS"],
         }
-        dhub.sync_dataframe_to_csv(table, meta)
+        if ext != "csv":
+            meta.update({"mimeType": "application/gzip"})
+        dhub.sync_dataframe(table, meta, ext=ext)
 
     return dhub_ingest
 

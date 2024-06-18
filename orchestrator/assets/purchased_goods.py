@@ -13,6 +13,7 @@ from pandera.typing import Series, DateTime
 import pandas as pd
 
 from orchestrator.assets.utils import (
+    add_dhub_sync,
     empty_dataframe_from_model,
     normalize_column_name,
 )
@@ -43,7 +44,7 @@ class InvoiceSchema(pa.SchemaModel):
     cost_object: Series[str] = pa.Field(description="Cost Object ID")
 
 
-def parse_billing(row):
+def parse_billing(row: pd.Series):
     """Parse the billing column to extract the cost object and total amount if
     multiple accounts are present in the same row."""
     if pd.isna(row["Billing"]):
@@ -70,7 +71,10 @@ def parse_billing(row):
 
 
 class InvoiceConfig(Config):
-    """Configuration for the invoice asset"""
+    """Configuration for the invoice asset
+
+    Example: change this from the asset launchpad to specify the files to load to the data platform.
+    """
 
     files_to_download: List[str] = [
         "PurchasedGoods_Invoice_FY2019",
@@ -136,3 +140,16 @@ def purchased_goods_mapping(dhub: ResourceParam[DataHubResource]):
         "Code": "code",
     }
     return df.rename(columns=cols_mapping)
+
+
+dhub_purchased_goods_invoice = add_dhub_sync(
+    asset_name="dhub_purchased_goods_invoice",
+    table_key=["staging", "stg_purchased_goods_invoice"],
+    config={
+        "filename": "purchased_goods_invoice.parquet.gz",
+        "project_name": "Scope3 Purchased Goods",
+        "description": "Processed Purchased Goods Invoice line data with emission factors and GHG",
+        "title": "Processed Purchased Goods Invoice data",
+        "ext": "parquet",
+    },
+)

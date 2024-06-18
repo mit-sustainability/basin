@@ -21,7 +21,6 @@ cpi==1.1.1
 datasets
 python-dateutil
 matplotlib
-tenacity
 sqlalchemy==2.0.25
 datasets==2.15.0
 plotly==5.22.0
