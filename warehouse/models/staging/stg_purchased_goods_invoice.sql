@@ -80,11 +80,28 @@ adjusted AS (
     FROM tagged_cpi
 ),
 
+dlc AS (
+    SELECT
+        cost_object,
+        dlc_name,
+        school_area
+    FROM {{ref('stg_cost_object_rollup')}}
+),
+
+cost_tagged AS (
+    SELECT
+        a.*,
+        d.dlc_name
+    FROM adjusted AS a
+    LEFT JOIN dlc AS d
+        ON a.cost_object = d.cost_object
+),
+
 co2kg AS (
     SELECT
         *,
         emission_factor * adjusted_spend_2021 AS ghg
-    FROM adjusted
+    FROM cost_tagged
 
 )
 

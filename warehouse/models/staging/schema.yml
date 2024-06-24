@@ -193,5 +193,7 @@ models:
         description: "Adjusted spend total to 2021 USD for GHG calculation."
       - name: "inflated_spend"
         description: "CPI adjusted spend total to current year."
+      - name: "dlc_name"
+        description: "Department, Lab, and Center name."
       - name: "ghg"
         description: "Greenhouse gas data related in kg CO2e"

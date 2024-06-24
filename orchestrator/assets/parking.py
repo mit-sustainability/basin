@@ -2,7 +2,6 @@ from datetime import datetime
 
 from dagster import (
     asset,
-    AssetExecutionContext,
     AssetIn,
     get_dagster_logger,
     ResourceParam,
@@ -18,6 +17,20 @@ from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.mit_warehouse import MITWHRSResource
 
 logger = get_dagster_logger()
+
+sel_columns = [
+    "date",
+    "unique_1016",
+    "unique_1018",
+    "unique_1022",
+    "unique_1024",
+    "unique_1025",
+    "unique_1030",
+    "unique_1035",
+    "unique_1037",
+    "unique_1038",
+    "total_unique",
+]
 
 
 class ParkingNewbatchData(pa.SchemaModel):
@@ -47,19 +60,6 @@ def historical_parking_daily(dhub: ResourceParam[DataHubResource]):
     df = pd.read_csv(download_links[0])
     df["date"] = pd.to_datetime(df["date"])
     logger.info(f"Loaded historical parking data till: {df.date.max()}!")
-    sel_columns = [
-        "date",
-        "unique_1016",
-        "unique_1018",
-        "unique_1022",
-        "unique_1024",
-        "unique_1025",
-        "unique_1030",
-        "unique_1035",
-        "unique_1037",
-        "unique_1038",
-        "total_unique",
-    ]
     return df[sel_columns]
 
 
@@ -156,21 +156,8 @@ def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
     df_out = pd.merge(filtered, prediction, on="ds", how="left")
     logger.info(f"Successfully merge and predict parking trends till {df_out.ds.max()}")
 
-    sel_columns = [
-        "date",
-        "unique_1016",
-        "unique_1018",
-        "unique_1022",
-        "unique_1024",
-        "unique_1025",
-        "unique_1030",
-        "unique_1035",
-        "unique_1037",
-        "unique_1038",
-        "total_unique",
-        "trend",
-    ]
-    return df_out[sel_columns]
+    out_cols = sel_columns.append("trends")
+    return df_out[out_cols]
 
 
 dhub_waste_sync = add_dhub_sync(
