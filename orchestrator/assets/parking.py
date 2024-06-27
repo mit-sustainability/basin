@@ -156,7 +156,7 @@ def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
     df_out = pd.merge(filtered, prediction, on="ds", how="left")
     logger.info(f"Successfully merge and predict parking trends till {df_out.ds.max()}")
     out_cols = sel_columns.copy()
-    out_cols.append("trends")
+    out_cols.append("trend")
     return df_out[out_cols]
 
 
