@@ -7,9 +7,9 @@ from dagster import (
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
+import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime
-import pandas as pd
 from prophet import Prophet
 
 from orchestrator.assets.utils import add_dhub_sync
@@ -155,8 +155,8 @@ def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
     prediction = m.predict(all_time)
     df_out = pd.merge(filtered, prediction, on="ds", how="left")
     logger.info(f"Successfully merge and predict parking trends till {df_out.ds.max()}")
-
-    out_cols = sel_columns.append("trends")
+    out_cols = sel_columns.copy()
+    out_cols.append("trends")
     return df_out[out_cols]
 
 

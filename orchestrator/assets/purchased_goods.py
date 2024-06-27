@@ -8,9 +8,9 @@ from dagster import (
 )
 from dagster_pandera import pandera_schema_to_dagster_type
 import numpy as np
+import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime
-import pandas as pd
 
 from orchestrator.assets.utils import (
     add_dhub_sync,
