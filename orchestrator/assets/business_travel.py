@@ -4,7 +4,6 @@ import cpi
 from dagster import (
     AssetExecutionContext,
     asset,
-    AssetIn,
     get_dagster_logger,
     ResourceParam,
 )
@@ -179,7 +178,7 @@ def all_scope_summary(dhub: ResourceParam[DataHubResource]):
     group_name="raw",
 )
 def cost_object_warehouse(dwhrs: MITWHRSResource):
-    """This asset ingest the all_scope summary data from the Data Hub"""
+    """This asset ingest cost object table from MIT warehouse"""
     query = (
         "SELECT COST_COLLECTOR_ID, DLC_NAME, SCHOOL_AREA, COST_COLLECTOR_EFFECTIVE_DATE " "FROM WAREUSER.COST_COLLECTOR"
     )

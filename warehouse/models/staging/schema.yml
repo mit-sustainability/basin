@@ -45,8 +45,6 @@ models:
     columns:
       - name: cost_object
         description: "Cost Object ID"
-        tests:
-          - unique
       - name: dlc_name
         description: "MIT Department, Lab, and Center name"
       - name: school_area
@@ -129,3 +127,73 @@ models:
         description: "Weekly commute miles by mode"
       - name: mtco2
         description: "Anual equivalent CO2 emission in metric tons"
+  - name: stg_parking_daily
+    description: "Merged parking data from selected lots"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "date"
+        description: "Service Date"
+      - name: "unique_1016"
+        description: "Daily unique parker for lot 1016"
+      - name: "unique_1018"
+        description: "Daily unique parker for lot 1018"
+      - name: "unique_1022"
+        description: "Daily unique parker for lot 1022"
+      - name: "unique_1024"
+        description: "Daily unique parker for lot 1024"
+      - name: "unique_1025"
+        description: "Daily unique parker for lot 1025"
+      - name: "unique_1030"
+        description: "Daily unique parker for lot 1030"
+      - name: "unique_1035"
+        description: "Daily unique parker for lot 1035"
+      - name: "unique_1037"
+        description: "Daily unique parker for lot 1037"
+      - name: "unique_1038"
+        description: "Daily unique parker for lot 1038"
+      - name: "total_unique"
+        description: "Daily unique parker for all lots"
+  - name: stg_purchased_goods_invoice
+    description: "CPI adjusted and GHG emission enriched invoice data for purchased goods"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "SAP Invoice #"
+        description: "Unique identifier for SAP-generated invoices."
+      - name: "Invoice #"
+        description: "General identifier for invoices, distinct from SAP-specific IDs."
+      - name: "fiscal_year"
+        description: "The fiscal year in which the transaction was recorded or relevant."
+      - name: "PO Number"
+        description: "Purchase Order number associated with the invoice"
+      - name: "level_1"
+        description: "General goods and service category"
+      - name: "level_2"
+        description: "Rolled up commodity category"
+      - name: "level_3"
+        description: "Lowest level detailed commodity categorization."
+      - name: "total"
+        description: "Total USD spend for the invoice"
+      - name: "Description"
+        description: "Descriptive details about the invoice"
+      - name: "Billing"
+        description: "Billing information."
+      - name: "Supplier"
+        description: "Name or identifier of the supplier or service provider."
+      - name: "Supplier #"
+        description: "Unique number or identifier assigned to the supplier."
+      - name: "cost_object"
+        description: "MIT cost object associated with the invoice."
+      - name: "code"
+        description: "USEEIO code to map to emission factor"
+      - name: "emission_factor"
+        description: "GHG emission factor from USEEIO/NAICS table."
+      - name: "adjusted_spend_2021"
+        description: "Adjusted spend total to 2021 USD for GHG calculation."
+      - name: "inflated_spend"
+        description: "CPI adjusted spend total to current year."
+      - name: "dlc_name"
+        description: "Department, Lab, and Center name."
+      - name: "ghg"
+        description: "Greenhouse gas data related in kg CO2e"

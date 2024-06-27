@@ -295,3 +295,120 @@ sources:
             description: "Daily average of people using the mode"
           - name: "year"
             description: "Year of the survey"
+      - name: historical_parking_daily
+        description: "Parking data till June 25 2021"
+        meta:
+          dagster:
+            asset_key: ["historical_parking_daily"]
+        columns:
+          - name: "date"
+            description: "Service Date"
+          - name: "unique_1016"
+            description: "Daily unique parker for lot 1016"
+          - name: "unique_1018"
+            description: "Daily unique parker for lot 1018"
+          - name: "unique_1022"
+            description: "Daily unique parker for lot 1022"
+          - name: "unique_1024"
+            description: "Daily unique parker for lot 1024"
+          - name: "unique_1025"
+            description: "Daily unique parker for lot 1025"
+          - name: "unique_1030"
+            description: "Daily unique parker for lot 1030"
+          - name: "unique_1035"
+            description: "Daily unique parker for lot 1035"
+          - name: "unique_1037"
+            description: "Daily unique parker for lot 1037"
+          - name: "unique_1038"
+            description: "Daily unique parker for lot 1038"
+          - name: "total_unique"
+            description: "Daily unique parker for all lots"
+      - name: newbatch_parking_daily
+        description: "New daily parking activity since 2023 June 25"
+        meta:
+          dagster:
+            asset_key: ["newbatch_parking_daily"]
+        columns:
+          - name: "date"
+            description: "Date of the parking activity"
+          - name: "parking_lot"
+            description: "Parking lot ID"
+          - name: "total"
+            description: "Total parking count"
+          - name: "unique"
+            description: "Unique parking count"
+          - name: "last_update"
+            description: "update timestamp"
+      - name: mit_holidays
+        description: "MIT holidays since 2015, required for Prophet model"
+        meta:
+          dagster:
+            asset_key: ["mit_holidays"]
+        columns:
+          - name: "date"
+            description: "date of the holiday"
+          - name: "holiday"
+            description: "holiday description"
+          - name: "holiday_type"
+            description: "Type of holiday"
+          - name: "last_update"
+            description: "update timestamp"
+      - name: purchased_goods_invoice
+        description: "Purchased goods invoice since FY2019"
+        meta:
+          dagster:
+            asset_key: ["purchased_goods_invoice"]
+        columns:
+          - name: "sap_invoice_number"
+            description: "Unique identifier for SAP-generated entries."
+          - name: "invoice_number"
+            description: "General identifier for invoices."
+          - name: "invoice_date"
+            description: "The date on which the invoice was issued."
+          - name: "header_status"
+            description: "Status of the invoice header indicating processing stages.  (e.g., Approved, Voided, Disputed)"
+          - name: "po_number"
+            description: "Purchase order number related to the invoice."
+          - name: "po_order_date"
+            description: "The date the purchase order was issued."
+          - name: "po_status"
+            description: "Current status of the purchase order (e.g., pending, completed)."
+          - name: "commodity"
+            description: "Type of commodity or service described by the invoice."
+          - name: "po_line_commodity"
+            description: "Type of commodity or service described by the purchase order."
+          - name: "category"
+            description: "Category of goods or services."
+          - name: "line_number"
+            description: "Line item number in the invoice."
+          - name: "total"
+            description: "Total amount billed in USD on the invoice."
+          - name: "po_line_number"
+            description: "Purchased order line nunmber"
+          - name: "po_line_total"
+            description: "Purchased order line total"
+          - name: "description"
+            description: "Description of the line items or services billed."
+          - name: "supplier"
+            description: "Name of the supplier."
+          - name: "supplier_number"
+            description: "Supplier's unique identifier or number."
+          - name: "billing"
+            description: "Details related to the billing process or status."
+      - name: purchased_goods_mapping
+        description: "Mapping table for purchased goods invoice to different category levels and EEIO codes"
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["purchased_goods_mapping"]
+        columns:
+          - name: "Level 3 Categories"
+            description: "The most granular category level within the organizational hierarchy."
+          - name: "Level 2 Categories"
+            description: "Intermediate category level, nesting under Level 1 Categories."
+          - name: "Level 1 Categories"
+            description: "Top-level category, representing the broadest classification."
+          - name: "Name"
+            description: "USEEIO/NAICS commodity name"
+          - name: "Code"
+            description: "USEEIO code for supply chain commidty"

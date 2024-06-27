@@ -3,16 +3,49 @@ and requires authorization to get temporary credentials following the official d
 http://dsg-datahub-apidoc.s3-website-us-east-1.amazonaws.com/
 """
 
-from io import StringIO
+from io import BytesIO, StringIO, IOBase
 import requests
 
 from dagster import get_dagster_logger
 import pandas as pd
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+from requests.exceptions import SSLError
 
 logger = get_dagster_logger()
 default_timeout = 10
 
-## TODO: Use asyncio and aiohttp to handle async requests
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(2),
+    retry=retry_if_exception_type(SSLError),
+)
+def upload_data_to_dhub(url: str, data: IOBase, ext: str = "csv"):
+    """Upload data to datahub using the given url with retries for SSL error.
+    Args:
+        url: An AWS presigned URL to upload the data.
+        data: StringIO or BytesIO object containing the data to be uploaded.
+        ext: file extension of the data to be uploaded, default to "csv".
+    """
+    if ext == "csv":
+        payload = {
+            "data": data.getvalue().encode("utf-8"),
+            "headers": {"Content-Type": "text/csv"},
+        }
+    elif ext == "parquet":
+        payload = {
+            "data": data,
+            "headers": {"Content-Type": "application/gzip"},
+        }
+    else:
+        logger.error("Unsupported file extension")
+        return
+
+    res = requests.put(url, timeout=1000, **payload)
+    if res.status_code == 200:
+        print("Upload Successful")
+    else:
+        logger.error(f"Failed to upload. Status code: {res.status_code}")
 
 
 def data_hub_authorize(auth_token):
@@ -96,19 +129,22 @@ class DataHubResource:
         if res.status_code == 200:
             return res.json()["data"]["temporarily_upload_url"]
 
-    def sync_dataframe_to_csv(self, df: pd.DataFrame, meta):
-        """Sync the dataframe to target csv on datahub"""
+    def sync_dataframe(self, df: pd.DataFrame, meta: dict, ext: str):
+        """Sync the dataframe to target csv on datahub
+        Args:
+            df: dataframe to be uploaded.
+            meta: datahub file configuration, including project, title, and filenames.
+            ext: file extension of the data to be uploaded.
+
+        """
         upload_link = self.get_upload_link(meta)
-        csv_buffer = StringIO()
-        df.to_csv(csv_buffer, index=False)
-        # TODO handle retry
-        res = requests.put(
-            upload_link,
-            data=csv_buffer.getvalue(),
-            headers={"Content-Type": "text/csv"},
-            timeout=300,
-        )
-        if res.status_code == 200:
-            print("Upload Successful")
+        if ext == "csv":
+            csv_buffer = StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+            upload_data_to_dhub(upload_link, csv_buffer)
         else:
-            logger.error(f"Failed to upload. Status code: {res.status_code}")
+            out_buffer = BytesIO()
+            df.to_parquet(out_buffer, index=False, compression="gzip")
+            out_buffer.seek(0)
+            upload_data_to_dhub(upload_link, out_buffer, ext=ext)
