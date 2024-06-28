@@ -12,12 +12,13 @@ from dagster_aws.s3 import S3Resource
 
 from orchestrator.assets.postgres import mitos_dbt_assets
 from orchestrator.assets import (
-    construction,
     business_travel,
-    waste,
     commuting,
+    construction,
+    food,
     parking,
     purchased_goods,
+    waste,
 )
 
 from orchestrator.jobs.business_travel_job import business_asset_job
@@ -45,6 +46,7 @@ waste_assets = load_assets_from_modules([waste])
 commuting_assets = load_assets_from_modules([commuting])
 parking_assets = load_assets_from_modules([parking])
 purchased_goods_assets = load_assets_from_modules([purchased_goods])
+food_assets = load_assets_from_modules([food])
 
 defs = Definitions(
     assets=[mitos_dbt_assets]
@@ -53,7 +55,8 @@ defs = Definitions(
     + waste_assets
     + commuting_assets
     + parking_assets
-    + purchased_goods_assets,
+    + purchased_goods_assets
+    + food_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
