@@ -1,5 +1,5 @@
 import re
-from typing import Optional, List
+from typing import List
 from dagster import (
     asset,
     Config,
@@ -10,7 +10,7 @@ from dagster_pandera import pandera_schema_to_dagster_type
 import numpy as np
 import pandas as pd
 import pandera as pa
-from pandera.typing import Series, DateTime
+from pandera.typing import Series, DateTime, Float
 
 from orchestrator.assets.utils import (
     add_dhub_sync,
@@ -23,24 +23,24 @@ logger = get_dagster_logger()
 
 
 class InvoiceSchema(pa.SchemaModel):
-    sap_invoice_number: Series[str] = pa.Field(description="SAP Invoice Number")
-    invoice_number: Series[str] = pa.Field(description="Invoice Number")
+    sap_invoice_number: Series[Float] = pa.Field(description="SAP Invoice Number", nullable=True)
+    invoice_number: Series[str] = pa.Field(description="Invoice Number", nullable=True)
     invoice_date: Series[DateTime] = pa.Field(description="Date of Invoice")
     header_status: Series[str] = pa.Field(description="Status of the Invoice Header")
-    po_number: Series[str] = pa.Field(description="Purchase Order Number")
-    po_order_date: Series[DateTime] = pa.Field(description="Purchase Order Date")
-    po_status: Series[str] = pa.Field(description="Status of the Purchase Order")
-    commodity: Series[str] = pa.Field(description="Commodity Type")
-    po_line_commodity: Series[str] = pa.Field(description="Commodity Type at PO Line")
-    category: Series[str] = pa.Field(description="Category of the Item")
-    line_number: Series[int] = pa.Field(ge=0, description="Line Number")
+    po_number: Series[Float] = pa.Field(description="Purchase Order Number", nullable=True)
+    po_order_date: Series[DateTime] = pa.Field(description="Purchase Order Date", nullable=True)
+    po_status: Series[str] = pa.Field(description="Status of the Purchase Order", nullable=True)
+    commodity: Series[str] = pa.Field(description="Commodity Type", nullable=True)
+    po_line_commodity: Series[str] = pa.Field(description="Commodity Type at PO Line", nullable=True)
+    category: Series[str] = pa.Field(description="Category of the Item", nullable=True)
+    line_number: Series[int] = pa.Field(description="Line Number")
     total: Series[float] = pa.Field(description="Total Amount")
-    po_line_number: Series[int] = pa.Field(ge=0, description="Purchase Order Line Number")
+    po_line_number: Series[Float] = pa.Field(description="Purchase Order Line Number", nullable=True)
     po_line_total: Series[float] = pa.Field(description="Total at PO Line")
-    description: Series[str] = pa.Field(description="Description of the Item")
-    supplier: Series[str] = pa.Field(description="Supplier Name")
-    supplier_number: Series[str] = pa.Field(description="Supplier Number")
-    billing: Series[float] = pa.Field(description="Billing Description")
+    description: Series[str] = pa.Field(description="Description of the Item", nullable=True)
+    supplier: Series[str] = pa.Field(description="Supplier Name", nullable=True)
+    supplier_number: Series[Float] = pa.Field(description="Supplier Number", nullable=True)
+    billing: Series[str] = pa.Field(description="Billing Description")
     cost_object: Series[str] = pa.Field(description="Cost Object ID")
 
 
