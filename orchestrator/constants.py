@@ -1,20 +1,21 @@
 import os
 from pathlib import Path
 
+from dagster import EnvVar
 from dagster_dbt import DbtCliResource
 
 dbt_project_dir = Path(__file__).joinpath("..", "..", "warehouse").resolve()
 dbt = DbtCliResource(project_dir=os.fspath(dbt_project_dir))
 PG_CREDENTIALS = {
-    "user": os.getenv("PG_USER"),
-    "host": os.getenv("PG_WAREHOUSE_HOST"),
-    "password": os.getenv("PG_PASSWORD"),
+    "user": EnvVar("PG_USER"),
+    "host": EnvVar("PG_WAREHOUSE_HOST"),
+    "password": EnvVar("PG_PASSWORD"),
     "database": "postgres",
 }
 DWRHS_CREDENTIALS = {
-    "user": os.getenv("DWRHS_USER"),
-    "host": os.getenv("DWRHS_HOST"),
-    "password": os.getenv("DWRHS_PASSWORD"),
+    "user": EnvVar("DWRHS_USER"),
+    "host": EnvVar("DWRHS_HOST"),
+    "password": EnvVar("DWRHS_PASSWORD"),
     "sid": "DWRHS",
 }
 dh_api_key = os.getenv("DATAHUB_API_KEY")
