@@ -197,3 +197,36 @@ models:
         description: "Department, Lab, and Center name."
       - name: "ghg"
         description: "Greenhouse gas data related in kg CO2e"
+  - name: stg_food_order
+    description: "Food order data with SIMAP category and GHG emission"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: customer_name
+        description: "Dinning hall name"
+      - name: contract_month
+        description: "Contract month of the order"
+      - name: fiscal_year
+        description: "Fiscal year of the order"
+      - name: mfr_item_description
+        description: "Manufacturer item description"
+      - name: dist_item_description
+        description: "Distributor description"
+      - name: lbs
+        description: "Weight in lbs"
+      - name: gal
+        description: "Volume in gallon"
+      - name: spend
+        description: "Dollar spend"
+      - name: wri_category
+        description: "World Resource Institute food category"
+      - name: simap_category
+        description: "SIMAP food category"
+      - name: spend_emission_factor
+        description: "GHG emission factor in kg/2021 USD"
+      - name: weight_emission_factor
+        description: "GHG emission factor in kg CO2e/kg Food"
+      - name: weight_kg
+        description: "Weight in kg"
+      - name: co2eq
+        description: "GHG emission in kg CO2e"

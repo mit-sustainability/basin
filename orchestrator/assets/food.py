@@ -10,7 +10,6 @@ from dagster import (
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
-import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime, Float
@@ -46,7 +45,6 @@ sel_cols = [
     "case_qty",
     "spend",
     "wri_category",
-    "simap_category",
 ]
 
 # class FoodOrderSchema(pa.SchemaModel):
@@ -59,8 +57,8 @@ class FoodOrderConfig(Config):
     """
 
     files_to_download: List[str] = [
-        "MIT_v2_JUL2021-JUN2022.xlsx",
-        "MIT_v2_JUL2022-JUN2023.xlsx",
+        "MIT_v2_JUL2021_JUN2022",
+        "MIT_v2_JUL2022_JUN2023",
     ]
 
 
@@ -101,7 +99,6 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
         "MIT - Forbes Family CafÃ©": "Forbes Family",
     }
     combined["customer_name"] = combined["customer_name"].map(dinning_hall_mapping)
-    # Select relevant columns
     return combined[sel_cols]
 
 
@@ -121,7 +118,12 @@ def food_emission_factor(dhub: ResourceParam[DataHubResource]):
         logger.error("No download links found!")
     # Load the data
     df = pd.read_excel(download_links[0], sheet_name="Final Table")
-    return df.rename(columns={"Food Category": "simap_category"})
+    name_mapping = {
+        "Food Category": "simap_category",
+        "Spend-Based Emissions Factor (kg CO2e/2021 USD, purchaser price)": "spend-based emissions factor (kg CO2e/2021 USD)",
+        "Weight-Based Emissions Factors (kg CO2e/kg food)": "weight-based emissions factor (kg CO2e/kg food)",
+    }
+    return df.rename(columns=name_mapping)
 
 
 @asset(
@@ -148,6 +150,7 @@ def food_order_categorize(df: pd.DataFrame):
         ]
     ].fillna(value="")
     df["title"] = filled.agg(" ".join, axis=1)
+    print(df["title"])
     inputs = [{"body": entry} for entry in df["title"].values]
     # Predict food category through API
     results = asyncio.run(fetch_all_async(food_categorizer, inputs))
@@ -157,6 +160,7 @@ def food_order_categorize(df: pd.DataFrame):
 
     bodies = [item["body"] for item in results]
     predict = pd.DataFrame(bodies)
+    print(predict.head())
     df["simap_category"] = predict["Cat1"]
     out_cols = sel_cols.copy()
     out_cols.append("simap_category")
