@@ -416,6 +416,8 @@ sources:
         description: SIMAP food emission factor from Heller & Keoleian 2014
         meta:
           owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["food_emission_factor"]
         columns:
           - name: simap_category
             description: "Description for Food Category"
