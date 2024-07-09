@@ -1,7 +1,7 @@
 """Shared objects and functions for all assets."""
 
 from datetime import datetime
-import regex as re
+from queue import Queue  # Use Queue for thread-safe results collection
 from typing import List
 
 import asyncio
@@ -10,7 +10,8 @@ from dagster import asset, AssetIn, ResourceParam, get_dagster_logger
 import pandas as pd
 import pandera as pa
 import pytz
-from queue import Queue  # Use Queue for thread-safe results collection
+import regex as re
+
 
 from orchestrator.resources.datahub import DataHubResource
 
@@ -18,9 +19,9 @@ from orchestrator.resources.datahub import DataHubResource
 logger = get_dagster_logger()
 
 
-def empty_dataframe_from_model(Model: pa.DataFrameModel) -> pd.DataFrame:
+def empty_dataframe_from_model(model: pa.DataFrameModel) -> pd.DataFrame:
     """An empty dataframe model to ensure pandera check"""
-    schema = Model.to_schema()
+    schema = model.to_schema()
     return pd.DataFrame(columns=schema.dtypes.keys()).astype({col: str(dtype) for col, dtype in schema.dtypes.items()})
 
 
