@@ -9,15 +9,11 @@ from dagster import (
     get_dagster_logger,
     ResourceParam,
 )
-from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
-import pandera as pa
-from pandera.typing import Series, DateTime, Float
 
 from orchestrator.constants import food_categorizer
 from orchestrator.assets.utils import (
     add_dhub_sync,
-    empty_dataframe_from_model,
     normalize_column_name,
     fetch_all_async,
 )
@@ -47,8 +43,6 @@ sel_cols = [
     "wri_category",
 ]
 
-# class FoodOrderSchema(pa.SchemaModel):
-
 
 class FoodOrderConfig(Config):
     """Configuration for the food order asset
@@ -66,7 +60,6 @@ class FoodOrderConfig(Config):
     io_manager_key="postgres_replace",  # only use this when loading from scratch, else "postgres_append"
     compute_kind="python",
     group_name="raw",
-    # dagster_type=pandera_schema_to_dagster_type(InvoiceSchema),
 )
 def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]):
     """This asset ingest the food order data Bon Appetit provided
@@ -169,12 +162,12 @@ def food_order_categorize(df: pd.DataFrame):
 
 dhub_food_orders = add_dhub_sync(
     asset_name="dhub_food_order_categorize",
-    table_key=["staging", "food_order_categorize"],
+    table_key=["staging", "stg_food_order"],
     config={
-        "filename": "food_order_categorize.parquet.gz",
+        "filename": "food_order_ghg.parquet.gz",
         "project_name": "Scope3 Food",
-        "description": "Processed Food Order data with SIMAP categories",
-        "title": "Processed Food Order Data with SIMAP categories",
+        "description": "Processed Food Order data with GHG emissions",
+        "title": "Food Order GHG emissions",
         "ext": "parquet",
     },
 )
