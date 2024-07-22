@@ -230,3 +230,20 @@ models:
         description: "Weight in kg"
       - name: co2eq
         description: "GHG emission in kg CO2e"
+  - name: stg_waste_emission
+    description: "Scope 3 waste emission with emission factors"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: service_date
+        description: "Service Date"
+      - name: material
+        description: "Waste material stream"
+      - name: tons
+        description: "waste tonnage"
+      - name: emission_factors
+        description: "GHG emission factor in kg CO2e/ton"
+      - name: co2eq
+        description: "Total GHG emission in kg CO2 equivalence"
+      - name: year
+        description: "Service year"
