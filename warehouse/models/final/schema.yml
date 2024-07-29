@@ -168,3 +168,33 @@ models:
         description: "supplier name"
       - name: "description"
         description: "Descriptive details about the invoice"
+  - name: final_waste_emission
+    description: "Summary of Scope 3 waste emission grouped by material"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: year
+        description: "Calendar Year of Service Date"
+      - name: material
+        description: "Waste stream"
+      - name: tons
+        description: "Waste tonnage"
+      - name: co2eq
+        description: "Metric tons CO2e emission"
+  - name: final_waste_emission_audit
+    description: "Summary of Scope 3 waste emission grouped by material"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: year
+        description: "Calendar Year of Service Date"
+      - name: material
+        description: "Waste stream"
+      - name: tons
+        description: "Waste tonnage"
+      - name: co2eq
+        description: "Metric tons CO2e emission"
+      - name: tons_adjusted
+        description: "Waste tonnage adjusted with audit data"
+      - name: co2eq_adjusted
+        description: "Metric tons CO2e emission adjusted with audit data"

@@ -241,7 +241,24 @@ models:
         description: "Waste material stream"
       - name: tons
         description: "waste tonnage"
-      - name: emission_factors
+      - name: emission_factor
+        description: "GHG emission factor in kg CO2e/ton"
+      - name: co2eq
+        description: "Total GHG emission in kg CO2 equivalence"
+      - name: year
+        description: "Service year"
+  - name: stg_waste_emission_audit
+    description: "Scope 3 waste emission with emission factors integrated audit results"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: service_month
+        description: "Service Month"
+      - name: material
+        description: "Waste material stream"
+      - name: tons
+        description: "waste tonnage"
+      - name: emission_factor
         description: "GHG emission factor in kg CO2e/ton"
       - name: co2eq
         description: "Total GHG emission in kg CO2 equivalence"

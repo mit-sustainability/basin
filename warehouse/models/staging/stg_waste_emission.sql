@@ -6,25 +6,30 @@ WITH ef AS (
         combusted,
         composted,
         CASE
-            WHEN material = 'Yard Trimmings' THEN 4
-            WHEN material = 'Mixed Recyclables' THEN 2
+            WHEN material = 'Yard Trimmings' THEN 5
+            WHEN material = 'Mixed Organics' THEN 4
             WHEN material = 'Food Waste' THEN 3
+            WHEN material = 'Mixed Recyclables' THEN 2
             ELSE 1
         END AS group_id
     FROM {{ source("raw", "waste_emission_factors_EPA") }}
-    WHERE material IN ('Mixed MSW', 'Yard Trimmings', 'Food Waste', 'Mixed Recyclables')
+    WHERE
+        material IN (
+            'Mixed MSW', 'Yard Trimmings', 'Food Waste', 'Mixed Recyclables', 'Mixed Organics'
+        )
 ),
 
 roll AS (
     SELECT
         *,
         CASE
-            WHEN material IN ('Hard-to-Recycle', 'Other', 'C & D', 'Trash') THEN 1
+            WHEN material IN ('Hard-to-Recycle Materials', 'C & D', 'Trash') THEN 1
             WHEN material = 'Recycling' THEN 2
             WHEN material = 'Compost' THEN 3
-            ELSE 4
+            WHEN material = 'Other' THEN 4
+            ELSE 5
         END AS group_id
-    FROM {{ ref("stg_waste_recycle") }}
+    FROM {{ ref("final_waste_recycle") }}
 ),
 
 
@@ -69,7 +74,7 @@ SELECT
     service_date,
     material,
     tons,
-    emission_factors,
+    emission_factors AS emission_factor,
     co2eq,
     "year"
 FROM ghg
