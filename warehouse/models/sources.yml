@@ -420,11 +420,13 @@ sources:
             asset_key: ["food_emission_factor"]
         columns:
           - name: simap_category
-            description: "Description for Food Category"
+            description: "Food Category based on SIMAP methodology"
+            tests:
+              - unique
           - name: spend-based emissions factor (kg CO2e/2021 USD)
-            description: "Description for Spend-Based Emissions Factor"
+            description: "Spend-Based Emissions Factor"
           - name: weight-based emissions factor (kg CO2e/kg food)
-            description: "Description for Weight-Based Emissions Factors"
+            description: "Weight-Based Emissions Factors"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging
