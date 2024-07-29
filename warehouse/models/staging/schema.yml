@@ -159,13 +159,13 @@ models:
     meta:
       owner: yu_cheng@mit.edu
     columns:
-      - name: "SAP Invoice #"
+      - name: "sap_invoice_number"
         description: "Unique identifier for SAP-generated invoices."
-      - name: "Invoice #"
+      - name: "invoice_number"
         description: "General identifier for invoices, distinct from SAP-specific IDs."
       - name: "fiscal_year"
         description: "The fiscal year in which the transaction was recorded or relevant."
-      - name: "PO Number"
+      - name: "po_number"
         description: "Purchase Order number associated with the invoice"
       - name: "level_1"
         description: "General goods and service category"
@@ -175,13 +175,13 @@ models:
         description: "Lowest level detailed commodity categorization."
       - name: "total"
         description: "Total USD spend for the invoice"
-      - name: "Description"
+      - name: "description"
         description: "Descriptive details about the invoice"
-      - name: "Billing"
+      - name: "billing"
         description: "Billing information."
-      - name: "Supplier"
+      - name: "supplier"
         description: "Name or identifier of the supplier or service provider."
-      - name: "Supplier #"
+      - name: "supplier_number"
         description: "Unique number or identifier assigned to the supplier."
       - name: "cost_object"
         description: "MIT cost object associated with the invoice."
@@ -197,3 +197,39 @@ models:
         description: "Department, Lab, and Center name."
       - name: "ghg"
         description: "Greenhouse gas data related in kg CO2e"
+  - name: stg_food_order
+    description: "Food order data with SIMAP category and GHG emission"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: customer_name
+        description: "Dinning hall name"
+      - name: contract_month
+        description: "Contract month of the order"
+      - name: fiscal_year
+        description: "Fiscal year of the order"
+      - name: mfr_item_description
+        description: "Manufacturer item description"
+      - name: dist_item_description
+        description: "Distributor description"
+      - name: lbs
+        description: "Weight in lbs"
+      - name: gal
+        description: "Volume in gallon"
+      - name: spend
+        description: "Dollar spend"
+      - name: wri_category
+        description: "World Resource Institute food category"
+      - name: simap_category
+        description: "SIMAP food category"
+        tests:
+          - accepted_values:
+              values: ['Beef', 'Pork', 'Chicken', 'Fish', 'Milk', 'Cheese', 'Eggs', 'Grains', 'Fruits', 'Vegetables', 'Potatoes', 'Beans', 'Nuts', 'Liquids', 'Coffee and tea', 'Oils', 'Sugars', 'Spices', '0']
+      - name: spend_emission_factor
+        description: "GHG emission factor in kg/2021 USD"
+      - name: weight_emission_factor
+        description: "GHG emission factor in kg CO2e/kg Food"
+      - name: weight_kg
+        description: "Weight in kg defined as 0.45*lbs + 3.79*gal"
+      - name: co2eq
+        description: "GHG emission in kg CO2e"

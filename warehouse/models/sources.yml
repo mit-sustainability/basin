@@ -412,3 +412,68 @@ sources:
             description: "USEEIO/NAICS commodity name"
           - name: "Code"
             description: "USEEIO code for supply chain commidty"
+      - name: food_emission_factor
+        description: SIMAP food emission factor from Heller & Keoleian 2014
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["food_emission_factor"]
+        columns:
+          - name: simap_category
+            description: "Food Category based on SIMAP methodology"
+            tests:
+              - unique
+          - name: spend-based emissions factor (kg CO2e/2021 USD)
+            description: "Spend-Based Emissions Factor"
+          - name: weight-based emissions factor (kg CO2e/kg food)
+            description: "Weight-Based Emissions Factors"
+  - name: staging
+    description: Python generated file in the MITOS warehouse with initial data processing
+    schema: staging
+    meta:
+      owner: yu_cheng@mit.edu
+    loader: Dagster
+    tables:
+      - name: food_order_categorize
+        description: "Food order data with SIMAP Categories"
+        meta:
+          owner: yu_cheng@mit.edu
+        columns:
+          - name: customer_name
+            description: "Dinning hall name"
+          - name: contract_month
+            description: "Contract month of the order"
+          - name: mfr_item_parent_category_name
+            description: "Manufacturer item parent category"
+          - name: mfr_item_category_name
+            description: "Manufacturer item category"
+          - name: mfr_item_code
+            description: "Manufacturer item identification code"
+          - name: mfr_item_description
+            description: "Manufacturer item description"
+          - name: distributor_name
+            description: "Name of distributor"
+          - name: dist_item_description
+            description: "Distributor description"
+          - name: din
+            description: "Distributor identification number"
+          - name: dist_item_manufacturer_item_id
+            description: "Distributor item manufacturer identification"
+          - name: lbs
+            description: "Weight in lbs"
+          - name: gal
+            description: "Volume in gallon"
+          - name: dist_qty
+            description: "Distribution quantity"
+          - name: dist_item_umo
+            description: "Distribution item unit of measure"
+          - name: reporting_qty
+            description: "Reporting quantity"
+          - name: mfr_item_reporting_uom
+            description: "Manufacturer item reporting unit of measure"
+          - name: case_qty
+            description: "Case quantity"
+          - name: spend
+            description: "Dollar spend"
+          - name: wri_category
+            description: "World Resource Institute food category"

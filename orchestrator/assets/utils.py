@@ -1,12 +1,17 @@
 """Shared objects and functions for all assets."""
 
 from datetime import datetime
+from queue import Queue  # Use Queue for thread-safe results collection
 from typing import List
 
+import aiohttp
+import asyncio
 from dagster import asset, AssetIn, ResourceParam, get_dagster_logger
 import pandas as pd
 import pandera as pa
 import pytz
+import regex as re
+
 
 from orchestrator.resources.datahub import DataHubResource
 
@@ -14,9 +19,9 @@ from orchestrator.resources.datahub import DataHubResource
 logger = get_dagster_logger()
 
 
-def empty_dataframe_from_model(Model: pa.DataFrameModel) -> pd.DataFrame:
+def empty_dataframe_from_model(model: pa.DataFrameModel) -> pd.DataFrame:
     """An empty dataframe model to ensure pandera check"""
-    schema = Model.to_schema()
+    schema = model.to_schema()
     return pd.DataFrame(columns=schema.dtypes.keys()).astype({col: str(dtype) for col, dtype in schema.dtypes.items()})
 
 
@@ -73,7 +78,45 @@ def str2datetime(tstring: str, fmat: str = "%Y-%m-%dT%H:%M:%S") -> datetime:
 
 def normalize_column_name(col_name):
     """Normalize column name to lowercase and replace special characters"""
-    col_name = col_name.lower()
+    col_name = col_name.replace("#", "Number")
+    col_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", col_name)
     col_name = col_name.replace(" ", "_")
-    col_name = col_name.replace("#", "number")
+    col_name = col_name.lower()
+    # Remove duplicate underscores
+    col_name = re.sub(r"_+", "_", col_name)
     return col_name
+
+
+async def post_api_request(url, data, session):
+    """Make API request with async"""
+    async with session.post(url, json=data) as response:
+        response.raise_for_status()  # Raise an exception for non-2xx status codes
+        return await response.json()
+
+
+async def fetch_all_async(url: str, data_list: List[dict]):
+    """Fetch multiple results async using asyncio and aiohttp
+
+    Args:
+        url: API endpoint to request from
+        data_list: list of data payload dictionaries
+    Returns:
+        list of results from the API requests.
+    """
+    results = Queue()  # Thread-safe queue for results
+    tasks = []
+
+    async with aiohttp.ClientSession() as session:
+        for data in data_list:
+            tasks.append(asyncio.ensure_future(post_api_request(url, data, session)))
+
+        # Wait for all tasks to complete and append results in order
+        for task in tasks:
+            result = await task
+            results.put(result)  # Thread-safe addition to queue
+
+    # Collect results from the queue in order
+    final_results = []
+    while not results.empty():
+        final_results.append(results.get())
+    return final_results
