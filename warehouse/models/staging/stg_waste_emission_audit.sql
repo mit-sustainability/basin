@@ -107,6 +107,32 @@ recycling_scaled AS (
 
 ),
 
+hard_recycle AS (
+    SELECT
+        service_month,
+        material,
+        tons,
+        tons * 0.75 AS sorted_recycling,
+        emission_factor
+    FROM
+        ton_month
+    WHERE
+        material = 'Hard-to-Recycle Materials'
+),
+
+-- add 75% of hard recycle to recycling
+recycling_adjusted AS (
+    SELECT
+        r.service_month,
+        r.material,
+        r.tons_scaled + coalesce(h.sorted_recycling, 0) AS tons,
+        r.sorted_trash,
+        r.emission_factor
+    FROM recycling_scaled AS r
+    LEFT JOIN hard_recycle AS h
+        ON r.service_month = h.service_month
+),
+
 -- trash and organics go back to the trash stream
 trash_updated AS (
     SELECT
@@ -117,7 +143,7 @@ trash_updated AS (
     FROM
         ton_month AS t
     LEFT JOIN
-        recycling_scaled AS r
+        recycling_adjusted AS r
         ON
             t.service_month = r.service_month
     WHERE
@@ -128,9 +154,9 @@ adjusted AS (
     SELECT
         service_month,
         material,
-        tons_scaled AS tons,
+        tons,
         emission_factor
-    FROM recycling_scaled
+    FROM recycling_adjusted
 
     UNION ALL
 
@@ -146,10 +172,19 @@ adjusted AS (
     SELECT
         service_month,
         material,
+        tons * 0.25 AS tons,
+        emission_factor
+    FROM hard_recycle
+
+    UNION ALL
+
+    SELECT
+        service_month,
+        material,
         tons,
         emission_factor
     FROM ton_month
-    WHERE material NOT IN ('Recycling', 'Trash')
+    WHERE material NOT IN ('Recycling', 'Trash', 'Hard-to-Recycle Materials')
 ),
 
 -- calculate GHG emission
