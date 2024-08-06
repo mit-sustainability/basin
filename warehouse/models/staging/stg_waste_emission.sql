@@ -1,3 +1,7 @@
+{% set cnd_split = 0.5 %}
+{% set residual = 0.22 %}
+{% set hard_split = 0.1 %}
+
 WITH ef AS (
     SELECT
         material,
@@ -32,7 +36,6 @@ roll AS (
     FROM {{ ref("final_waste_recycle") }}
 ),
 
-
 -- different category has different combination of landfilled/combusted/composted
 attached_ef AS (
     SELECT
@@ -47,36 +50,178 @@ attached_ef AS (
             WHEN r.material = 'C & D' THEN e.landfilled
             WHEN r.material IN ('Compost', 'Yard Waste') THEN e.composted
             ELSE e.recycled
-        END AS emission_factors
+        END AS emission_factor
     FROM roll AS r
     LEFT JOIN ef AS e ON r.group_id = e.group_id
 ),
 
+
+-- bin to calendar month
+ton_month AS (
+    SELECT
+        date_trunc('month', service_date)::date AS service_month,
+        material,
+        sum(tons) AS tons,
+        max(emission_factor) AS emission_factor
+    FROM attached_ef
+    GROUP BY date_trunc('month', service_date)::date, material
+    ORDER BY service_month
+),
+
+-- scale recycling based on waste audit 22% contamination
+recycling AS (
+    SELECT
+        service_month,
+        material,
+        tons,
+        tons * (1 - {{ residual }}) AS tons_new,
+        tons * {{ residual }} AS to_trash,
+        emission_factor
+    FROM
+        ton_month
+    WHERE
+        material = 'Recycling'
+
+
+),
+
+-- 90/10 split hard_recycling (Trash/Recycling)
+hard_recycle AS (
+    SELECT
+        service_month,
+        material,
+        tons * {{ hard_split }} AS tons_new,
+        tons * (1 - {{ hard_split }}) AS to_recycling,
+        emission_factor
+    FROM
+        ton_month
+    WHERE
+        material = 'Hard-to-Recycle Materials'
+),
+
+-- 50/50 split C & D Trash/Recycling
+cnd AS (
+    SELECT
+        service_month,
+        material,
+        tons * {{ cnd_split }} AS tons_new,
+        tons * (1 - {{ cnd_split }}) AS to_recycling,
+        emission_factor
+    FROM
+        ton_month
+    WHERE
+        material = 'C & D'
+),
+
+
+-- add partial hard-to-recycle and C&D to recycling
+recycling_adjusted AS (
+    SELECT
+        r.service_month,
+        r.material,
+        r.tons_new + coalesce(h.to_recycling, 0) + coalesce(c.to_recycling, 0) AS tons_new,
+        r.emission_factor
+    FROM recycling AS r
+    LEFT JOIN hard_recycle AS h
+        ON r.service_month = h.service_month
+    LEFT JOIN cnd AS c
+        ON r.service_month = c.service_month
+),
+
+-- trash and organics go back to the trash stream
+trash_adjusted AS (
+    SELECT
+        t.service_month,
+        t.material,
+        t.tons + r.to_trash AS tons_new,
+        t.emission_factor
+    FROM
+        ton_month AS t
+    LEFT JOIN
+        recycling AS r
+        ON
+            t.service_month = r.service_month
+    WHERE
+        t.material = 'Trash'
+
+),
+
+
+-- combine all streams
+adjusted AS (
+    SELECT
+        service_month,
+        material,
+        tons_new AS tons,
+        emission_factor
+    FROM recycling_adjusted
+
+    UNION ALL
+
+    SELECT
+        service_month,
+        material,
+        tons_new AS tons,
+        emission_factor
+    FROM trash_adjusted
+
+    UNION ALL
+
+    SELECT
+        service_month,
+        material,
+        tons_new AS tons,
+        emission_factor
+    FROM hard_recycle
+
+    UNION ALL
+
+    SELECT
+        service_month,
+        material,
+        tons_new AS tons,
+        emission_factor
+    FROM cnd
+
+    UNION ALL
+
+    SELECT
+        service_month,
+        material,
+        tons,
+        emission_factor
+    FROM ton_month
+    WHERE material NOT IN ('Recycling', 'Trash', 'Hard-to-Recycle Materials', 'C & D')
+),
+
+-- calculate GHG emission
 ghg AS (
     SELECT
-        ae.service_date,
-        ae.customer_name,
+        ae.service_month,
         ae.material,
-        ae.tons,
-        ae.emission_factors,
-        ae.tons * ae.emission_factors AS co2eq,
+        ae.tons AS tons_adjusted,
+        tm.tons AS tons_original,
+        ae.emission_factor,
+        ae.tons * ae.emission_factor AS co2eq,
         CASE
-            WHEN EXTRACT(MONTH FROM ae."service_date") < 7
-                THEN EXTRACT(YEAR FROM ae."service_date")
-            ELSE EXTRACT(YEAR FROM ae."service_date") + 1
+            WHEN extract(MONTH FROM ae."service_month") < 7
+                THEN extract(YEAR FROM ae."service_month")
+            ELSE extract(YEAR FROM ae."service_month") + 1
         END AS fiscal_year,
-        EXTRACT(YEAR FROM ae."service_date") AS "year"
-    FROM attached_ef AS ae
+        extract(YEAR FROM ae."service_month") AS "year"
+    FROM adjusted AS ae
+    LEFT JOIN ton_month AS tm
+        ON
+            ae.service_month = tm.service_month
+            AND ae.material = tm.material
 )
 
-
 SELECT
-    service_date,
+    service_month,
     material,
-    tons,
-    emission_factors AS emission_factor,
+    tons_original AS tons,
+    tons_adjusted AS tons_adjusted,
     co2eq,
     "year"
 FROM ghg
-WHERE service_date IS NOT NULL
-ORDER BY service_date
+ORDER BY service_month

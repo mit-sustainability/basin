@@ -44,7 +44,7 @@ sources:
         columns:
           - name: cost_object
             description: "Cost Object ID"
-            tests:
+            data_tests:
               - unique
           - name: dlc_name
             description: "MIT Department, Lab, and Center name"
@@ -63,7 +63,7 @@ sources:
           - name: expense_type
           - name: emission_category
             description: "Larger GHG emission group"
-            tests:
+            data_tests:
               - not_null
       - name: construction_expense
         description: "Construction expense data from VPCSS"
@@ -76,7 +76,7 @@ sources:
           - name: renovation_and_renewal
             description: "Renovation and Renewal expense in Million"
           - name: fiscal_year
-            tests:
+            data_tests:
               - unique
       - name: dof_maintenance_cost
         description: "Maintenance and service cost data from Facilities"
@@ -85,7 +85,7 @@ sources:
             asset_key: ["dof_maintenance_cost"]
         columns:
           - name: fiscal_year
-            tests:
+            data_tests:
               - unique
           - name: Work Orders Within DOF
             description: "Work Orders within Department of Facilities"
@@ -101,7 +101,7 @@ sources:
         columns:
           - name: ID
             description: "USEEIO code with region"
-            tests:
+            data_tests:
               - unique
           - name: emission_factor
             description: "eCO2 emission factor in kg/$ from USEEIOv2.0 (2012 dollars)"
@@ -125,7 +125,7 @@ sources:
         columns:
           - name: ID
             description: "USEEIO code with region"
-            tests:
+            data_tests:
               - unique
           - name: emission_factor
             description: "eCO2 emission factor in kg/$ from USEEIOv2.0 (2012 dollars)"
