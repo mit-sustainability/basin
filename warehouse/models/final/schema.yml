@@ -68,7 +68,7 @@ models:
         description: MIT Fiscal year July-June
       - name: expense_type
         description: Type of construction expense
-        tests:
+        data_tests:
           - accepted_values:
               values: ['New Construction', 'Maintenance material and Services', 'Renovation and Renewal']
       - name: expense_2021
@@ -104,7 +104,7 @@ models:
         description: "Anual equivalent CO2 emission in metric tons"
       - name: year
         description: "Survey year"
-        tests:
+        data_tests:
           - accepted_values:
               values: [2018, 2021, 2023]
   - name: purchased_goods_invoice_summary
@@ -168,3 +168,16 @@ models:
         description: "supplier name"
       - name: "description"
         description: "Descriptive details about the invoice"
+  - name: final_waste_emission
+    description: "Summary of Scope 3 waste emission grouped by material"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: year
+        description: "Calendar Year of Service Date"
+      - name: material
+        description: "Waste stream"
+      - name: tons
+        description: "Waste tonnage"
+      - name: co2eq
+        description: "Metric tons CO2e emission"

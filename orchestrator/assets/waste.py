@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from dagster import (
     asset,
     get_dagster_logger,
@@ -9,7 +11,11 @@ from pandera.typing import Series, DateTime
 
 import pandas as pd
 
-from orchestrator.assets.utils import empty_dataframe_from_model, add_dhub_sync
+from orchestrator.assets.utils import (
+    empty_dataframe_from_model,
+    add_dhub_sync,
+    normalize_column_name,
+)
 from orchestrator.resources.datahub import DataHubResource
 
 logger = get_dagster_logger()
@@ -109,6 +115,45 @@ def small_stream_recycle(dhub: ResourceParam[DataHubResource]):
     df_out["material"] = "Hard-to-Recycle Materials"
     df_out["customer_name"] = "Small Stream Facility"
     df_out["diverted"] = df_out["tons"]
+
+    return df_out
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def waste_emission_factors_EPA(dhub: ResourceParam[DataHubResource]):
+    """This asset ingest the Commuting Emission Factors by vehicle
+    type from EPA Emission Factors Hub."""
+    project_id = dhub.get_project_id("Scope3 General")
+    logger.info(f"Found project id: {project_id}!")
+    download_links = dhub.search_files_from_project(project_id, "EPA_GHG_emission_factors_June_2024")
+    if len(download_links) == 0:
+        logger.error("No download links found!")
+        return pd.DataFrame()
+    # Load the data
+    workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
+
+    # Get GWP to calculate CO2-eq
+    ef = pd.read_excel(
+        workbook,
+        usecols="C:I",
+        skiprows=425,
+        nrows=61,
+    )
+    mapping = {
+        "RecycledA": "Recycled",
+        "LandfilledB": "Landfilled",
+        "CombustedC": "Combusted",
+        "CompostedD": "Composted",
+        "Anaerobically Digested (Dry Digestate with Curing)E": "Dry Anaerobically Digested",
+        "Anaerobically Digested (Wet  Digestate with Curing)E": "Wet Anaerobically Digested",
+    }
+    df_out = ef.rename(columns=mapping)
+    df_out.columns = [normalize_column_name(col) for col in df_out.columns]
+    df_out["last_update"] = datetime.now()
 
     return df_out
 
