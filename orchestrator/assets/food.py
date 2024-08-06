@@ -11,7 +11,7 @@ from dagster import (
 )
 import pandas as pd
 
-from orchestrator.constants import food_categorizer
+from orchestrator.constants import food_cat_endpoint
 from orchestrator.assets.utils import (
     add_dhub_sync,
     normalize_column_name,
@@ -101,7 +101,7 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
     group_name="raw",
 )
 def food_emission_factor(dhub: ResourceParam[DataHubResource]):
-    """This asset ingest the food emission factors
+    """This asset ingests the food emission factors
     from the Data Hub"""
     project_id = dhub.get_project_id("Scope3 Food")
     logger.info(f"Found project id: {project_id}!")
@@ -109,7 +109,6 @@ def food_emission_factor(dhub: ResourceParam[DataHubResource]):
     download_links = dhub.search_files_from_project(project_id, "food_emission_factors_SIMAP.xlsx")
     if len(download_links) == 0:
         logger.error("No download links found!")
-    # Load the data
     df = pd.read_excel(download_links[0], sheet_name="Final Table")
     name_mapping = {
         "Food Category": "simap_category",
@@ -145,21 +144,24 @@ def food_order_categorize(df: pd.DataFrame):
     df["title"] = filled.agg(" ".join, axis=1)
     print(df["title"])
     inputs = [{"body": entry} for entry in df["title"].values]
+
     # Predict food category through API
-    results = asyncio.run(fetch_all_async(food_categorizer, inputs))
+    results = asyncio.run(fetch_all_async(food_cat_endpoint, inputs))
 
     for item in results:
         item["body"] = json.loads(item["body"])
 
     bodies = [item["body"] for item in results]
     predict = pd.DataFrame(bodies)
-    print(predict.head())
     df["simap_category"] = predict["Cat1"]
+
+    # Select output columns
     out_cols = sel_cols.copy()
     out_cols.append("simap_category")
     return df[out_cols]
 
 
+# Sync back to DataHub
 dhub_food_orders = add_dhub_sync(
     asset_name="dhub_food_order_categorize",
     table_key=["staging", "stg_food_order"],

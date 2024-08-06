@@ -222,12 +222,15 @@ models:
         description: "World Resource Institute food category"
       - name: simap_category
         description: "SIMAP food category"
+        tests:
+          - accepted_values:
+              values: ['Beef', 'Pork', 'Chicken', 'Fish', 'Milk', 'Cheese', 'Eggs', 'Grains', 'Fruits', 'Vegetables', 'Potatoes', 'Beans', 'Nuts', 'Liquids', 'Coffee and tea', 'Oils', 'Sugars', 'Spices', '0']
       - name: spend_emission_factor
         description: "GHG emission factor in kg/2021 USD"
       - name: weight_emission_factor
         description: "GHG emission factor in kg CO2e/kg Food"
       - name: weight_kg
-        description: "Weight in kg"
+        description: "Weight in kg defined as 0.45*lbs + 3.79*gal"
       - name: co2eq
         description: "GHG emission in kg CO2e"
   - name: stg_waste_emission

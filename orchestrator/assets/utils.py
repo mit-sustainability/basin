@@ -4,8 +4,8 @@ from datetime import datetime
 from queue import Queue  # Use Queue for thread-safe results collection
 from typing import List
 
-import asyncio
 import aiohttp
+import asyncio
 from dagster import asset, AssetIn, ResourceParam, get_dagster_logger
 import pandas as pd
 import pandera as pa
@@ -87,21 +87,28 @@ def normalize_column_name(col_name):
     return col_name
 
 
-async def send_request(url, data, session):
-    """Make API request async"""
+async def post_api_request(url, data, session):
+    """Make API request with async"""
     async with session.post(url, json=data) as response:
         response.raise_for_status()  # Raise an exception for non-2xx status codes
         return await response.json()
 
 
-async def fetch_all_async(url, data_list):
-    """Fetch multiple results async using asyncio and aiohttp"""
+async def fetch_all_async(url: str, data_list: List[dict]):
+    """Fetch multiple results async using asyncio and aiohttp
+
+    Args:
+        url: API endpoint to request from
+        data_list: list of data payload dictionaries
+    Returns:
+        list of results from the API requests.
+    """
     results = Queue()  # Thread-safe queue for results
     tasks = []
 
     async with aiohttp.ClientSession() as session:
         for data in data_list:
-            tasks.append(asyncio.ensure_future(send_request(url, data, session)))
+            tasks.append(asyncio.ensure_future(post_api_request(url, data, session)))
 
         # Wait for all tasks to complete and append results in order
         for task in tasks:
