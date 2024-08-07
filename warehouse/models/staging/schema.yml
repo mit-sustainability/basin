@@ -252,7 +252,21 @@ models:
         description: "Total GHG emission in kg CO2 equivalence"
       - name: year
         description: "Service year"
-
+  - name: stg_ghg_inventory
+    description: "Aggregate all scopes GHG emissions"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: category
+        description: "GHG category"
+      - name: emission
+        description: "GHG emission in metric tons"
+      - name: fiscal_year
+        description: "MIT fiscal year"
+      - name: scope
+        description: "GHG scope 1, 2, or 3"
+      - name: last_update
+        description: "Timestamp of the entry being added"
 unit_tests:
   - name: test_waste_split_adjustment
     description: >

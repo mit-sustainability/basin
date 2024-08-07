@@ -448,6 +448,23 @@ sources:
             description: "Emission factor when processed by dry anaerobic digestion"
           - name: wet_anaerobically_digested
             description: "Emission factor when processed by wet anaerobic digestion"
+      - name: ghg_manual_entries
+        description: Sync manual entried GHG emission from Quickbase
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["ghg_manual_entries"]
+        columns:
+          - name: category
+            description: "category"
+          - name: emission
+            description: "GHG emission in metric tons"
+          - name: scope
+            description: "GHG scope 1, 2, or 3"
+          - name: fiscal_year
+            description: "MIT fiscal year"
+          - name: last_update
+            description: "Timestamp of the entry being added"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

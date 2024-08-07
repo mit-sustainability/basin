@@ -19,6 +19,7 @@ from orchestrator.assets import (
     parking,
     purchased_goods,
     waste,
+    ghg_inventory,
 )
 
 from orchestrator.jobs.business_travel_job import business_asset_job
@@ -48,6 +49,7 @@ commuting_assets = load_assets_from_modules([commuting])
 parking_assets = load_assets_from_modules([parking])
 purchased_goods_assets = load_assets_from_modules([purchased_goods])
 food_assets = load_assets_from_modules([food])
+all_scopes_assets = load_assets_from_modules([ghg_inventory])
 
 defs = Definitions(
     assets=[mitos_dbt_assets]
@@ -57,7 +59,8 @@ defs = Definitions(
     + commuting_assets
     + parking_assets
     + purchased_goods_assets
-    + food_assets,
+    + food_assets
+    + all_scopes_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
