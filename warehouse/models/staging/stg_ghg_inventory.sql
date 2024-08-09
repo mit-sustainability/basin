@@ -44,7 +44,7 @@ waste AS (
 pgs AS (
     SELECT
         '3.1 Purchased Goods and Services' AS category,
-        sum(ghg) / 1000 AS emission, --mtCO2
+        sum(ghg) / 1000 AS emission, -- mtco2
         fiscal_year,
         3 AS "scope",
         max(last_update) AS last_update
