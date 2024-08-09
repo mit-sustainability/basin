@@ -6,7 +6,8 @@ SELECT
     sum(inflated_spend) AS spend_usd,
     max(level_2) AS level_2,
     max(level_1) AS level_1,
-    string_agg(DISTINCT "description", ', ') AS "description"
+    string_agg(DISTINCT "description", ', ') AS "description",
+    current_timestamp AS last_update
 FROM staging.stg_purchased_goods_invoice
 GROUP BY po_number, fiscal_year
 ORDER BY fiscal_year

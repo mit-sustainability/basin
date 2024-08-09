@@ -197,6 +197,8 @@ models:
         description: "Department, Lab, and Center name."
       - name: "ghg"
         description: "Greenhouse gas data related in kg CO2e"
+      - name: last_update
+        description: "Timestamp of the entry being modified"
   - name: stg_food_order
     description: "Food order data with SIMAP category and GHG emission"
     meta:
@@ -222,7 +224,7 @@ models:
         description: "World Resource Institute food category"
       - name: simap_category
         description: "SIMAP food category"
-        tests:
+        data_tests:
           - accepted_values:
               values: ['Beef', 'Pork', 'Chicken', 'Fish', 'Milk', 'Cheese', 'Eggs', 'Grains', 'Fruits', 'Vegetables', 'Potatoes', 'Beans', 'Nuts', 'Liquids', 'Coffee and tea', 'Oils', 'Sugars', 'Spices', '0']
       - name: spend_emission_factor
@@ -266,7 +268,7 @@ models:
       - name: scope
         description: "GHG scope 1, 2, or 3"
       - name: last_update
-        description: "Timestamp of the entry being added"
+        description: "Timestamp of the entry being modified"
 unit_tests:
   - name: test_waste_split_adjustment
     description: >

@@ -52,9 +52,9 @@ def ghg_manual_entries(s3: S3Resource) -> Output[pd.DataFrame]:
     metadata = {
         "total_entries": len(df),
     }
-    sel_columns = ["category", "emission", "fiscal_year", "scope"]
+    sel_columns = ["category", "emission", "fiscal_year", "scope", "Date Modified"]
     df_out = df[sel_columns]
-    df_out["last_update"] = datetime.now()
+    df_out.rename({"Date Modified": "last_update"}, axis=1, inplace=True)
 
     return Output(value=df_out, metadata=metadata)
 

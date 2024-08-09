@@ -14,7 +14,7 @@ business AS (
         sum(total_mtco2) AS emission,
         fiscal_year,
         3 AS "scope",
-        current_timestamp AS "last_update"
+        max(last_update) AS last_update
     FROM {{ ref("travel_FY_exp_group_summary") }}
     GROUP BY fiscal_year
 ),
@@ -25,7 +25,7 @@ construction AS (
         sum(ghg_emission) AS emission,
         fiscal_year,
         3 AS "scope",
-        current_timestamp AS "last_update"
+        max(last_update) AS last_update
     FROM {{ ref("construction_expense_emission") }}
     GROUP BY fiscal_year
 ),
@@ -36,11 +36,21 @@ waste AS (
         sum(co2eq) AS emission,
         "year" AS fiscal_year,
         3 AS "scope",
-        current_timestamp AS "last_update"
+        max(last_update) AS last_update
     FROM {{ ref("final_waste_emission") }}
     GROUP BY fiscal_year
 ),
 
+pgs AS (
+    SELECT
+        '3.1 Purchased Goods and Services' AS category,
+        sum(ghg) / 1000 AS emission, --mtCO2
+        fiscal_year,
+        3 AS "scope",
+        max(last_update) AS last_update
+    FROM {{ ref("stg_purchased_goods_invoice") }}
+    GROUP BY fiscal_year
+),
 
 combined AS (
     SELECT * FROM manual
@@ -50,6 +60,8 @@ combined AS (
     SELECT * FROM construction
     UNION ALL
     SELECT * FROM waste
+    UNION ALL
+    SELECT * FROM pgs
 )
 
 SELECT

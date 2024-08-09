@@ -421,7 +421,7 @@ sources:
         columns:
           - name: simap_category
             description: "Food Category based on SIMAP methodology"
-            tests:
+            data_tests:
               - unique
           - name: spend-based emissions factor (kg CO2e/2021 USD)
             description: "Spend-Based Emissions Factor"
@@ -464,7 +464,7 @@ sources:
           - name: fiscal_year
             description: "MIT fiscal year"
           - name: last_update
-            description: "Timestamp of the entry being added"
+            description: "Timestamp of the entry being modified"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

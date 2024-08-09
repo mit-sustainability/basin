@@ -11,6 +11,9 @@ test-paths: ["tests"]
 analysis-paths: ["analysis"]
 macro-paths: ["macros"]
 
+flags:
+   fail_fast: true
+
 packages-install-path: "dbt_packages"
 target-path: "target"
 clean-targets:
@@ -68,3 +71,10 @@ seeds:
     +persist_docs:
       relation: true
       columns: true
+
+snapshots:
+  mitos:
+    +target_schema: snapshots
+    +meta:
+      dagster:
+        group: snapshots

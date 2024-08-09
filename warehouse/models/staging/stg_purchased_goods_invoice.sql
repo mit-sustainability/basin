@@ -106,4 +106,7 @@ co2kg AS (
 )
 
 
-SELECT * FROM co2kg -- kgCO2e/dollar
+SELECT
+    *,
+    CURRENT_TIMESTAMP AS last_update
+FROM co2kg -- kgCO2e/dollar
