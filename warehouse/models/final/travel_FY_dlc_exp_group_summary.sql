@@ -12,7 +12,9 @@ SELECT
         WHEN SUM(SUM(expense_amount)) OVER (PARTITION BY dlc_name, fiscal_year) = 0 THEN 0
         ELSE
             SUM(expense_amount) / SUM(SUM(expense_amount)) OVER (PARTITION BY dlc_name, fiscal_year)
-    END AS share_of_total_expense_amount
+    END AS share_of_total_expense_amount,
+    CURRENT_TIMESTAMP AS "last_update"
+
 FROM {{ref('stg_travel_spending')}}
 GROUP BY
     dlc_name,
