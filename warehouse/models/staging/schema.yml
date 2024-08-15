@@ -269,7 +269,7 @@ unit_tests:
         - 50% of C & D to recycle
     model: stg_waste_emission
     given:
-      - input: source("raw", "waste_emission_factors_EPA")
+      - input: source("raw", "waste_emission_factors_epa")
         rows: []
       - input: ref("final_waste_recycle")
         rows:
