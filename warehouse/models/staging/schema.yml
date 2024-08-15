@@ -222,7 +222,7 @@ models:
         description: "World Resource Institute food category"
       - name: simap_category
         description: "SIMAP food category"
-        tests:
+        data_tests:
           - accepted_values:
               values: ['Beef', 'Pork', 'Chicken', 'Fish', 'Milk', 'Cheese', 'Eggs', 'Grains', 'Fruits', 'Vegetables', 'Potatoes', 'Beans', 'Nuts', 'Liquids', 'Coffee and tea', 'Oils', 'Sugars', 'Spices', '0']
       - name: spend_emission_factor
@@ -242,6 +242,8 @@ models:
         description: "Service Month"
       - name: material
         description: "Waste material stream"
+        data_tests:
+          - not_null
       - name: tons
         description: "waste tonnage"
       - name: tons_adjusted
@@ -252,6 +254,11 @@ models:
         description: "Total GHG emission in kg CO2 equivalence"
       - name: year
         description: "Service year"
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 2010
+              inclusive: true
+
 
 unit_tests:
   - name: test_waste_split_adjustment

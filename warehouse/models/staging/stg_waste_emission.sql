@@ -16,7 +16,7 @@ WITH ef AS (
             WHEN material = 'Mixed Recyclables' THEN 2
             ELSE 1
         END AS group_id
-    FROM {{ source("raw", "waste_emission_factors_EPA") }}
+    FROM {{ source("raw", "waste_emission_factors_epa") }}
     WHERE
         material IN (
             'Mixed MSW', 'Yard Trimmings', 'Food Waste', 'Mixed Recyclables', 'Mixed Organics'
