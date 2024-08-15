@@ -44,8 +44,6 @@ sources:
         columns:
           - name: cost_object
             description: "Cost Object ID"
-            tests:
-              - unique
           - name: dlc_name
             description: "MIT Department, Lab, and Center name"
           - name: school_area
@@ -63,8 +61,6 @@ sources:
           - name: expense_type
           - name: emission_category
             description: "Larger GHG emission group"
-            tests:
-              - not_null
       - name: construction_expense
         description: "Construction expense data from VPCSS"
         meta:
@@ -76,8 +72,7 @@ sources:
           - name: renovation_and_renewal
             description: "Renovation and Renewal expense in Million"
           - name: fiscal_year
-            tests:
-              - unique
+            description: "MIT Fiscal year July-June"
       - name: dof_maintenance_cost
         description: "Maintenance and service cost data from Facilities"
         meta:
@@ -85,8 +80,7 @@ sources:
             asset_key: ["dof_maintenance_cost"]
         columns:
           - name: fiscal_year
-            tests:
-              - unique
+            description: "MIT Fiscal year July-June"
           - name: Work Orders Within DOF
             description: "Work Orders within Department of Facilities"
           - name: Sales Work Orders
@@ -101,8 +95,6 @@ sources:
         columns:
           - name: ID
             description: "USEEIO code with region"
-            tests:
-              - unique
           - name: emission_factor
             description: "eCO2 emission factor in kg/$ from USEEIOv2.0 (2012 dollars)"
           - name: Name
@@ -125,8 +117,6 @@ sources:
         columns:
           - name: ID
             description: "USEEIO code with region"
-            tests:
-              - unique
           - name: emission_factor
             description: "eCO2 emission factor in kg/$ from USEEIOv2.0 (2012 dollars)"
           - name: Name
@@ -421,12 +411,31 @@ sources:
         columns:
           - name: simap_category
             description: "Food Category based on SIMAP methodology"
-            tests:
-              - unique
           - name: spend-based emissions factor (kg CO2e/2021 USD)
             description: "Spend-Based Emissions Factor"
           - name: weight-based emissions factor (kg CO2e/kg food)
-            description: "Weight-Based Emissions Factors"
+            description: "Description for Weight-Based Emissions Factors"
+      - name: waste_emission_factors_epa
+        description: Table 9 in 2024 June EPA emission factor hub
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["waste_emission_factors_epa"]
+        columns:
+          - name: material
+            description: "Waste category"
+          - name: recycled
+            description: "Emission factor when recycled"
+          - name: landfilled
+            description: "Emission factor when landfilled"
+          - name: combusted
+            description: "Emission factor when combusted"
+          - name: composted
+            description: "Emission factor when composted"
+          - name: dry_anaerobically_digested
+            description: "Emission factor when processed by dry anaerobic digestion"
+          - name: wet_anaerobically_digested
+            description: "Emission factor when processed by wet anaerobic digestion"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

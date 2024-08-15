@@ -26,12 +26,12 @@ models:
         description: School Area
       - name: expense_group
         description: Larger Expense Group
-        tests:
+        data_tests:
           - accepted_values:
               values: ['Air Travel', 'Ground Travel', 'Accommodations', 'Food', 'Other']
       - name: transport_mode
         description: Transport Mode for GHG calculation
-        tests:
+        data_tests:
           - accepted_values:
               values: ['misc.', 'housing', 'meals', 'car', 'train', 'ferry', 'air']
       - name: co2_factor
@@ -222,7 +222,7 @@ models:
         description: "World Resource Institute food category"
       - name: simap_category
         description: "SIMAP food category"
-        tests:
+        data_tests:
           - accepted_values:
               values: ['Beef', 'Pork', 'Chicken', 'Fish', 'Milk', 'Cheese', 'Eggs', 'Grains', 'Fruits', 'Vegetables', 'Potatoes', 'Beans', 'Nuts', 'Liquids', 'Coffee and tea', 'Oils', 'Sugars', 'Spices', '0']
       - name: spend_emission_factor
@@ -233,3 +233,53 @@ models:
         description: "Weight in kg defined as 0.45*lbs + 3.79*gal"
       - name: co2eq
         description: "GHG emission in kg CO2e"
+  - name: stg_waste_emission
+    description: "Scope 3 waste emission with emission factors"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: service_month
+        description: "Service Month"
+      - name: material
+        description: "Waste material stream"
+        data_tests:
+          - not_null
+      - name: tons
+        description: "waste tonnage"
+      - name: tons_adjusted
+        description: "waste tonnage adjusted by specified splits"
+      - name: emission_factor
+        description: "GHG emission factor in kg CO2e/ton"
+      - name: co2eq
+        description: "Total GHG emission in kg CO2 equivalence"
+      - name: year
+        description: "Service year"
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 2010
+              inclusive: true
+
+
+unit_tests:
+  - name: test_waste_split_adjustment
+    description: >
+      Scenario: Waste Streams per knowledge:
+        - 22% of recycle to trash
+        - 90% of hard-to-recycle to recycle
+        - 50% of C & D to recycle
+    model: stg_waste_emission
+    given:
+      - input: source("raw", "waste_emission_factors_EPA")
+        rows: []
+      - input: ref("final_waste_recycle")
+        rows:
+          - { service_date: '2020-04-01', customer_name: 'dummy', material: 'C & D', diverted: 0, tons: 20 }
+          - { service_date: '2020-04-01', customer_name: 'dummy', material: 'Trash', diverted: 0, tons: 50 }
+          - { service_date: '2020-04-01', customer_name: 'dummy', material: 'Hard-to-Recycle Materials', diverted: 0, tons: 10 }
+          - { service_date: '2020-04-01', customer_name: 'dummy', material: 'Recycling', diverted: 0, tons: 10 }
+    expect:
+      rows:
+          - { service_month: '2020-04-01', material: 'C & D', tons_adjusted: 10, tons: 20, co2eq: NULL, year: 2020}
+          - { service_month: '2020-04-01', material: 'Trash', tons_adjusted: 52.2, tons: 50, co2eq: NULL, year: 2020 }
+          - { service_month: '2020-04-01', material: 'Hard-to-Recycle Materials', tons_adjusted: 1, tons: 10, co2eq: NULL, year: 2020 }
+          - { service_month: '2020-04-01', material: 'Recycling', tons_adjusted: 26.8, tons: 10, co2eq: NULL, year: 2020 }

@@ -90,7 +90,7 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
                     )
                     if self.write_method == "replace" and exists:
                         logger.info("Drop the table recursively.")
-                        con.execute(text(f"DROP TABLE {schema}.{table} CASCADE;"))
+                        con.execute(text(f'DROP TABLE {schema}."{table}" CASCADE;'))
                     obj.to_sql(
                         con=con,
                         name=table,
