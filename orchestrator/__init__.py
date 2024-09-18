@@ -33,6 +33,7 @@ from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
     PG_CREDENTIALS,
+    EM_CREDENTIALS,
     dh_api_key,
 )
 from orchestrator.resources.datahub import DataHubResource
@@ -77,6 +78,7 @@ defs = Definitions(
         "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
         "postgres_append": PostgreSQLPandasIOManager(**PG_CREDENTIALS, write_method="append"),
         "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
+        "em_connect": PostgreConnResources(**EM_CREDENTIALS),
         "dhub": DataHubResource(auth_token=dh_api_key),
         "dwhrs": MITWHRSResource(**DWRHS_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),

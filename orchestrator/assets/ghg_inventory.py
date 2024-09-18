@@ -1,10 +1,9 @@
 from datetime import datetime
-import json
-import cpi
 from dagster import (
     Output,
     asset,
     get_dagster_logger,
+    MetadataValue,
     ResourceParam,
 )
 from dagster_aws.s3 import S3Resource
@@ -16,7 +15,11 @@ import pytz
 import requests
 from sqlalchemy import text
 
-from orchestrator.assets.utils import empty_dataframe_from_model, add_dhub_sync
+from orchestrator.assets.utils import (
+    empty_dataframe_from_model,
+    add_dhub_sync,
+    normalize_column_name,
+)
 from orchestrator.resources.postgres_io_manager import PostgreConnResources
 from orchestrator.resources.datahub import DataHubResource
 
@@ -57,6 +60,52 @@ def ghg_manual_entries(s3: S3Resource) -> Output[pd.DataFrame]:
     df_out.rename({"Date Modified": "last_update"}, axis=1, inplace=True)
 
     return Output(value=df_out, metadata=metadata)
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+    # dagster_type=pandera_schema_to_dagster_type(TravelSpendingData),
+)
+def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
+    engine = em_connect.create_engine()
+    logger.info("Connect to energize_mit database to ingest Scope 1 and 2 emissions")
+    query = """
+            SELECT
+                "GL_ACCOUNT_KEY",
+                "START_DATE",
+                "START_DATE_USE",
+                "BILLING_FY",
+                "USE_FY",
+                "GHG",
+                "UNIT_OF_MEASURE",
+                "NUMBER_OF_UNITS",
+                "BUILDING_GROUP_LEVEL1",
+                "LEVEL1_CATEGORY",
+                "LEVEL2_CATEGORY",
+                "LEVEL3_CATEGORY"
+            FROM public.energy_cdr
+            WHERE "BUILDING_GROUP_LEVEL1" IN ('CUP','Non-CUP')
+            AND "LEVEL2_CATEGORY" = 'Purchased'
+            AND "LEVEL3_CATEGORY" IN ('Electricity', 'Gas', 'Fuel Oil #2', 'Fuel Oil #6')
+            """
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(query, conn)
+        logger.info("Query executed successfully. Scope 1 and 2 data fetched from energize-mit.")
+    except Exception as e:
+        logger.error("An error occurred:", e)
+    finally:
+        engine.dispose()
+
+    metadata = {
+        "total_entries": len(df),
+        "last_entry_date": MetadataValue.text(df["START_DATE"].max().strftime("%Y-%m-%d")),
+    }
+    df["last_update"] = datetime.now()
+    df.columns = [normalize_column_name(col) for col in df.columns]
+    return Output(value=df, metadata=metadata)
 
 
 # Sync processed table back to datahub

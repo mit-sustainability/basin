@@ -465,6 +465,37 @@ sources:
             description: "MIT fiscal year"
           - name: last_update
             description: "Timestamp of the entry being modified"
+      - name: purchased_energy
+        description: CUP and Non-CUP purchased energy from energy_cdr table in energize-mit
+        meta:
+          owner: yu_cheng@mit.edu
+        columns:
+          - name: gl_account_key
+            description: "GL Account Key"
+          - name: start_date
+            description: "Start Date"
+          - name: start_date_use
+            description: "Start Date for Use"
+          - name: billing_fy
+            description: "Billing Fiscal Year"
+          - name: use_fy
+            description: "Use Fiscal Year"
+          - name: ghg
+            description: "Greenhouse Gas"
+          - name: unit_of_measure
+            description: "Unit of Measure"
+          - name: number_of_units
+            description: "Number of Units"
+          - name: building_group_level1
+            description: "Building Group Level 1"
+          - name: level1_category
+            description: "Level 1 Category"
+          - name: level2_category
+            description: "Level 2 Category"
+          - name: level3_category
+            description: "Level 3 Category"
+          - name: last_update
+            description: "Last Update timestamp"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

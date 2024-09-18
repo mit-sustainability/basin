@@ -52,6 +52,33 @@ pgs AS (
     GROUP BY fiscal_year
 ),
 
+-- purchased energy from energize-mit
+cdr AS (
+    SELECT
+        ghg,
+        billing_fy,
+        last_update,
+        CASE
+            WHEN level3_category IN ('Gas', 'Fuel Oil #2', 'Fuel Oil #6') THEN 1
+            WHEN level3_category = 'Electricity' THEN 2
+        END AS scope
+    FROM {{ source("raw", "purchased_energy") }}
+),
+
+energy AS (
+    SELECT
+        CASE
+            WHEN scope = 1 THEN '1. Direct emissions'
+            WHEN scope = 2 THEN '2. Indirect electricity'
+        END AS category,
+        sum(ghg) AS emission,
+        billing_fy AS fiscal_year,
+        scope,
+        max(last_update) AS last_update
+    FROM cdr
+    GROUP BY billing_fy, scope
+),
+
 combined AS (
     SELECT * FROM manual
     UNION ALL
@@ -62,6 +89,8 @@ combined AS (
     SELECT * FROM waste
     UNION ALL
     SELECT * FROM pgs
+    UNION ALL
+    SELECT * FROM energy
 )
 
 SELECT
