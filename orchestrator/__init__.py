@@ -10,7 +10,7 @@ from orchestrator.resources.postgres_io_manager import (
 from dagster_aws.pipes import PipesLambdaClient
 from dagster_aws.s3 import S3Resource
 
-from orchestrator.assets.postgres import mitos_dbt_assets
+from orchestrator.assets.postgres import mitos_dbt_assets, lambda_pipes_asset
 from orchestrator.assets import (
     business_travel,
     commuting,
@@ -53,7 +53,7 @@ food_assets = load_assets_from_modules([food])
 all_scopes_assets = load_assets_from_modules([ghg_inventory])
 
 defs = Definitions(
-    assets=[mitos_dbt_assets]
+    assets=[mitos_dbt_assets, lambda_pipes_asset]
     + construction_assets
     + business_travel_assets
     + waste_assets

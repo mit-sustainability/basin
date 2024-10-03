@@ -9,6 +9,7 @@ from dagster import (
 )
 from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
+import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime
@@ -78,7 +79,7 @@ def travel_spending(
         required_cols[2]: "trip_end_date",
         required_cols[3]: "cost_object",
     }
-
+    # TODO this cannot handle the case we got partial quarter
     # Get last update from warehouse
     engine = pg_engine.create_engine()
     logger.info("Check last update of the travel_spending table")
@@ -89,8 +90,17 @@ def travel_spending(
         table_exists = result.scalar()
         last_update = datetime(2020, 1, 1, tzinfo=pytz.UTC)
         if table_exists:
-            result = conn.execute(text(f"SELECT last_update FROM raw.{target_table}"))
-            last_update = pytz.utc.localize(result.scalar())
+            date_query = f"""
+                            SELECT trip_end_date, last_update
+                            FROM raw.{target_table}
+                            ORDER BY trip_end_date DESC LIMIT 1"""
+            result = conn.execute(text(date_query))
+            row = result.fetchone()
+
+            if row:
+                trip_end_date, update_date = row
+            last_update = pytz.utc.localize(update_date)
+            last_entry_date = np.datetime64(pytz.utc.localize(trip_end_date).replace(tzinfo=None))
         conn.commit()
     # Get s3 list
     s3_client = s3.get_client()
@@ -113,6 +123,7 @@ def travel_spending(
         logger.info(f"Adding {new_entries_count} new entries to the travel_spending table")
         df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
         df_out["trip_end_date"] = pd.to_datetime(df_out["trip_end_date"])
+        df_out = df_out[df_out["trip_end_date"] > last_entry_date]
         df_out = df_out.sort_values("trip_end_date")
     return df_out
 

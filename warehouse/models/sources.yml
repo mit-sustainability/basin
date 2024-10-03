@@ -469,6 +469,8 @@ sources:
         description: CUP and Non-CUP purchased energy from energy_cdr table in energize-mit
         meta:
           owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["purchased_energy"]
         columns:
           - name: gl_account_key
             description: "GL Account Key"
