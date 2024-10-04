@@ -1,10 +1,12 @@
 from datetime import datetime
 import json
 import cpi
+from dagster_aws.pipes import PipesLambdaClient
 from dagster import (
     AssetExecutionContext,
     asset,
     get_dagster_logger,
+    Output,
     ResourceParam,
 )
 from dagster_aws.s3 import S3Resource
@@ -51,17 +53,30 @@ def concatenate_csv(unprocessed, s3_client, src_bucket):
     return pd.concat(dfs, ignore_index=True)
 
 
+@asset(compute_kind="python", group_name="lambda")
+def travel_csv_convert(context: AssetExecutionContext, lambda_pipes_client: PipesLambdaClient):
+    """Convert Excel files in the mitos-landing-zone bucket to csv files using Lambda"""
+    return lambda_pipes_client.run(
+        context=context,
+        function_name="convert-xlsx-csv-dir",
+        event={"some_parameter_value": 5},
+    ).get_materialize_result()
+
+
 @asset(
     io_manager_key="postgres_append",
     compute_kind="python",
     group_name="raw",
     dagster_type=pandera_schema_to_dagster_type(TravelSpendingData),
+    deps=[travel_csv_convert],
 )
 def travel_spending(
-    context: AssetExecutionContext,
     s3: S3Resource,
     pg_engine: PostgreConnResources,
-) -> pd.DataFrame:
+) -> Output[pd.DataFrame]:
+    """Ingest travel spending data from s3 bucket and append to the travel_spending table
+    Use `last_entry_date` and `last_update` to filter new entries to append
+    """
     # this still works because the resource is still available on the context
     source_bucket = "mitos-landing-zone"
     target_table = "travel_spending"
@@ -80,7 +95,7 @@ def travel_spending(
         required_cols[3]: "cost_object",
     }
 
-    # Get last update from warehouse
+    # Get last_update and last_entry_date from warehouse
     engine = pg_engine.create_engine()
     logger.info("Check last update of the travel_spending table")
     with engine.connect() as conn:
@@ -88,7 +103,7 @@ def travel_spending(
             text(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{target_table}')")
         )
         table_exists = result.scalar()
-        last_update = datetime(2020, 1, 1, tzinfo=pytz.UTC)
+        last_update = last_entry_date = datetime(2020, 1, 1, tzinfo=pytz.UTC)
         if table_exists:
             date_query = f"""
                             SELECT trip_end_date, last_update
@@ -96,13 +111,12 @@ def travel_spending(
                             ORDER BY trip_end_date DESC LIMIT 1"""
             result = conn.execute(text(date_query))
             row = result.fetchone()
-
             if row:
                 trip_end_date, update_date = row
-            last_update = pytz.utc.localize(update_date)
-            last_entry_date = np.datetime64(pytz.utc.localize(trip_end_date).replace(tzinfo=None))
+                last_update = pytz.utc.localize(update_date)
+                last_entry_date = np.datetime64(pytz.utc.localize(trip_end_date).replace(tzinfo=None))
         conn.commit()
-    # Get s3 list
+    # Get s3 objects and filter new entries
     s3_client = s3.get_client()
     objects = s3_client.list_objects_v2(Bucket=source_bucket)
     unprocessed = [
@@ -115,6 +129,8 @@ def travel_spending(
     new_entries_count = 0
     try:
         new_entries = concatenate_csv(unprocessed, s3_client, source_bucket)
+        new_entries["Sent for Payment Date"] = pd.to_datetime(new_entries["Sent for Payment Date"])
+        new_entries = new_entries[new_entries["Sent for Payment Date"] > last_entry_date]
         new_entries_count = len(new_entries.index)
     except ValueError:
         logger.info("No new entries found, appending no new entries to the travel_spending table")
@@ -122,10 +138,8 @@ def travel_spending(
     if new_entries_count > 0:
         logger.info(f"Adding {new_entries_count} new entries to the travel_spending table")
         df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
-        df_out["trip_end_date"] = pd.to_datetime(df_out["trip_end_date"])
-        df_out = df_out[df_out["trip_end_date"] > last_entry_date]
         df_out = df_out.sort_values("trip_end_date")
-    return df_out
+    return Output(df_out, metadata={"New entry count": new_entries_count})
 
 
 @asset(
