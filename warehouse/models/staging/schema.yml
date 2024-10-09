@@ -90,6 +90,8 @@ models:
         description: "Tons being diverted"
       - name: "tons"
         description: "Total tonnage of waste collected"
+      - name: "fiscal_year"
+        description: "MIT fiscal year July to June"
   - name: stg_commuting_survey_2018
     description: "Estimated GHG emissions from Commuting Survey 2018."
     meta:
@@ -258,6 +260,8 @@ models:
           - dbt_utils.accepted_range:
               min_value: 2010
               inclusive: true
+      - name: "fiscal_year"
+        description: "MIT fiscal year July to June"
 
 
 unit_tests:

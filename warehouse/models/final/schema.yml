@@ -75,7 +75,6 @@ models:
         description: Expense in million dollars adjusted to 2021 dollars
       - name: ghg_emission
         description: Total CO2 emission of each expense type
-
   - name: final_waste_recycle
     description: "Up-to-date waste collection and recycling data from Facilities including small streams"
     meta:
@@ -91,6 +90,8 @@ models:
         description: "Tons being diverted"
       - name: "tons"
         description: "Total tonnage of waste collected"
+      - name: "fiscal_year"
+        description: "MIT fiscal year July to June"
   - name: commuting_emission
     description: "Estimated GHG Scope3 commuting emissions"
     meta:
@@ -173,8 +174,8 @@ models:
     meta:
       owner: yu_cheng@mit.edu
     columns:
-      - name: year
-        description: "Calendar Year of Service Date"
+      - name: fiscal_year
+        description: "MIT fiscal year July to June"
       - name: material
         description: "Waste stream"
       - name: tons
