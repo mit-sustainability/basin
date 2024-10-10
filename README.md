@@ -23,7 +23,7 @@ A river basin consists of many streams...
 ## Setup Local Dagster and Postgres Instances
 
 1. To see Dagster/dbt in action, one must setup a local Postgres instance. Follow the instructions to install postgresql and setup a user/password [here.](https://www.sqlshack.com/setting-up-a-postgresql-database-on-mac/)
-2. Setup environment variables required for dagster, docker, Makefile and dbt. It is recommended to use `direnv` in the root folder of this repo, and set up a .envrc file. See `envrc_template` for example. With `direnv`, a `.envrc` file containing environment variables will be automatially loaded when one enters the `basin` directory.
+2. Setup environment variables required for dagster, docker, Makefile and dbt. It is recommended to use [`direnv`](https://formulae.brew.sh/formula/direnv#default) in the root folder of this repo, and set up a .envrc file. See `envrc_template` for example. With `direnv`, a `.envrc` file containing environment variables will be automatially loaded when one enters the `basin` directory.
 3. Under the `orchestrator` directory execute `./run_dagster_local.sh`
 
 ## Contributing
