@@ -1,29 +1,11 @@
 WITH historical AS (
     SELECT
-        "Date (YYYY-MM-DD)" AS service_date,
-        "Building Name" AS customer_name,
-        "Waste Stream" AS material,
-        "Diverted Tonnage" AS diverted,
-        "Total Tonnage" AS tons
-    FROM {{ source('raw', 'historical_waste_recycle') }}
-),
-
-mapped AS (
-    SELECT
-        service_date::DATE,
+        service_date::DATE AS service_date,
         customer_name,
-        CASE
-            WHEN material = 'MSW or Trash' THEN 'Trash'
-            WHEN material = 'Food Waste' THEN 'Compost'
-            WHEN material = 'Bulk Waste' THEN 'C & D'
-            WHEN material = 'Other Diversion' THEN 'Other'
-            ELSE material
-        END AS material,
+        material,
         diverted,
         tons
-    FROM historical
-    WHERE service_date IS NOT NULL
-    ORDER BY service_date
+    FROM {{ source('raw', 'historical_waste_recycle') }}
 ),
 
 new_batch AS (
@@ -50,9 +32,12 @@ new_batch AS (
 ),
 
 combined AS (
-    SELECT * FROM mapped
+    SELECT * FROM historical
     UNION ALL
     SELECT * FROM new_batch
 )
 
-SELECT * FROM combined
+SELECT
+    *,
+    {{ fiscal_year('service_date') }}  AS fiscal_year
+FROM combined
