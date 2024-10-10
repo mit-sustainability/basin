@@ -6,12 +6,17 @@ small AS (
         customer_name,
         material,
         diverted,
-        tons
+        tons,
+        {{ fiscal_year('service_date') }}  AS fiscal_year
     FROM {{source('raw', 'small_stream_recycle')}}
     WHERE tons IS NOT NULL
+),
+
+combined AS (
+    SELECT * FROM hauler
+    UNION ALL
+    SELECT * FROM small
 )
 
-SELECT * FROM hauler
-UNION ALL
-SELECT * FROM small
-ORDER BY service_date
+-- deduplicate data entry
+SELECT DISTINCT * FROM combined

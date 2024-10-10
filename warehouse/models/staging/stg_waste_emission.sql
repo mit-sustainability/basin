@@ -222,6 +222,7 @@ SELECT
     tons_original AS tons,
     tons_adjusted AS tons_adjusted,
     co2eq,
-    "year"
+    "year",
+    {{ fiscal_year('service_month') }}  AS fiscal_year
 FROM ghg
 ORDER BY service_month
