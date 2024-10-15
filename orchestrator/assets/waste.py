@@ -188,7 +188,7 @@ dhub_waste_sync = add_dhub_sync(
         "filename": "final_waste_update",
         "project_name": "Material Matters",
         "description": "Processed waste data including historical, Casella and small stream",
-        "title": "Processed Waste Data till 2024 August",
+        "title": "Processed Waste Data",
     },
 )
 

@@ -72,7 +72,7 @@ sources:
           - name: renovation_and_renewal
             description: "Renovation and Renewal expense in Million"
           - name: fiscal_year
-            description: "MIT Fiscal year July-June"
+            description: "MIT fiscal year (July to June)"
       - name: dof_maintenance_cost
         description: "Maintenance and service cost data from Facilities"
         meta:
@@ -80,7 +80,7 @@ sources:
             asset_key: ["dof_maintenance_cost"]
         columns:
           - name: fiscal_year
-            description: "MIT Fiscal year July-June"
+            description: "MIT fiscal year (July to June)"
           - name: Work Orders Within DOF
             description: "Work Orders within Department of Facilities"
           - name: Sales Work Orders
@@ -144,9 +144,9 @@ sources:
           - name: "tons"
             description: "Total tonnage of waste collected"
           - name: "fiscal_year"
-            description: "MIT fiscal year July to June"
+            description: "MIT fiscal year (July to June)"
       - name: newbatch_waste_recycle
-        description: "Waste recycle data from Jan to Aug 2024"
+        description: "New batch Waste recycle data scrapped from Casella Dashboard"
         meta:
           dagster:
             asset_key: ["newbatch_waste_recycle"]
