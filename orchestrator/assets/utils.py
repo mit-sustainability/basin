@@ -51,6 +51,8 @@ def add_dhub_sync(asset_name: str, table_key: List[str], config: dict):
         project_name = config.get("project_name")
         title = config.get("title", filename)
         description = config.get("description")
+        date_stamp = datetime.now().strftime("%Y-%m-%d")
+        description = f"{description} - {date_stamp}"
         project_id = dhub.get_project_id(project_name)
         logger.info(f"Sync to project: {project_id}!")
         ext = config.get("ext", "csv")
