@@ -15,7 +15,7 @@ models:
       - name: cost_object
         description: DLC cost object ID
       - name: fiscal_year
-        description: MIT fiscal year July to June
+        description: "MIT fiscal year (July to June)"
       - name: cal_year
         description: Expense record year
       - name: inflated_exp_amount
@@ -55,7 +55,7 @@ models:
       owner: yu_cheng@mit.edu
     columns:
       - name: fiscal_year
-        description: "Fiscal Year"
+        description: "MIT fiscal year (July to June)"
       - name: expense_type
         description: "Type of expense, relevant for emission factor selection"
       - name: expense_in_million_2021_equivalent
@@ -68,7 +68,7 @@ models:
       owner: yu_cheng@mit.edu
     columns:
       - name: fiscal_year
-        description: "Fiscal Year"
+        description: "MIT fiscal year (July to June)"
       - name: expense_type
         description: "Type of expense, relevant for emission factor selection and understanding"
       - name: expense_2021_equivalent
@@ -90,6 +90,8 @@ models:
         description: "Tons being diverted"
       - name: "tons"
         description: "Total tonnage of waste collected"
+      - name: "fiscal_year"
+        description: "MIT fiscal year (July to June)"
   - name: stg_commuting_survey_2018
     description: "Estimated GHG emissions from Commuting Survey 2018."
     meta:
@@ -209,7 +211,7 @@ models:
       - name: contract_month
         description: "Contract month of the order"
       - name: fiscal_year
-        description: "Fiscal year of the order"
+        description: "MIT fiscal year (July to June) of the order"
       - name: mfr_item_description
         description: "Manufacturer item description"
       - name: dist_item_description
@@ -244,6 +246,8 @@ models:
         description: "Service Month"
       - name: material
         description: "Waste material stream"
+        data_tests:
+          - not_null
       - name: tons
         description: "waste tonnage"
       - name: tons_adjusted
@@ -254,6 +258,13 @@ models:
         description: "Total GHG emission in kg CO2 equivalence"
       - name: year
         description: "Service year"
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 2010
+              inclusive: true
+      - name: "fiscal_year"
+        description: "MIT fiscal year (July to June)"
+
   - name: stg_ghg_inventory
     description: "Aggregate all scopes GHG emissions"
     meta:
@@ -278,7 +289,7 @@ unit_tests:
         - 50% of C & D to recycle
     model: stg_waste_emission
     given:
-      - input: source("raw", "waste_emission_factors_EPA")
+      - input: source("raw", "waste_emission_factors_epa")
         rows: []
       - input: ref("final_waste_recycle")
         rows:

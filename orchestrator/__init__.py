@@ -28,7 +28,7 @@ from orchestrator.jobs.commuting_job import commuting_asset_job
 from orchestrator.jobs.food_job import food_asset_job
 from orchestrator.jobs.parking_job import parking_asset_job
 from orchestrator.jobs.purchased_goods import pgs_job
-from orchestrator.jobs.waste_job import waste_asset_job, waste_emission_job
+from orchestrator.jobs.waste_job import waste_asset_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
@@ -71,7 +71,6 @@ defs = Definitions(
         parking_asset_job,
         pgs_job,
         food_asset_job,
-        waste_emission_job,
     ],
     resources={
         "dbt": DbtCliResource(project_dir=os.fspath(dbt_project_dir)),

@@ -9,7 +9,7 @@ models:
       - name: school_area
         description: School Area
       - name: fiscal_year
-        description: MIT Fiscal year July-June
+        description: "MIT fiscal year (July to June)"
       - name: expense_group
         description: Larger Expense Group
       - name: group_mtco2
@@ -31,7 +31,7 @@ models:
       - name: dlc_name
         description: Department, Lab or Center
       - name: fiscal_year
-        description: MIT Fiscal year July-June
+        description: "MIT fiscal year (July to June)"
       - name: expense_group
         description: Larger Expense Group
       - name: group_mtco2
@@ -51,7 +51,7 @@ models:
     description: Business travel spending amount and CO2 emission grouped by FY and Expense Groups
     columns:
       - name: fiscal_year
-        description: MIT Fiscal year July-June
+        description: "MIT fiscal year (July to June)"
       - name: expense_group
         description: Larger Expense Group
       - name: expense_total
@@ -71,7 +71,7 @@ models:
     description: Construction expense and GHG emission broken down by expense type
     columns:
       - name: fiscal_year
-        description: MIT Fiscal year July-June
+        description: "MIT fiscal year (July to June)"
       - name: expense_type
         description: Type of construction expense
         data_tests:
@@ -98,6 +98,8 @@ models:
         description: "Tons being diverted"
       - name: "tons"
         description: "Total tonnage of waste collected"
+      - name: "fiscal_year"
+        description: "MIT fiscal year (July to June)"
   - name: commuting_emission
     description: "Estimated GHG Scope3 commuting emissions"
     meta:
@@ -122,7 +124,7 @@ models:
       - name: "level_3"
         description: "Lowest level detailed commodity categorization."
       - name: fiscal_year
-        description: "MIT Fiscal year from July to June"
+        description: "MIT fiscal year (July to June)"
       - name: mtco2
         description: "Metric tons CO2e emission"
       - name: spend_usd
@@ -145,7 +147,7 @@ models:
       - name: po_number
         description: "Purchased Order number"
       - name: fiscal_year
-        description: "MIT Fiscal year from July to June"
+        description: "MIT fiscal year (July to June)"
       - name: "level_3"
         description: "Lowest level detailed commodity categorization."
       - name: mtco2
@@ -166,7 +168,7 @@ models:
       owner: yu_cheng@mit.edu
     columns:
       - name: fiscal_year
-        description: "MIT Fiscal year from July to June"
+        description: "MIT fiscal year (July to June)"
       - name: supplier_number
         description: "supplier number"
       - name: mtco2
@@ -186,8 +188,8 @@ models:
     meta:
       owner: yu_cheng@mit.edu
     columns:
-      - name: year
-        description: "Calendar Year of Service Date"
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
       - name: material
         description: "Waste stream"
       - name: tons

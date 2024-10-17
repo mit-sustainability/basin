@@ -1,5 +1,4 @@
 from dagster import AssetExecutionContext, asset, AssetIn
-from dagster_aws.pipes import PipesLambdaClient
 from dagster_dbt import (
     DagsterDbtTranslator,
     DagsterDbtTranslatorSettings,
@@ -52,13 +51,3 @@ def input_test_asset(dbt_table) -> None:
     df = dbt_table.head(5)
     ### Output to postgres
     print(df)
-
-
-@asset(compute_kind="python", group_name="lambda")
-def lambda_pipes_asset(context: AssetExecutionContext, lambda_pipes_client: PipesLambdaClient):
-    """Test Dagster's experimental Pipe feature to trigger a lambda function"""
-    return lambda_pipes_client.run(
-        context=context,
-        function_name="convert-xlsx-csv-dir",
-        event={"some_parameter_value": 5},
-    ).get_materialize_result()
