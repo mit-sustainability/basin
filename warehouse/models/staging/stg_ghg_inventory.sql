@@ -99,7 +99,7 @@ combined AS (
     SELECT * FROM upstream_e
     UNION ALL
     SELECT * FROM fuel
-)
+),
 
 SELECT
     billing_fy,
