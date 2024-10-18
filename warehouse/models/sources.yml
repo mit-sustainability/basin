@@ -471,7 +471,7 @@ sources:
           - name: use_fy
             description: "Use Fiscal Year"
           - name: ghg
-            description: "Greenhouse Gas"
+            description: "Greenhouse Gas Emission"
           - name: unit_of_measure
             description: "Unit of Measure"
           - name: number_of_units

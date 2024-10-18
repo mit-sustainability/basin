@@ -275,7 +275,22 @@ models:
       - name: emission
         description: "GHG emission in metric tons"
       - name: fiscal_year
-        description: "MIT fiscal year"
+        description: "MIT fiscal year (July to June)"
+      - name: scope
+        description: "GHG scope 1, 2, or 3"
+      - name: last_update
+        description: "Timestamp of the entry being modified"
+  - name: stg_fuel_energy_upstream
+    description: "Scope 3 fuel and energy related, associated with upstream emissions, transportation and distribution loss."
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: category
+        description: "GHG category"
+      - name: emission
+        description: "GHG emission in metric tons"
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
       - name: scope
         description: "GHG scope 1, 2, or 3"
       - name: last_update
