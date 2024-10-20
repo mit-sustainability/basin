@@ -152,7 +152,7 @@ def annual_cpi_index():
     DEFAULT_SERIES_ID = cpi.defaults.DEFAULT_SERIES_ID
     logger.info("Ectract the annual CPI data using the python cpi library ")
     cpi_df = cpi.series.get_by_id(DEFAULT_SERIES_ID).to_dataframe()
-    cpi_sub = cpi_df[cpi_df["period_code"] == "M13"][["year", "value", "series_id", "series_title"]].sort_values("year")
+    cpi_sub = cpi_df[cpi_df["period_code"] == "M13"][["year", "value", "series_id"]].sort_values("year")
     cpi_sub["last_update"] = datetime.now()
 
     return cpi_sub
