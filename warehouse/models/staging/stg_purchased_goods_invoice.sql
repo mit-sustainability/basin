@@ -1,3 +1,5 @@
+{{ config(materialized='table', sort='fiscal_year') }}
+
 WITH filled AS (
     SELECT
         *,
