@@ -62,7 +62,7 @@ def construction_expense(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the construction expense data from the Data Hub"""
     project_id = dhub.get_project_id("Scope3 Construction")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "Expense project FY16-FY23")
+    download_links = dhub.search_files_from_project(project_id, "Expense project FY16-FY24", tags=["construction"])
     if download_links is None:
         logger.info("No download links found!")
         return empty_dataframe_from_model(ConstructionExpenseData)
@@ -70,14 +70,14 @@ def construction_expense(dhub: ResourceParam[DataHubResource]):
     workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
     df_expense = pd.read_excel(
         workbook,
-        usecols="G:O",  # Only load columns B, C, D
-        skiprows=8,  # Skip the first 2 rows
+        usecols="E:N",  # need to adjust load range for column and rows
+        skiprows=7,
         nrows=2,
     )
     # Prepare for output
     df_out = df_expense.T.reset_index(drop=True)
     df_out.columns = ["new_construction", "renovation_and_renewal"]
-    df_out["fiscal_year"] = range(2015, 2024)
+    df_out["fiscal_year"] = range(2015, 2025)
     return df_out
 
 
@@ -90,7 +90,7 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the maintenance cost data from the Data Hub"""
     project_id = dhub.get_project_id("Scope3 Construction")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "MITOSRequest_DOFOpsCostsv2")
+    download_links = dhub.search_files_from_project(project_id, "DOFOpsCostsSummary_mitos")
     if len(download_links) == 0:
         logger.info("No download links found!")
         return pd.DataFrame()
@@ -98,25 +98,25 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
     # Load the DoF related maintenance cost
     dof1 = pd.read_excel(
         workbook,
-        usecols="B:F",
-        sheet_name="Summary",
-        skiprows=33,
+        usecols="B:G",
+        sheet_name="WO_within_DOF",
+        skiprows=29,
         nrows=1,
         header=None,
     )
     dof2 = pd.read_excel(
         workbook,
-        usecols="B:F",
-        sheet_name="Summary",
-        skiprows=83,
+        usecols="B:G",
+        sheet_name="Sales_WO",
+        skiprows=44,
         nrows=1,
         header=None,
     )
     dof3 = pd.read_excel(
         workbook,
-        usecols="P:T",
-        sheet_name="Summary",
-        skiprows=89,
+        usecols="B:G",
+        sheet_name="Non_WO",
+        skiprows=72,
         nrows=1,
         header=None,
     )
@@ -131,7 +131,7 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
             "DOF Ops Costs Outside of Wos",
         ],
     )
-    df_out["fiscal_year"] = range(2019, 2024)
+    df_out["fiscal_year"] = range(2019, 2025)
     return df_out
 
 

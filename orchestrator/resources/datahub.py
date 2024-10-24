@@ -112,6 +112,7 @@ class DataHubResource:
         res = requests.post(url, headers=self.headers, json=data, timeout=default_timeout)
         if res.status_code == 200:
             files = res.json()["data"]
+            logger.info(f"Successfully found files: {files}")
         else:
             logger.error(f"Fail to find the file with name {search_term} in project {project_id}.")
         try:

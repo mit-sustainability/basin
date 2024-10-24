@@ -18,13 +18,21 @@ WITH expense AS (
     ORDER BY fiscal_year, expense_type
 ),
 
+latest_cpi AS (
+    SELECT value AS latest_cpi
+    FROM {{ source('raw', 'annual_cpi_index') }}
+    ORDER BY year DESC
+    LIMIT 1
+),
+
 attached AS (
     SELECT
         e.*,
-        aci.value AS cpi
+        COALESCE(aci.value, lc.latest_cpi) AS cpi
     FROM expense AS e
     LEFT JOIN {{ source('raw', 'annual_cpi_index') }} AS aci
         ON e.fiscal_year = aci.year
+    CROSS JOIN latest_cpi AS lc
 ),
 
 factor AS (
