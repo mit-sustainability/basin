@@ -166,6 +166,10 @@ models:
     description: "CPI adjusted and GHG emission enriched invoice data for purchased goods"
     meta:
       owner: yu_cheng@mit.edu
+      dagster:
+        group: staging
+        auto_materialize_policy:
+          type: eager
     columns:
       - name: "sap_invoice_number"
         description: "Unique identifier for SAP-generated invoices."
