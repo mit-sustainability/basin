@@ -1,9 +1,16 @@
-WITH attached AS (
+WITH latest_cpi AS (
+    SELECT value AS latest_cpi
+    FROM raw.annual_cpi_index
+    ORDER BY year DESC
+    LIMIT 1
+),
+
+attached AS (
     SELECT
         d.*,
         '230301' AS eeio_code,
         'Maintenance material and Services' AS expense_type,
-        aci.value AS cpi,
+        COALESCE(aci.value, lc.latest_cpi) AS cpi,
         d."Work Orders Within DOF"
         + d."Sales Work Orders"
         + d."DOF Ops Costs Outside of Wos" AS total
@@ -11,6 +18,7 @@ WITH attached AS (
     FROM {{ source('raw', 'dof_maintenance_cost') }} AS d
     LEFT JOIN raw.annual_cpi_index AS aci
         ON d.fiscal_year = aci.year
+    CROSS JOIN latest_cpi AS lc
 ),
 
 
