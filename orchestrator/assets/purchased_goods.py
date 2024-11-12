@@ -76,14 +76,11 @@ class InvoiceConfig(Config):
     Example: change this from the asset launchpad to specify the files to load to the data platform.
     """
 
-    files_to_download: List[str] = [
-        "PurchasedGoods_Invoice_FY2019",
-        "PurchasedGoods_Invoice_FY2020",
-    ]
+    files_to_download: List[str] = ["PurchasedGoods_Invoice_FY2024"]
 
 
 @asset(
-    io_manager_key="postgres_replace",  # only use this when loading from scratch, else "postgres_append"
+    io_manager_key="postgres_append",  # only use this when loading from scratch, else "postgres_append"
     compute_kind="python",
     group_name="raw",
     dagster_type=pandera_schema_to_dagster_type(InvoiceSchema),

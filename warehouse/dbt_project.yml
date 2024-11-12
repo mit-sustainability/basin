@@ -59,6 +59,8 @@ models:
       +meta:
         dagster:
           group: final
+          auto_materialize_policy:
+            type: eager
       +schema: final
       +materialized: view
       +tags:

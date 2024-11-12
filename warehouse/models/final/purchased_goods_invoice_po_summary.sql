@@ -8,6 +8,6 @@ SELECT
     max(level_1) AS level_1,
     string_agg(DISTINCT "description", ', ') AS "description",
     current_timestamp AS last_update
-FROM staging.stg_purchased_goods_invoice
+FROM {{ref('stg_purchased_goods_invoice')}}
 GROUP BY po_number, fiscal_year
 ORDER BY fiscal_year

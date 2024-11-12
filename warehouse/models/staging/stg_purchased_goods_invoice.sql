@@ -1,11 +1,9 @@
+{{ config(materialized='table', sort='fiscal_year') }}
+
 WITH filled AS (
     SELECT
         *,
-        CASE
-            WHEN EXTRACT(MONTH FROM "invoice_date") < 7
-                THEN EXTRACT(YEAR FROM "invoice_date")
-            ELSE EXTRACT(YEAR FROM "invoice_date") + 1
-        END AS fiscal_year,
+        {{ fiscal_year('invoice_date') }}  AS fiscal_year,
         EXTRACT(YEAR FROM "invoice_date") AS invoice_year,
         COALESCE("commodity", "po_line_commodity") AS commodity_filled,
         "total"::FLOAT AS spend
@@ -66,7 +64,7 @@ adjusted AS (
         po_number,
         level_1,
         level_2,
-        level_3, -- same AS commidty
+        level_3,
         total,
         description,
         billing,
