@@ -109,13 +109,13 @@ def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
 
 
 # Sync processed table back to datahub
-# dhub_travel_spending = add_dhub_sync(
-#     asset_name="dhub_travel_spending",
-#     table_key=["staging", "stg_travel_spending"],
-#     config={
-#         "filename": "final_travel_spending.csv",
-#         "project_name": "Scope3 Business Travel",
-#         "description": "Travel Spending data with expense group, DLC, emission factors and more",
-#         "title": "Processed Travel Spending data",
-#     },
-# )
+dhub_ghg_inventory = add_dhub_sync(
+    asset_name="dhub_ghg_inventory",
+    table_key=["staging", "stg_ghg_inventory"],
+    config={
+        "filename": "ghg_inventory.csv",
+        "project_name": "GHG_Inventory",
+        "description": "Aggregated GHG inventory emissions by categories",
+        "title": "Aggregated GHG Inventory",
+    },
+)
