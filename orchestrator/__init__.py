@@ -40,6 +40,7 @@ from orchestrator.constants import (
 from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.mit_warehouse import MITWHRSResource
 from orchestrator.schedules.mitos_warehouse import schedules
+from orchestrator.sensors.s3_bucket import sensor_ghg_manual
 
 ### TODO: Set a utility function folders, and implement recursive search for jobs and schedules.
 # https://github.com/dagster-io/dagster/issues/12359
@@ -74,6 +75,7 @@ defs = Definitions(
         food_asset_job,
         ghg_job,
     ],
+    sensors=[sensor_ghg_manual],
     resources={
         "dbt": DbtCliResource(project_dir=os.fspath(dbt_project_dir)),
         "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
