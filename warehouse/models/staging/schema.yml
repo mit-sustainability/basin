@@ -281,6 +281,11 @@ models:
     description: "Aggregate all scopes GHG emissions"
     meta:
       owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - category
+            - fiscal_year
     columns:
       - name: category
         description: "GHG category"
