@@ -2,8 +2,8 @@
 WITH entries AS (
     SELECT
         CASE
-            WHEN category LIKE '1.%' THEN '1. Direct emissions'
-            WHEN category LIKE '2.%' THEN '2. Indirect electricity'
+            WHEN category LIKE '1.1%' THEN '1. Direct emissions'
+            WHEN category LIKE '2.1%' THEN '2. Indirect electricity'
             ELSE category
         END AS category,
         emission,
@@ -12,19 +12,6 @@ WITH entries AS (
         last_update
     FROM {{ source("raw", "ghg_manual_entries") }}
 ),
-
--- Aggregate manually entried scope 1 and 2
-rolled AS (
-    SELECT
-        category,
-        sum(emission) AS emission,
-        fiscal_year,
-        max("scope") AS "scope",
-        max(last_update) AS last_update
-    FROM entries
-    GROUP BY category, fiscal_year
-),
-
 
 business AS (
     SELECT
@@ -115,7 +102,7 @@ combined AS (
         emission,
         last_update::timestamp AS last_timestamp,
         'manual' AS source
-    FROM rolled
+    FROM entries
     UNION ALL
     SELECT
         category,
