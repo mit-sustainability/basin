@@ -1,112 +1,191 @@
-WITH loss AS (
+WITH manual AS (
     SELECT
-        gl_account_key,
-        start_date,
-        billing_fy,
-        level2_category,
-        level3_category,
-        number_of_units,
-        unit_of_measure,
-        ghg * 0.051 AS mtco2e -- MtCO2e
-    FROM {{ source("raw", "purchased_energy") }}
-    WHERE
-        level3_category = 'Electricity'
-        AND number_of_units != 0
+        category,
+        emission,
+        fiscal_year,
+        "scope",
+        last_update
+    FROM {{ source("raw", "ghg_manual_entries") }}
 ),
 
-upstream_e AS (
+business AS (
     SELECT
-        gl_account_key,
-        start_date,
-        billing_fy,
-        level2_category,
-        level3_category,
-        number_of_units,
-        unit_of_measure,
-        number_of_units * 0.0000668 AS mtco2e -- MtCO2e
-    FROM {{ source("raw", "purchased_energy") }}
-    WHERE
-        level3_category = 'Electricity'
-        AND number_of_units != 0
-
+        '3.6 Business Travel' AS category,
+        sum(total_mtco2) AS emission,
+        fiscal_year,
+        3 AS "scope",
+        max(last_update) AS last_update
+    FROM {{ ref("travel_FY_exp_group_summary") }}
+    GROUP BY fiscal_year
 ),
 
-gas AS (
+construction AS (
     SELECT
-        gl_account_key,
-        start_date,
+        '3.2 Construction' AS category,
+        sum(ghg_emission) AS emission,
+        fiscal_year,
+        3 AS "scope",
+        max(last_update) AS last_update
+    FROM {{ ref("construction_expense_emission") }}
+    GROUP BY fiscal_year
+),
+
+waste AS (
+    SELECT
+        '3.5 Waste' AS category,
+        sum(co2eq) AS emission,
+        fiscal_year,
+        3 AS "scope",
+        max(last_update) AS last_update
+    FROM {{ ref("final_waste_emission") }}
+    GROUP BY fiscal_year
+),
+
+pgs AS (
+    SELECT
+        '3.1 Purchased Goods and Services' AS category,
+        sum(ghg) / 1000 AS emission, -- mtco2
+        fiscal_year,
+        3 AS "scope",
+        current_timestamp AS "last_update"
+    FROM {{ ref("stg_purchased_goods_invoice") }}
+    GROUP BY fiscal_year
+),
+
+-- purchased energy from energize-mit
+cdr AS (
+    SELECT
+        ghg,
         billing_fy,
-        level2_category,
-        level3_category,
-        number_of_units,
-        unit_of_measure,
+        last_update,
         CASE
-            WHEN unit_of_measure = 'THM'
-                THEN number_of_units * 1.036 * 2.831685
-            ELSE number_of_units * 2.831685
-        END AS cubic_meters
+            WHEN level3_category IN ('Gas', 'Fuel Oil #2', 'Fuel Oil #6') THEN 1
+            WHEN level3_category = 'Electricity' THEN 2
+        END AS scope
     FROM {{ source("raw", "purchased_energy") }}
-    WHERE
-        level3_category = 'Gas'
-        AND number_of_units != 0
 ),
 
-oil AS (
+energy AS (
     SELECT
-        gl_account_key,
-        start_date,
-        billing_fy,
-        level2_category,
-        level3_category,
-        number_of_units,
-        unit_of_measure,
-        number_of_units * 3.785 AS liters
-    FROM {{ source("raw", "purchased_energy") }}
-    WHERE
-        level3_category IN ('Fuel Oil #2', 'Fuel Oil #6')
-        AND number_of_units != 0
+        CASE
+            WHEN scope = 1 THEN '1. Direct emissions'
+            WHEN scope = 2 THEN '2. Indirect electricity'
+        END AS category,
+        sum(ghg) AS emission,
+        billing_fy AS fiscal_year,
+        scope,
+        max(last_update) AS last_update
+    FROM cdr
+    GROUP BY billing_fy, scope
 ),
 
-fuel AS (
-
+fera AS (
     SELECT
-        gl_account_key,
-        start_date,
-        billing_fy,
-        level2_category,
-        level3_category,
-        number_of_units,
-        unit_of_measure,
-        cubic_meters * 0.0003366 AS mtco2e
-    FROM gas
-
-    UNION ALL
-    SELECT
-        gl_account_key,
-        start_date,
-        billing_fy,
-        level2_category,
-        level3_category,
-        number_of_units,
-        unit_of_measure,
-        liters * 0.00069539 AS mtco2e
-    FROM oil
+        '3.3 Fuel and energy-related activities' AS category,
+        mtco2e AS emission,
+        billing_fy AS fiscal_year,
+        scope,
+        last_update
+    FROM {{ ref("stg_fuel_energy_upstream") }}
 ),
 
 combined AS (
-    SELECT * FROM loss
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_update::timestamp AS last_timestamp,
+        'manual' AS source
+    FROM manual
     UNION ALL
-    SELECT * FROM upstream_e
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_update::timestamp AS last_timestamp,
+        'business' AS source
+    FROM business
     UNION ALL
-    SELECT * FROM fuel
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_update::timestamp AS last_timestamp,
+        'construction' AS source
+    FROM construction
+    UNION ALL
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_update::timestamp AS last_timestamp,
+        'waste' AS source
+    FROM waste
+    UNION ALL
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_update::timestamp AS last_timestamp,
+        'pgs' AS source
+    FROM pgs
+    UNION ALL
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_update::timestamp AS last_timestamp,
+        'energy' AS source
+    FROM energy
+    UNION ALL
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_update::timestamp AS last_timestamp,
+        'fera' AS source
+    FROM fera
 ),
 
+ranked AS (
+    SELECT
+        category,
+        fiscal_year,
+        scope,
+        emission,
+        last_timestamp AS last_update,
+        source,
+        row_number() OVER (
+            PARTITION BY category, fiscal_year
+            ORDER BY
+                CASE
+                    WHEN source = 'manual' THEN 1
+                    WHEN source = 'business' THEN 2
+                    WHEN source = 'construction' THEN 3
+                    WHEN source = 'waste' THEN 4
+                    WHEN source = 'pgs' THEN 5
+                    WHEN source = 'energy' THEN 6
+                    WHEN source = 'fera' THEN 7
+                    ELSE 8
+                END
+        ) AS row_num
+    FROM combined
+)
+
 SELECT
-    billing_fy,
-    sum(mtco2e) AS mtco2e,
-    3 AS "scope",
-    'Fuel and energy related' AS category,
-    current_timestamp AS last_update
-FROM combined
-GROUP BY billing_fy
-ORDER BY billing_fy
+    category,
+    fiscal_year,
+    max(scope) AS scope,
+    max(emission) AS emission,
+    max(last_update) AS last_update
+FROM ranked
+WHERE row_num = 1 -- Ensure manual overwrites other sources
+GROUP BY category, fiscal_year
+ORDER BY fiscal_year

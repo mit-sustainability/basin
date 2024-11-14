@@ -1,19 +1,15 @@
 from datetime import datetime
 from dagster import (
-    Output,
     asset,
+    Output,
     get_dagster_logger,
     MetadataValue,
-    ResourceParam,
 )
 from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime
-import pytz
-import requests
-from sqlalchemy import text
 
 from orchestrator.assets.utils import (
     empty_dataframe_from_model,
@@ -21,29 +17,36 @@ from orchestrator.assets.utils import (
     normalize_column_name,
 )
 from orchestrator.resources.postgres_io_manager import PostgreConnResources
-from orchestrator.resources.datahub import DataHubResource
 
 
 logger = get_dagster_logger()
 
 
-# class TravelSpendingData(pa.SchemaModel):
-#     """Validate the output data schema of travel spending asset"""
+class EnergySchema(pa.SchemaModel):
+    """Validate the output data schema of travel spending asset"""
 
-#     expense_amount: Series[float] = pa.Field(description="Expense Amount")
-#     expense_type: Series[str] = pa.Field(description="Expense Type")
-#     trip_end_date: Series[DateTime] = pa.Field(
-#         lt="2025", description="Travel Spending Report Date"
-#     )
-#     cost_object: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
-#     last_update: Series[DateTime] = pa.Field(description="Date of last update")
+    gl_account_key: Series[str] = pa.Field(description="Expense Amount")
+    start_date: Series[object] = pa.Field(description="Transaction date")
+    start_date_use: Series[object] = pa.Field(description="Energy use date")
+    billing_fy: Series[int] = pa.Field(description="Billing Fiscal Year")
+    use_fy: Series[int] = pa.Field(description="Use Fiscal Year")
+    ghg: Series[float] = pa.Field(description="GHG Emissions in metric tons")
+    unit_of_measure: Series[str] = pa.Field(description="Unit of Measure")
+    number_of_units: Series[float] = pa.Field(description="Number of energy units")
+    building_group_level1: Series[str] = pa.Field(isin=["Non-CUP", "CUP"], description="Building Group category")
+    level1_category: Series[str] = pa.Field(description="Level 1 category")
+    level2_category: Series[str] = pa.Field(eq="Purchased", description="Level 2 category")
+    level3_category: Series[str] = pa.Field(
+        isin=["Gas", "Fuel Oil #2", "Electricity", "Fuel Oil #6"],
+        description="Level 3 category",
+    )
+    last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
 @asset(
-    io_manager_key="postgres_append",
+    io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
-    # dagster_type=pandera_schema_to_dagster_type(TravelSpendingData),
 )
 def ghg_manual_entries(s3: S3Resource) -> Output[pd.DataFrame]:
     source_bucket = "mitos-landing-zone"
@@ -66,7 +69,7 @@ def ghg_manual_entries(s3: S3Resource) -> Output[pd.DataFrame]:
     io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
-    # dagster_type=pandera_schema_to_dagster_type(TravelSpendingData),
+    dagster_type=pandera_schema_to_dagster_type(EnergySchema),
 )
 def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
     engine = em_connect.create_engine()
@@ -96,6 +99,7 @@ def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
         logger.info("Query executed successfully. Scope 1 and 2 data fetched from energize-mit.")
     except Exception as e:
         logger.error("An error occurred:", e)
+        return empty_dataframe_from_model(EnergySchema)
     finally:
         engine.dispose()
 
@@ -104,6 +108,10 @@ def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
         "last_entry_date": MetadataValue.text(df["START_DATE"].max().strftime("%Y-%m-%d")),
     }
     df["last_update"] = datetime.now()
+    # Convert FY columns to integer
+    for col in ["BILLING_FY", "USE_FY"]:
+        df[col] = df[col].astype("Int64")
+
     df.columns = [normalize_column_name(col) for col in df.columns]
     return Output(value=df, metadata=metadata)
 

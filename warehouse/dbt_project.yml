@@ -80,4 +80,4 @@ snapshots:
     +target_schema: snapshots
     +meta:
       dagster:
-        group: snapshots
+        group: snapshot

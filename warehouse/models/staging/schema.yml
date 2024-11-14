@@ -251,6 +251,9 @@ models:
     description: "Scope 3 waste emission with emission factors"
     meta:
       owner: yu_cheng@mit.edu
+      group: staging
+      auto_materialize_policy:
+        type: eager
     columns:
       - name: service_month
         description: "Service Month"
@@ -274,7 +277,6 @@ models:
               inclusive: true
       - name: "fiscal_year"
         description: "MIT fiscal year (July to June)"
-
   - name: stg_ghg_inventory
     description: "Aggregate all scopes GHG emissions"
     meta:
@@ -288,12 +290,18 @@ models:
         description: "MIT fiscal year (July to June)"
       - name: scope
         description: "GHG scope 1, 2, or 3"
+        data_tests:
+          - accepted_values:
+              values: [1, 2, 3]
       - name: last_update
         description: "Timestamp of the entry being modified"
   - name: stg_fuel_energy_upstream
     description: "Scope 3 fuel and energy related, associated with upstream emissions, transportation and distribution loss."
     meta:
       owner: yu_cheng@mit.edu
+      group: staging
+      auto_materialize_policy:
+        type: eager
     columns:
       - name: category
         description: "GHG category"

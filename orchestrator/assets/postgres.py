@@ -1,4 +1,5 @@
-from dagster import AssetExecutionContext, asset, AssetIn
+from typing import Any, Mapping, Optional
+from dagster import AssetExecutionContext, asset, AssetIn, AutoMaterializePolicy
 from dagster_dbt import (
     DagsterDbtTranslator,
     DagsterDbtTranslatorSettings,
@@ -9,7 +10,18 @@ import pandas as pd
 
 from orchestrator.constants import dbt_manifest_path
 
-dagster_dbt_translator = DagsterDbtTranslator(settings=DagsterDbtTranslatorSettings(enable_asset_checks=True))
+
+# Setup translator
+class CustomDagsterDbtTranslator(DagsterDbtTranslator):
+    def get_auto_materialize_policy(self, dbt_resource_props: Mapping[str, Any]) -> Optional[AutoMaterializePolicy]:
+        # Apply the eager policy to all snapshots
+        if dbt_resource_props.get("meta", {}).get("dagster", {}).get("group") == "snapshot":
+            return AutoMaterializePolicy.eager()
+        return None
+
+
+# Instantiate the custom translator with asset checks enabled
+dagster_dbt_translator = CustomDagsterDbtTranslator(settings=DagsterDbtTranslatorSettings(enable_asset_checks=True))
 
 
 @dbt_assets(manifest=dbt_manifest_path, dagster_dbt_translator=dagster_dbt_translator)

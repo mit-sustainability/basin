@@ -12,6 +12,6 @@
 select
     fiscal_year||'-'||category as id,
     *
-from {{ ref('stg_ghg_inventory') }}
+FROM {{ ref('stg_ghg_inventory')}}
 
 {% endsnapshot %}
