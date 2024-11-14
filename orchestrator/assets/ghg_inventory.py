@@ -49,6 +49,7 @@ class EnergySchema(pa.SchemaModel):
     group_name="raw",
 )
 def ghg_manual_entries(s3: S3Resource) -> Output[pd.DataFrame]:
+    """Load manually entried GHG emission from S3 bucket"""
     source_bucket = "mitos-landing-zone"
     # Get the data from S3
     s3_client = s3.get_client()
@@ -72,6 +73,7 @@ def ghg_manual_entries(s3: S3Resource) -> Output[pd.DataFrame]:
     dagster_type=pandera_schema_to_dagster_type(EnergySchema),
 )
 def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
+    """Load purchased energy numbers from energy-cdr in energize-mit database"""
     engine = em_connect.create_engine()
     logger.info("Connect to energize_mit database to ingest Scope 1 and 2 emissions")
     query = """
