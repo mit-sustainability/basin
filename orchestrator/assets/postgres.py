@@ -1,5 +1,5 @@
 from typing import Any, Mapping, Optional
-from dagster import AssetExecutionContext, asset, AssetIn, AutoMaterializePolicy
+from dagster import AssetExecutionContext, asset, AssetIn, AutomationCondition
 from dagster_dbt import (
     DagsterDbtTranslator,
     DagsterDbtTranslatorSettings,
@@ -13,10 +13,14 @@ from orchestrator.constants import dbt_manifest_path
 
 # Setup translator
 class CustomDagsterDbtTranslator(DagsterDbtTranslator):
-    def get_auto_materialize_policy(self, dbt_resource_props: Mapping[str, Any]) -> Optional[AutoMaterializePolicy]:
-        # Apply the eager policy to all snapshots
-        if dbt_resource_props.get("meta", {}).get("dagster", {}).get("group") == "snapshot":
-            return AutoMaterializePolicy.eager()
+    def get_automation_condition(self, dbt_resource_props: Mapping[str, Any]) -> Optional[AutomationCondition]:
+        # Apply the eager condition to all snapshots
+        if dbt_resource_props.get("meta", {}).get("dagster", {}).get("group") in [
+            "snapshot",
+            "final",
+            "dhub_sync",
+        ]:
+            return AutomationCondition.eager()
         return None
 
 

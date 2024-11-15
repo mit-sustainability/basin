@@ -106,7 +106,7 @@ SELECT
     sum(mtco2e) AS mtco2e,
     3 AS "scope",
     'Fuel and energy related' AS category,
-    current_timestamp AS last_update
+    current_timestamp::timestamp AS last_update
 FROM combined
 GROUP BY billing_fy
 ORDER BY billing_fy

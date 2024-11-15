@@ -54,7 +54,7 @@ models:
     meta:
       owner: yu_cheng@mit.edu
       group: staging
-      auto_materialize_policy:
+      automation_condition:
         type: eager
     columns:
       - name: fiscal_year
@@ -70,7 +70,7 @@ models:
     meta:
       owner: yu_cheng@mit.edu
       group: staging
-      auto_materialize_policy:
+      automation_condition:
         type: eager
     columns:
       - name: fiscal_year
@@ -168,8 +168,8 @@ models:
       owner: yu_cheng@mit.edu
       dagster:
         group: staging
-        auto_materialize_policy:
-          type: eager
+      automation_condition:
+        type: eager
     columns:
       - name: "sap_invoice_number"
         description: "Unique identifier for SAP-generated invoices."
@@ -252,7 +252,7 @@ models:
     meta:
       owner: yu_cheng@mit.edu
       group: staging
-      auto_materialize_policy:
+      automation_condition:
         type: eager
     columns:
       - name: service_month
@@ -305,7 +305,7 @@ models:
     meta:
       owner: yu_cheng@mit.edu
       group: staging
-      auto_materialize_policy:
+      automation_condition:
         type: eager
     columns:
       - name: category
