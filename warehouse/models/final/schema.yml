@@ -20,6 +20,8 @@ models:
         description: CO2 emission share of each expense group/school area
       - name: share_of_total_expense_amount
         description: Expense share of each expense group/school area
+      - name: last_update
+        description: "The timestamp of last materialization"
 
   - name: travel_FY_dlc_exp_group_summary
     meta:
@@ -40,6 +42,8 @@ models:
         description: CO2 emission share of each expense group/DLCs
       - name: share_of_total_expense_amount
         description: Expense share of each expense group/DLCs
+      - name: last_update
+        description: "The timestamp of last materialization"
 
   - name: travel_FY_exp_group_summary
     meta:
@@ -58,6 +62,8 @@ models:
         description: Total CO2 emission of each expense group
       - name: mtCO2_share
         description: Total CO2 emission of each expense group
+      - name: last_update
+        description: "The timestamp of last materialization"
 
   - name: construction_expense_emission
     meta:
@@ -75,6 +81,8 @@ models:
         description: Expense in million dollars adjusted to 2021 dollars
       - name: ghg_emission
         description: Total CO2 emission of each expense type
+      - name: last_update
+        description: "The timestamp of last materialization"
   - name: final_waste_recycle
     description: "Up-to-date waste collection and recycling data from Facilities including small streams"
     meta:
@@ -129,6 +137,8 @@ models:
         description: "Percentage share of total CO2 emission"
       - name: share_spend
         description: "Percentage share of dollar spend"
+      - name: last_update
+        description: "The timestamp of last materialization"
   - name: purchased_goods_invoice_po_summary
     description: "Summary of purchased goods invoices grouped by PO_number"
     meta:
@@ -150,6 +160,8 @@ models:
         description: "Rolled up commodity category"
       - name: "description"
         description: "Descriptive details about the invoice"
+      - name: last_update
+        description: "The timestamp of last materialization"
   - name: purchased_goods_invoice_supplier_summary
     description: "Summary of purchased goods invoices grouped by supplier number"
     meta:
@@ -169,6 +181,8 @@ models:
         description: "supplier name"
       - name: "description"
         description: "Descriptive details about the invoice"
+      - name: last_update
+        description: "The timestamp of last materialization"
   - name: final_waste_emission
     description: "Summary of Scope 3 waste emission grouped by material"
     meta:
@@ -182,3 +196,20 @@ models:
         description: "Waste tonnage"
       - name: co2eq
         description: "Metric tons CO2e emission"
+      - name: last_update
+        description: "The timestamp of last materialization"
+  - name: final_ghg_inventory
+    description: "Aggregate all scopes GHG emissions of the specified fiscal_year"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: category
+        description: "GHG category"
+      - name: emission
+        description: "GHG emission in metric tons"
+      - name: fiscal_year
+        description: "MIT fiscal year"
+      - name: scope
+        description: "GHG scope 1, 2, or 3"
+      - name: last_update
+        description: "Timestamp of the entry being added"

@@ -13,7 +13,8 @@ SELECT
         ELSE
             SUM(expense_amount)
             / SUM(SUM(expense_amount)) OVER (PARTITION BY school_area, fiscal_year)
-    END AS share_of_total_expense_amount
+    END AS share_of_total_expense_amount,
+    CURRENT_TIMESTAMP AS "last_update"
 FROM {{ref('stg_travel_spending')}}
 GROUP BY
     school_area,

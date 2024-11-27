@@ -54,7 +54,7 @@ models:
     meta:
       owner: yu_cheng@mit.edu
       group: staging
-      auto_materialize_policy:
+      automation_condition:
         type: eager
     columns:
       - name: fiscal_year
@@ -70,7 +70,7 @@ models:
     meta:
       owner: yu_cheng@mit.edu
       group: staging
-      auto_materialize_policy:
+      automation_condition:
         type: eager
     columns:
       - name: fiscal_year
@@ -168,8 +168,8 @@ models:
       owner: yu_cheng@mit.edu
       dagster:
         group: staging
-        auto_materialize_policy:
-          type: eager
+      automation_condition:
+        type: eager
     columns:
       - name: "sap_invoice_number"
         description: "Unique identifier for SAP-generated invoices."
@@ -185,6 +185,9 @@ models:
         description: "Rolled up commodity category"
       - name: "level_3"
         description: "Lowest level detailed commodity categorization."
+        data_tests:
+          - dbt_utils.not_accepted_values:
+              values: ['Waste Disposal', 'Construction/Maintenance Services', 'General Travel Expenses', 'Waste Disposal']
       - name: "total"
         description: "Total USD spend for the invoice"
       - name: "description"
@@ -207,8 +210,10 @@ models:
         description: "CPI adjusted spend total to current year."
       - name: "dlc_name"
         description: "Department, Lab, and Center name."
-      - name: "ghg"
-        description: "Greenhouse gas data related in kg CO2e"
+      - name: "mtco2"
+        description: "Greenhouse gas emission in metric ton CO2e"
+      - name: last_update
+        description: "Timestamp of the entry being modified"
   - name: stg_food_order
     description: "Food order data with SIMAP category and GHG emission"
     meta:
@@ -249,6 +254,9 @@ models:
     description: "Scope 3 waste emission with emission factors"
     meta:
       owner: yu_cheng@mit.edu
+      group: staging
+      automation_condition:
+        type: eager
     columns:
       - name: service_month
         description: "Service Month"
@@ -272,8 +280,47 @@ models:
               inclusive: true
       - name: "fiscal_year"
         description: "MIT fiscal year (July to June)"
-
-
+  - name: stg_ghg_inventory
+    description: "Aggregate all scopes GHG emissions"
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - category
+            - fiscal_year
+    columns:
+      - name: category
+        description: "GHG category"
+      - name: emission
+        description: "GHG emission in metric tons"
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: scope
+        description: "GHG scope 1, 2, or 3"
+        data_tests:
+          - accepted_values:
+              values: [1, 2, 3]
+      - name: last_update
+        description: "Timestamp of the entry being modified"
+  - name: stg_fuel_energy_upstream
+    description: "Scope 3 fuel and energy related, associated with upstream emissions, transportation and distribution loss."
+    meta:
+      owner: yu_cheng@mit.edu
+      group: staging
+      automation_condition:
+        type: eager
+    columns:
+      - name: category
+        description: "GHG category"
+      - name: emission
+        description: "GHG emission in metric tons"
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: scope
+        description: "GHG scope 1, 2, or 3"
+      - name: last_update
+        description: "Timestamp of the entry being modified"
 unit_tests:
   - name: test_waste_split_adjustment
     description: >

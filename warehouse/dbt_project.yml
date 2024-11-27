@@ -10,6 +10,10 @@ seed-paths: ["seeds"]
 test-paths: ["tests"]
 analysis-paths: ["analysis"]
 macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+flags:
+   fail_fast: true
 
 packages-install-path: "dbt_packages"
 target-path: "target"
@@ -55,8 +59,6 @@ models:
       +meta:
         dagster:
           group: final
-          auto_materialize_policy:
-            type: eager
       +schema: final
       +materialized: view
       +tags:
@@ -70,3 +72,10 @@ seeds:
     +persist_docs:
       relation: true
       columns: true
+
+snapshots:
+  mitos:
+    +target_schema: snapshots
+    +meta:
+      dagster:
+        group: snapshot

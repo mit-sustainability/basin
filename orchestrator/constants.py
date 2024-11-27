@@ -18,6 +18,12 @@ DWRHS_CREDENTIALS = {
     "password": EnvVar("DWRHS_PASSWORD"),
     "sid": "DWRHS",
 }
+EM_CREDENTIALS = {
+    "user": EnvVar("EM_USER"),
+    "host": EnvVar("EM_WAREHOUSE_HOST"),
+    "password": EnvVar("EM_PASSWORD"),
+    "database": "dsg_prod",
+}
 dh_api_key = os.getenv("DATAHUB_API_KEY")
 PLATFORM_ENV = os.getenv("PLATFORM_ENV")
 food_cat_endpoint = os.getenv("FOOD_API_ENDPOINT")

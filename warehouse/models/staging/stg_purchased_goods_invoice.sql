@@ -78,6 +78,15 @@ adjusted AS (
     FROM tagged_cpi
 ),
 
+filtered AS (
+    --Filter out the duplicated level_3 category accounted by other scope 3 categories
+    SELECT a.* FROM adjusted AS a
+    LEFT JOIN {{ source('raw', 'purchased_goods_duplicated_category') }} AS d
+        ON a.level_3 = d.duplicated_level3
+    WHERE d.duplicated_level3 IS NULL
+),
+
+
 dlc AS (
     SELECT
         cost_object,
@@ -87,21 +96,18 @@ dlc AS (
 ),
 
 cost_tagged AS (
+    --Attach DLC information for further analysis
     SELECT
-        a.*,
+        f.*,
         d.dlc_name
-    FROM adjusted AS a
+    FROM filtered AS f
     LEFT JOIN dlc AS d
-        ON a.cost_object = d.cost_object
-),
-
-co2kg AS (
-    SELECT
-        *,
-        emission_factor * adjusted_spend_2021 AS ghg
-    FROM cost_tagged
-
+        ON f.cost_object = d.cost_object
 )
 
-
-SELECT * FROM co2kg
+--Convert emission unit from kgco2 to mtco2
+SELECT
+    *,
+    emission_factor * adjusted_spend_2021 / 1000 AS mtco2,
+    CURRENT_TIMESTAMP AS last_update
+FROM cost_tagged

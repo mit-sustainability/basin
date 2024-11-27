@@ -1,4 +1,4 @@
-dbt-core==1.8.4
+dbt-core==v1.8.8
 dbt-postgres==1.8.2
 dbt-extractor==0.5.1
 protobuf==4.25.3
