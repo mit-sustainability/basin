@@ -124,7 +124,7 @@ def purchased_goods_mapping(dhub: ResourceParam[DataHubResource]):
     project_id = dhub.get_project_id("Scope3 Purchased Goods")
     logger.info(f"Found project id: {project_id}!")
 
-    download_links = dhub.search_files_from_project(project_id, "duplicated_pns_1127")
+    download_links = dhub.search_files_from_project(project_id, "purchased_goods_eeio_mapping_2024")
     if len(download_links) == 0:
         logger.error("No download links found!")
     # Load the data
@@ -149,7 +149,7 @@ def purchased_goods_duplicated_category(dhub: ResourceParam[DataHubResource]):
     project_id = dhub.get_project_id("Scope3 Purchased Goods")
     logger.info(f"Found project id: {project_id}!")
 
-    download_links = dhub.search_files_from_project(project_id, "purchased_goods_eeio_mapping_2024")
+    download_links = dhub.search_files_from_project(project_id, "duplicated_pns_category")
     if len(download_links) == 0:
         logger.error("No download links found!")
     # Load the data

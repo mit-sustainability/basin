@@ -54,7 +54,7 @@ pgs AS (
     -- Aggregate purchased goods and services emissions by fiscal year
     SELECT
         '3.1 Purchased Goods and Services' AS category,
-        SUM(ghg) / 1000 AS emission, -- Convert to metric tons CO2
+        mtco2 AS emission,
         fiscal_year,
         3 AS "scope",
         CURRENT_TIMESTAMP AS last_update

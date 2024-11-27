@@ -486,6 +486,17 @@ sources:
             description: "Level 3 Category"
           - name: last_update
             description: "Last Update timestamp"
+      - name: purchased_goods_duplicated_category
+        description: Duplicated categories (level_3 commidity) accounted for in other scope 3 categories
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["purchased_goods_duplicated_category"]
+        columns:
+          - name: duplicated_level3
+            description: "Duplicated Level 3 Category for purchased goods and services"
+          - name: id
+            description: "unique identifier"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

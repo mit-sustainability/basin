@@ -185,6 +185,9 @@ models:
         description: "Rolled up commodity category"
       - name: "level_3"
         description: "Lowest level detailed commodity categorization."
+        data_tests:
+          - dbt_utils.not_accepted_values:
+              values: ['Waste Disposal', 'Construction/Maintenance Services', 'General Travel Expenses', 'Waste Disposal']
       - name: "total"
         description: "Total USD spend for the invoice"
       - name: "description"
@@ -207,8 +210,8 @@ models:
         description: "CPI adjusted spend total to current year."
       - name: "dlc_name"
         description: "Department, Lab, and Center name."
-      - name: "ghg"
-        description: "Greenhouse gas data related in kg CO2e"
+      - name: "mtco2"
+        description: "Greenhouse gas emission in metric ton CO2e"
       - name: last_update
         description: "Timestamp of the entry being modified"
   - name: stg_food_order
