@@ -1,5 +1,5 @@
--- Adapt manual entry scope 1 and 2 categories
 WITH entries AS (
+    -- Process manual entries for scope 1 and 2 categories
     SELECT
         CASE
             WHEN category LIKE '1.1%' THEN '1. Direct emissions'
@@ -9,60 +9,65 @@ WITH entries AS (
         emission,
         fiscal_year,
         "scope",
-        last_update
+        last_update::timestamp AS last_update
     FROM {{ source("raw", "ghg_manual_entries") }}
 ),
 
 business AS (
+    -- Aggregate business travel emissions by fiscal year
     SELECT
         '3.6 Business Travel' AS category,
-        sum(total_mtco2) AS emission,
+        SUM(total_mtco2) AS emission,
         fiscal_year,
         3 AS "scope",
-        max(last_update) AS last_update
+        MAX(last_update)::timestamp AS last_update
     FROM {{ ref("travel_FY_exp_group_summary") }}
     GROUP BY fiscal_year
 ),
 
+
 construction AS (
+    -- Aggregate construction-related emissions by fiscal year
     SELECT
         '3.2 Construction' AS category,
-        sum(ghg_emission) AS emission,
+        SUM(ghg_emission) AS emission,
         fiscal_year,
         3 AS "scope",
-        max(last_update) AS last_update
+        MAX(last_update)::timestamp AS last_update
     FROM {{ ref("construction_expense_emission") }}
     GROUP BY fiscal_year
 ),
 
 waste AS (
+    -- Aggregate waste-related emissions by fiscal year
     SELECT
         '3.5 Waste' AS category,
-        sum(co2eq) AS emission,
+        SUM(co2eq) AS emission,
         fiscal_year,
         3 AS "scope",
-        max(last_update) AS last_update
+        MAX(last_update)::timestamp AS last_update
     FROM {{ ref("final_waste_emission") }}
     GROUP BY fiscal_year
 ),
 
 pgs AS (
+    -- Aggregate purchased goods and services emissions by fiscal year
     SELECT
         '3.1 Purchased Goods and Services' AS category,
-        sum(ghg) / 1000 AS emission, -- mtco2
+        SUM(ghg) / 1000 AS emission, -- Convert to metric tons CO2
         fiscal_year,
         3 AS "scope",
-        current_timestamp AS "last_update"
+        CURRENT_TIMESTAMP AS last_update
     FROM {{ ref("stg_purchased_goods_invoice") }}
     GROUP BY fiscal_year
 ),
 
--- purchased energy from energize-mit
 cdr AS (
+    -- Extract purchased energy emissions with scope differentiation
     SELECT
         ghg,
-        billing_fy,
-        last_update,
+        billing_fy AS fiscal_year,
+        last_update::timestamp AS last_update,
         CASE
             WHEN level3_category IN ('Gas', 'Fuel Oil #2', 'Fuel Oil #6') THEN 1
             WHEN level3_category = 'Electricity' THEN 2
@@ -71,36 +76,39 @@ cdr AS (
 ),
 
 energy AS (
+    -- Aggregate purchased energy emissions by fiscal year and scope
     SELECT
         CASE
             WHEN scope = 1 THEN '1. Direct emissions'
             WHEN scope = 2 THEN '2. Indirect electricity'
         END AS category,
-        sum(ghg) AS emission,
-        billing_fy AS fiscal_year,
+        SUM(ghg) AS emission,
+        fiscal_year,
         scope,
-        max(last_update) AS last_update
+        MAX(last_update)::timestamp AS last_update
     FROM cdr
-    GROUP BY billing_fy, scope
+    GROUP BY fiscal_year, scope
 ),
 
 fera AS (
+    -- Extract emissions from upstream fuel and energy activities
     SELECT
         '3.3 Fuel and energy-related activities' AS category,
         mtco2e AS emission,
         billing_fy AS fiscal_year,
         scope,
-        last_update
+        last_update::timestamp AS last_update
     FROM {{ ref("stg_fuel_energy_upstream") }}
 ),
 
 combined AS (
+    -- Combine all data sources into a single dataset with source tracking
     SELECT
         category,
         fiscal_year,
         scope,
         emission,
-        last_update::timestamp AS last_timestamp,
+        last_update,
         'manual' AS source
     FROM entries
     UNION ALL
@@ -109,7 +117,7 @@ combined AS (
         fiscal_year,
         scope,
         emission,
-        last_update::timestamp AS last_timestamp,
+        last_update,
         'business' AS source
     FROM business
     UNION ALL
@@ -118,7 +126,7 @@ combined AS (
         fiscal_year,
         scope,
         emission,
-        last_update::timestamp AS last_timestamp,
+        last_update,
         'construction' AS source
     FROM construction
     UNION ALL
@@ -127,7 +135,7 @@ combined AS (
         fiscal_year,
         scope,
         emission,
-        last_update::timestamp AS last_timestamp,
+        last_update,
         'waste' AS source
     FROM waste
     UNION ALL
@@ -136,7 +144,7 @@ combined AS (
         fiscal_year,
         scope,
         emission,
-        last_update::timestamp AS last_timestamp,
+        last_update,
         'pgs' AS source
     FROM pgs
     UNION ALL
@@ -145,7 +153,7 @@ combined AS (
         fiscal_year,
         scope,
         emission,
-        last_update::timestamp AS last_timestamp,
+        last_update,
         'energy' AS source
     FROM energy
     UNION ALL
@@ -154,20 +162,21 @@ combined AS (
         fiscal_year,
         scope,
         emission,
-        last_update::timestamp AS last_timestamp,
+        last_update,
         'fera' AS source
     FROM fera
 ),
 
 ranked AS (
+    -- Assign rank to sources for prioritization
     SELECT
         category,
         fiscal_year,
         scope,
         emission,
-        last_timestamp AS last_update,
+        last_update,
         source,
-        row_number() OVER (
+        ROW_NUMBER() OVER (
             PARTITION BY category, fiscal_year
             ORDER BY
                 CASE
@@ -184,13 +193,14 @@ ranked AS (
     FROM combined
 )
 
+-- Final aggregated results with prioritized sources
 SELECT
     category,
     fiscal_year,
-    max(scope) AS scope,
-    max(emission) AS emission,
-    max(last_update) AS last_update
+    MAX(scope) AS scope,
+    MAX(emission) AS emission,
+    MAX(last_update) AS last_update
 FROM ranked
-WHERE row_num = 1 -- Ensure manual overwrites other sources
+WHERE row_num = 1 -- Ensure highest-priority source is used
 GROUP BY category, fiscal_year
 ORDER BY fiscal_year
