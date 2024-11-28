@@ -15,6 +15,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - DATAHUB_API_KEY=${DATAHUB_API_KEY}
       - FOOD_API_ENDPOINT=${FOOD_API_ENDPOINT}
+      - EM_WAREHOUSE_HOST=${EM_WAREHOUSE_HOST}
+      - EM_USER=${EM_USER}
+      - EM_PASSWORD=${EM_PASSWORD}
     ports:
       - 3000:3000
   dagster-daemon:
@@ -31,4 +34,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - DATAHUB_API_KEY=${DATAHUB_API_KEY}
       - FOOD_API_ENDPOINT=${FOOD_API_ENDPOINT}
+      - EM_WAREHOUSE_HOST=${EM_WAREHOUSE_HOST}
+      - EM_USER=${EM_USER}
+      - EM_PASSWORD=${EM_PASSWORD}
     command: "dagster-daemon run"

@@ -1,7 +1,7 @@
 SELECT
     fiscal_year,
     level_3,
-    sum(ghg) / 1000 AS mtco2,
+    sum(mtco2) AS mtco2,
     sum(inflated_spend) AS spend_usd,
     max(level_2) AS level_2,
     max(level_1) AS level_1,
