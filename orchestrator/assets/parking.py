@@ -151,7 +151,7 @@ def daily_parking_trend(df: pd.DataFrame, holidays: pd.DataFrame):
         changepoint_prior_scale=0.4,
     )
     m.fit(ts)
-    all_time = pd.DataFrame({"ds": pd.date_range(start="2015-09-15", end="2024-01-01", freq="D")})
+    all_time = pd.DataFrame({"ds": pd.date_range(start="2015-09-15", end="2024-12-01", freq="D")})
     prediction = m.predict(all_time)
     df_out = pd.merge(filtered, prediction, on="ds", how="left")
     logger.info(f"Successfully merge and predict parking trends till {df_out.ds.max()}")
