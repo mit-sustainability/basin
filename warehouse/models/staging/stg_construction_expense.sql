@@ -1,7 +1,9 @@
+{% set hard_spend = 0.65 %}
+
 WITH expense AS (
 
     SELECT
-        new_construction AS expense,
+        new_construction * {{ hard_spend }} AS expense,
         'New Construction' AS expense_type,
         '233262' AS eeio_code,
         fiscal_year
@@ -10,7 +12,7 @@ WITH expense AS (
     UNION ALL
 
     SELECT
-        renovation_and_renewal AS expense,
+        renovation_and_renewal * {{ hard_spend }} AS expense,
         'Renovation and Renewal' AS expense_type,
         '230301' AS eeio_code,
         fiscal_year
