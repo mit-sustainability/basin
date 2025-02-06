@@ -12,7 +12,7 @@ WITH expense AS (
     UNION ALL
 
     SELECT
-        renovation_and_renewal * {{ hard_spend }} AS expense,
+        renovation_and_renewal AS expense,
         'Renovation and Renewal' AS expense_type,
         '230301' AS eeio_code,
         fiscal_year
