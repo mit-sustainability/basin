@@ -1,7 +1,7 @@
 [sqlfluff]
 templater = jinja
 sql_file_exts = .sql
-exclude_rules = L034,L029,L057,L013,L014
+exclude_rules = L034,L029,L057,L013
 dialect = postgres
 max_line_length = 100
 
