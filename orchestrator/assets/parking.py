@@ -69,7 +69,7 @@ def historical_parking_daily(dhub: ResourceParam[DataHubResource]):
     group_name="raw",
     dagster_type=pandera_schema_to_dagster_type(ParkingNewbatchData),
 )
-def newbatch_parking_daily(dwhrs: MITWHRSResource):
+def newbatch_parking_daily(dwrhs: MITWHRSResource):
     """This asset ingest the new batch of parking activity data from MIT Warehouse"""
     query = """
             SELECT ENTRY_DATE AS "date",
@@ -82,7 +82,7 @@ def newbatch_parking_daily(dwhrs: MITWHRSResource):
                 AND TO_CHAR(ENTRY_DATE, 'DY', 'NLS_DATE_LANGUAGE = AMERICAN') NOT IN ('SAT', 'SUN')
             GROUP BY ENTRY_DATE, PARKING_LOT_ID
             """
-    rows = dwhrs.execute_query(query, chunksize=100000)
+    rows = dwrhs.execute_query(query, chunksize=100000)
     columns = [
         "date",
         "parking_lot",
@@ -100,7 +100,7 @@ def newbatch_parking_daily(dwhrs: MITWHRSResource):
     compute_kind="python",
     group_name="raw",
 )
-def mit_holidays(dwhrs: MITWHRSResource):
+def mit_holidays(dwrhs: MITWHRSResource):
     """This asset ingest the MIT holidays data from MIT Warehouse"""
     query = """
             SELECT HOLIDAY_CLOSING_DATE AS "date",
@@ -112,7 +112,7 @@ def mit_holidays(dwhrs: MITWHRSResource):
                 AND HOLIDAY_CLOSING_DATE < SYSDATE
             ORDER BY HOLIDAY_CLOSING_DATE
             """
-    rows = dwhrs.execute_query(query, chunksize=100000)
+    rows = dwrhs.execute_query(query, chunksize=100000)
     columns = [
         "date",
         "holiday",

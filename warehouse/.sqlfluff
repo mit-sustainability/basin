@@ -1,7 +1,7 @@
 [sqlfluff]
 templater = jinja
 sql_file_exts = .sql
-exclude_rules = L034,L029,L057
+exclude_rules = L034,L029,L057,L013,L014
 dialect = postgres
 max_line_length = 100
 
@@ -9,6 +9,9 @@ max_line_length = 100
 # Line length
 ignore_comment_lines = True
 ignore_comment_clauses = True
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = consistent
 
 [sqlfluff:templater:jinja]
 apply_dbt_builtins = True

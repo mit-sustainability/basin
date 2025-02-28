@@ -44,6 +44,8 @@ sources:
         columns:
           - name: cost_object
             description: "Cost Object ID"
+          - name: dlc_key
+            description: "MIT Department, Lab, and Center key in Warehouse"
           - name: dlc_name
             description: "MIT Department, Lab, and Center name"
           - name: school_area
@@ -460,6 +462,8 @@ sources:
           dagster:
             asset_key: ["purchased_energy"]
         columns:
+          - name: building_number
+            description: "MIT building number"
           - name: gl_account_key
             description: "GL Account Key"
           - name: start_date
@@ -497,6 +501,53 @@ sources:
             description: "Duplicated Level 3 Category for purchased goods and services"
           - name: id
             description: "unique identifier"
+      - name: ghg_categories
+        description: Greenhouse Gas categories for MIT following GHG protocol
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["ghg_categories"]
+        columns:
+          - name: id
+            description: "unique identifier"
+          - name: name
+            description: "GHG category name"
+          - name: description
+            description: "GHG category description"
+      - name: dlc_person_share
+        description: DLC share of campus total based on number of employees
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["dlc_person_share"]
+        columns:
+          - name: id
+            description: "unique identifier"
+          - name: dlc_key
+            description: "MIT Department, Lab, and Center key in Warehouse"
+          - name: total_employee
+            description: "Total number of employees of the DLC"
+          - name: percentage
+            description: "percentage of DLC employee of total MIT employees"
+          - name: last_update
+            description: "Last update timestamp"
+      - name: dlc_area_share
+        description: DLC share of building energy used based on assigned areas
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["dlc_area_share"]
+        columns:
+          - name: fclt_building_key
+            description: "MIT building key"
+          - name: dlc_key
+            description: "MIT Department, Lab, and Center key in Warehouse"
+          - name: total_area
+            description: "Total assigned area of the DLC in the building"
+          - name: dlc_share
+            description: "share of assigned area from the building total for the DLC"
+          - name: last_update
+            description: "Last update timestamp"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

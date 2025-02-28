@@ -321,6 +321,72 @@ models:
         description: "GHG scope 1, 2, or 3"
       - name: last_update
         description: "Timestamp of the entry being modified"
+  - name: stg_building_energy
+    description: "Scope 1+2 GHG breakdown by building and fiscal_year"
+    meta:
+      owner: yu_cheng@mit.edu
+      group: staging
+      automation_condition:
+        type: eager
+    columns:
+      - name: building_number
+        description: "MIT Building number"
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: emission
+        description: "GHG emission in metric tons"
+      - name: last_update
+        description: "Timestamp of the entry being modified"
+  - name: stg_building_dlc_share
+    description: "Adjust area-based share to building groups"
+    meta:
+      owner: yu_cheng@mit.edu
+      group: staging
+    columns:
+      - name: building_number
+        description: "MIT Building number"
+      - name: dlc_key
+        description: "MIT Department, Lab, and Center key in Warehouse"
+      - name: dlc_assigned_area
+        description: "DLC assigned area in the building"
+      - name: building_total_area
+        description: "Total assignable area of the building"
+      - name: dlc_share
+        description: "share of assigned area from the building total for the DLC"
+  - name: stg_dlc_energy_summary
+    description: "Add up energy consumption by DL used assigned area share in each building"
+    meta:
+      owner: yu_cheng@mit.edu
+      group: staging
+    columns:
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: dlc_key
+        description: "MIT Department, Lab, and Center key in Warehouse"
+      - name: emission
+        description: "Total DLC GHG emission (MtCO2)"
+      - name: dlc_name
+        description: "MIT Department, Lab, and Center name"
+      - name: school_area
+        description: "School Area"
+  - name: stg_dlc_footprint_capita
+    description: "Add up energy consumption by DL used assigned area share in each building"
+    meta:
+      owner: yu_cheng@mit.edu
+      group: staging
+    columns:
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: category
+        description: "GHG category"
+      - name: dlc_key
+        description: "MIT Department, Lab, and Center key in Warehouse"
+      - name: emission
+        description: "Total DLC GHG emission (MtCO2)"
+      - name: dlc_name
+        description: "MIT Department, Lab, and Center name"
+      - name: school_area
+        description: "School Area"
 unit_tests:
   - name: test_waste_split_adjustment
     description: >

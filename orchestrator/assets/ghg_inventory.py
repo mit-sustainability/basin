@@ -1,10 +1,5 @@
 from datetime import datetime
-from dagster import (
-    asset,
-    Output,
-    get_dagster_logger,
-    MetadataValue,
-)
+from dagster import asset, Output, get_dagster_logger, MetadataValue, ResourceParam
 from dagster_aws.s3 import S3Resource
 from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
@@ -16,6 +11,7 @@ from orchestrator.assets.utils import (
     add_dhub_sync,
     normalize_column_name,
 )
+from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.postgres_io_manager import PostgreConnResources
 
 
@@ -25,6 +21,7 @@ logger = get_dagster_logger()
 class EnergySchema(pa.SchemaModel):
     """Validate the output data schema of travel spending asset"""
 
+    building_number: Series[str] = pa.Field(description="MIT Building Number")
     gl_account_key: Series[str] = pa.Field(description="Expense Amount")
     start_date: Series[object] = pa.Field(description="Transaction date")
     start_date_use: Series[object] = pa.Field(description="Energy use date")
@@ -78,6 +75,7 @@ def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
     logger.info("Connect to energize_mit database to ingest Scope 1 and 2 emissions")
     query = """
             SELECT
+                "BUILDING_NUMBER",
                 "GL_ACCOUNT_KEY",
                 "START_DATE",
                 "START_DATE_USE",
@@ -115,6 +113,27 @@ def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
         df[col] = df[col].astype("Int64")
 
     df.columns = [normalize_column_name(col) for col in df.columns]
+    return Output(value=df, metadata=metadata)
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+)
+def ghg_categories(dhub: ResourceParam[DataHubResource]) -> Output[pd.DataFrame]:
+    """Load GHG categories from datahub"""
+    project_id = dhub.get_project_id("GHG_Inventory")
+    logger.info(f"Found project id: {project_id}!")
+
+    download_links = dhub.search_files_from_project(project_id, "ghg_protocol_categories")
+    if len(download_links) == 0:
+        logger.error("No download links found!")
+    df = pd.read_csv(download_links[0])
+    metadata = {
+        "total_categories": len(df),
+    }
+
     return Output(value=df, metadata=metadata)
 
 
