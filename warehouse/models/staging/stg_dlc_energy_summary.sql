@@ -33,7 +33,7 @@ DLC_Emission_Summary AS (
     GROUP BY fiscal_year, dlc_key
 ),
 
-Dlc_Mapping AS (
+DLC_Mapping AS (
     SELECT
         dlc_key,
         dlc_name,
@@ -51,6 +51,6 @@ SELECT
     d.dlc_name,
     d.school_area
 FROM DLC_Emission_Summary AS s
-LEFT JOIN Dlc_Mapping AS d
+LEFT JOIN DLC_Mapping AS d
     ON s.dlc_key = d.dlc_key
 ORDER BY s.fiscal_year, s.dlc_key
