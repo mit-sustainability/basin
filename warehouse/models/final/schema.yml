@@ -213,3 +213,20 @@ models:
         description: "GHG scope 1, 2, or 3"
       - name: last_update
         description: "Timestamp of the entry being added"
+  - name: final_footprint_records
+    description: "Combined GHG footprint recordings of MIT DLCs"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: id
+        description: "Unique identifier for DLC footprint record"
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: category
+        description: "GHG category"
+      - name: emission
+        description: "Total DLC GHG emission (MtCO2)"
+      - name: dlc_name
+        description: "MIT Department, Lab, and Center name"
+      - name: school_area
+        description: "School Area"

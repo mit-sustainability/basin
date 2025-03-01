@@ -53,4 +53,5 @@ SELECT
 FROM DLC_Emission_Summary AS s
 LEFT JOIN DLC_Mapping AS d
     ON s.dlc_key = d.dlc_key
+WHERE d.dlc_name IS NOT NULL
 ORDER BY s.fiscal_year, s.dlc_key

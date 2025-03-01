@@ -379,6 +379,9 @@ models:
         description: "MIT fiscal year (July to June)"
       - name: category
         description: "GHG category"
+        data_tests:
+          - accepted_values:
+              values: ['3.5 Waste', '3.2 Construction']
       - name: dlc_key
         description: "MIT Department, Lab, and Center key in Warehouse"
       - name: emission
