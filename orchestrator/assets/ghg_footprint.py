@@ -61,7 +61,6 @@ def dlc_person_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     # Add an id column, and a timestamp column to the dataframe
     df.insert(0, "id", df.index + 1)
     df["last_update"] = datetime.now()
-    # Convert FY columns to integer
     return Output(value=df, metadata=metadata)
 
 
@@ -69,6 +68,7 @@ def dlc_person_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
 def dlc_area_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     """Load Building DLC share from data warehouse"""
     logger.info("Connect to MIT data warehouse to ingest floor area share for each DLC and building")
+    ### Beware, WAREUSER.FCLT_ORG_DLC_KEY view might not be complete, missing HEALTH for E23
     query = """
             WITH DistinctDLC AS (
                     SELECT DISTINCT FCLT_ORGANIZATION_KEY, DLC_KEY
@@ -123,9 +123,8 @@ def dlc_area_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     metadata = {
         "number_of_DLCs": number_dlc,
     }
-    # Add an id column, and a timestamp column to the dataframe
+    # Add a timestamp column
     df["last_update"] = datetime.now()
-    # Convert FY columns to integer
     return Output(value=df, metadata=metadata)
 
 
@@ -183,6 +182,5 @@ dhub_dlc_footprint = add_dhub_sync(
         "project_name": "GHG_Inventory",
         "description": "GHG footprint broken down by DLCs and fiscal year",
         "title": "DLC-based GHG footprint",
-        "ext": "parquet",
     },
 )
