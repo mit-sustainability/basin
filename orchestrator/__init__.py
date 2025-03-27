@@ -20,6 +20,7 @@ from orchestrator.assets import (
     purchased_goods,
     waste,
     ghg_inventory,
+    ghg_footprint,
 )
 
 from orchestrator.jobs.business_travel_job import business_asset_job
@@ -30,6 +31,7 @@ from orchestrator.jobs.ghg_inventory import ghg_job
 from orchestrator.jobs.parking_job import parking_asset_job
 from orchestrator.jobs.purchased_goods import pgs_job
 from orchestrator.jobs.waste_job import waste_asset_job
+from orchestrator.jobs.dlc_footprint import footprint_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
@@ -53,6 +55,7 @@ parking_assets = load_assets_from_modules([parking])
 purchased_goods_assets = load_assets_from_modules([purchased_goods])
 food_assets = load_assets_from_modules([food])
 all_scopes_assets = load_assets_from_modules([ghg_inventory])
+footprint_assets = load_assets_from_modules([ghg_footprint])
 
 defs = Definitions(
     assets=[mitos_dbt_assets]
@@ -63,7 +66,8 @@ defs = Definitions(
     + parking_assets
     + purchased_goods_assets
     + food_assets
-    + all_scopes_assets,
+    + all_scopes_assets
+    + footprint_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
@@ -74,6 +78,7 @@ defs = Definitions(
         pgs_job,
         food_asset_job,
         ghg_job,
+        footprint_job,
     ],
     sensors=[sensor_ghg_manual],
     resources={
@@ -83,7 +88,7 @@ defs = Definitions(
         "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
         "em_connect": PostgreConnResources(**EM_CREDENTIALS),
         "dhub": DataHubResource(auth_token=dh_api_key),
-        "dwhrs": MITWHRSResource(**DWRHS_CREDENTIALS),
+        "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
     },

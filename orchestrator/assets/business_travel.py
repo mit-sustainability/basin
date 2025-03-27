@@ -202,14 +202,16 @@ def all_scope_summary(dhub: ResourceParam[DataHubResource]):
     compute_kind="python",
     group_name="raw",
 )
-def cost_object_warehouse(dwhrs: MITWHRSResource):
+def cost_object_warehouse(dwrhs: MITWHRSResource):
     """This asset ingest cost object table from MIT warehouse"""
     query = (
-        "SELECT COST_COLLECTOR_ID, DLC_NAME, SCHOOL_AREA, COST_COLLECTOR_EFFECTIVE_DATE " "FROM WAREUSER.COST_COLLECTOR"
+        "SELECT COST_COLLECTOR_ID, DLC_KEY, DLC_NAME, SCHOOL_AREA, COST_COLLECTOR_EFFECTIVE_DATE "
+        "FROM WAREUSER.COST_COLLECTOR"
     )
-    rows = dwhrs.execute_query(query, chunksize=100000)
+    rows = dwrhs.execute_query(query, chunksize=100000)
     columns = [
         "cost_collector_id",
+        "dlc_key",
         "dlc_name",
         "school_area",
         "cost_collector_effective_date",
