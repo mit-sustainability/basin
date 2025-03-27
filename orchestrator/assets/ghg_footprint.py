@@ -1,18 +1,13 @@
 from datetime import datetime
-from dagster import asset, Output, get_dagster_logger, MetadataValue, ResourceParam
-from dagster_aws.s3 import S3Resource
-from dagster_pandera import pandera_schema_to_dagster_type
+from dagster import asset, Output, get_dagster_logger, MetadataValue
 import pandas as pd
-import pandera as pa
 from pandera.typing import Series, DateTime
 
 
 from orchestrator.assets.utils import (
-    empty_dataframe_from_model,
     add_dhub_sync,
     normalize_column_name,
 )
-from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.postgres_io_manager import PostgreConnResources
 from orchestrator.resources.mit_warehouse import MITWHRSResource
 
@@ -180,13 +175,13 @@ def energy_distribution(em_connect: PostgreConnResources) -> Output[pd.DataFrame
 
 
 # Sync processed table back to datahub
-# dhub_ghg_inventory = add_dhub_sync(
-#     asset_name="dhub_ghg_inventory",
-#     table_key=["staging", "stg_ghg_inventory"],
-#     config={
-#         "filename": "ghg_inventory.csv",
-#         "project_name": "GHG_Inventory",
-#         "description": "Aggregated GHG inventory emissions by categories",
-#         "title": "Aggregated GHG Inventory",
-#     },
-# )
+dhub_dlc_footprint = add_dhub_sync(
+    asset_name="dhub_dlc_footprint",
+    table_key=["final", "final_footprint_records"],
+    config={
+        "filename": "dlc_footprint.csv",
+        "project_name": "GHG_Inventory",
+        "description": "GHG footprint broken down by DLCs and fiscal year",
+        "title": "DLC-based GHG footprint",
+    },
+)
