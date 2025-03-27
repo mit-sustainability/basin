@@ -354,7 +354,7 @@ models:
       - name: dlc_share
         description: "share of assigned area from the building total for the DLC"
   - name: stg_dlc_energy_summary
-    description: "Add up energy consumption by DL used assigned area share in each building"
+    description: "Aggregate energy consumption by DLC using assigned area share in each building"
     meta:
       owner: yu_cheng@mit.edu
       group: staging

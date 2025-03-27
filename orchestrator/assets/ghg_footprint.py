@@ -157,7 +157,7 @@ def energy_distribution(em_connect: PostgreConnResources) -> Output[pd.DataFrame
         logger.info("Query executed successfully. Energy distribution data fetched from energize-mit.")
     except Exception as e:
         logger.error("An error occurred:", e)
-        return
+        raise
     finally:
         engine.dispose()
 
