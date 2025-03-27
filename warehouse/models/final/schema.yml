@@ -217,6 +217,11 @@ models:
     description: "Combined GHG footprint recordings of MIT DLCs"
     meta:
       owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - dlc_name
+            - fiscal_year
     columns:
       - name: id
         description: "Unique identifier for DLC footprint record"

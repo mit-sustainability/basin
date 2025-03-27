@@ -183,5 +183,6 @@ dhub_dlc_footprint = add_dhub_sync(
         "project_name": "GHG_Inventory",
         "description": "GHG footprint broken down by DLCs and fiscal year",
         "title": "DLC-based GHG footprint",
+        "ext": "parquet",
     },
 )
