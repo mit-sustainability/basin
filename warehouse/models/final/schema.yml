@@ -222,6 +222,7 @@ models:
           combination_of_columns:
             - dlc_name
             - fiscal_year
+            - category
     columns:
       - name: id
         description: "Unique identifier for DLC footprint record"
