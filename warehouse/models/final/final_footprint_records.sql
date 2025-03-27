@@ -45,6 +45,13 @@ pgs AS (
     ORDER BY fiscal_year
 ),
 
+unique_dlc AS (
+    SELECT DISTINCT
+        dlc_name,
+        school_area
+    FROM {{ ref('stg_cost_object_rollup') }}
+),
+
 pgs_dlc AS (
     SELECT
         pgs.fiscal_year,
@@ -53,7 +60,7 @@ pgs_dlc AS (
         pgs.dlc_name,
         c.school_area
     FROM pgs
-    LEFT JOIN {{ ref('stg_cost_object_rollup') }} AS c
+    LEFT JOIN unique_dlc AS c
         ON pgs.dlc_name = c.dlc_name
 ),
 
@@ -71,3 +78,4 @@ SELECT
     row_number() OVER (ORDER BY fiscal_year, category) AS id,
     *
 FROM recording
+WHERE fiscal_year >= 2014

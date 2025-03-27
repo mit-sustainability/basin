@@ -12,7 +12,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_t
 from requests.exceptions import SSLError
 
 logger = get_dagster_logger()
-default_timeout = 10
+default_timeout = 30
 
 
 @retry(

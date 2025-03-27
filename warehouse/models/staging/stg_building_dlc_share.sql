@@ -105,47 +105,47 @@ WITH building_groups AS (
     UNION ALL
     SELECT
         'W85',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85A',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85B',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85C',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85D',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85E',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85F',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85G',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85H',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85J',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         'W85K',
-        'W85_W85A_W85B_W85C_W85D_W85E_W85F_W85G_W85H_W85J_W85K'
+        'W85_W85ABC_W85DE_W85FG_W85HJK'
     UNION ALL
     SELECT
         '32P',
@@ -174,6 +174,70 @@ WITH building_groups AS (
     SELECT
         'W18P',
         'Parking Areas'
+    UNION ALL
+    SELECT
+        'OC19A',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19B',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19C',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19D',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19E',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19F',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19G',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19H',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19J',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19K',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19L',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19M',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19N',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'OC19Q',
+        'OC19_ABCDEFGHJKLMNQ'
+    UNION ALL
+    SELECT
+        'W2',
+        'W2_W4'
+    UNION ALL
+    SELECT
+        'W4',
+        'W2_W4'
 ),
 
 bd_grouped AS (
@@ -181,7 +245,7 @@ bd_grouped AS (
         COALESCE(bg.grouped_building, bd.fclt_building_key) AS fclt_building_key,
         bd.dlc_key,
         SUM(bd.total_area) AS total_area
-    FROM raw.dlc_floor_share AS bd
+    FROM {{ source('raw','dlc_area_share') }} AS bd
     LEFT JOIN building_groups AS bg ON bd.fclt_building_key = bg.fclt_building_key
     GROUP BY COALESCE(bg.grouped_building, bd.fclt_building_key), bd.dlc_key
 ),

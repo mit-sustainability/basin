@@ -6,6 +6,7 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime
 
+
 from orchestrator.assets.utils import (
     empty_dataframe_from_model,
     add_dhub_sync,
@@ -70,7 +71,7 @@ def dlc_person_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
 
 
 @asset(io_manager_key="postgres_replace", compute_kind="python", group_name="raw")
-def dlc_floor_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
+def dlc_area_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     """Load Building DLC share from data warehouse"""
     logger.info("Connect to MIT data warehouse to ingest floor area share for each DLC and building")
     query = """
@@ -130,6 +131,51 @@ def dlc_floor_share(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     # Add an id column, and a timestamp column to the dataframe
     df["last_update"] = datetime.now()
     # Convert FY columns to integer
+    return Output(value=df, metadata=metadata)
+
+
+@asset(io_manager_key="postgres_replace", compute_kind="python", group_name="raw")
+def energy_distribution(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
+    """Load purchased energy numbers from energy-cdr in energize-mit database"""
+    engine = em_connect.create_engine()
+    logger.info("Connect to energize_mit database to ingest the full energy_cdr table")
+    query = """
+            SELECT
+                "BUILDING_NUMBER",
+                "GL_ACCOUNT_KEY",
+                "START_DATE",
+                "START_DATE_USE",
+                "BILLING_FY",
+                "USE_FY",
+                "GHG",
+                "UNIT_OF_MEASURE",
+                "NUMBER_OF_UNITS",
+                "BUILDING_GROUP_LEVEL1",
+                "LEVEL1_CATEGORY",
+                "LEVEL2_CATEGORY",
+                "LEVEL3_CATEGORY"
+            FROM public.energy_cdr
+            """
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(query, conn)
+        logger.info("Query executed successfully. Energy distribution data fetched from energize-mit.")
+    except Exception as e:
+        logger.error("An error occurred:", e)
+        return
+    finally:
+        engine.dispose()
+
+    metadata = {
+        "total_entries": len(df),
+        "last_entry_date": MetadataValue.text(df["START_DATE"].max().strftime("%Y-%m-%d")),
+    }
+    df["last_update"] = datetime.now()
+    # Convert FY columns to integer
+    for col in ["BILLING_FY", "USE_FY"]:
+        df[col] = df[col].astype("Int64")
+
+    df.columns = [normalize_column_name(col) for col in df.columns]
     return Output(value=df, metadata=metadata)
 
 

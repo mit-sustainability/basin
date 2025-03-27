@@ -40,6 +40,9 @@ class EnergySchema(pa.SchemaModel):
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
+EnergySchemaType = pandera_schema_to_dagster_type(EnergySchema)
+
+
 @asset(
     io_manager_key="postgres_replace",
     compute_kind="python",
@@ -67,7 +70,7 @@ def ghg_manual_entries(s3: S3Resource) -> Output[pd.DataFrame]:
     io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
-    dagster_type=pandera_schema_to_dagster_type(EnergySchema),
+    dagster_type=EnergySchemaType,
 )
 def purchased_energy(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
     """Load purchased energy numbers from energy-cdr in energize-mit database"""

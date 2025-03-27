@@ -1,11 +1,11 @@
 WITH cdr AS (
-    -- Extract purchased energy emissions by buildings
+    -- Extract Energy related emissions by buildings
     SELECT
         ghg,
         billing_fy AS fiscal_year,
         building_number,
         last_update::timestamp AS last_update
-    FROM {{ source("raw", "purchased_energy") }}
+    FROM {{ source("raw", "energy_distribution") }}
 )
 
 SELECT
