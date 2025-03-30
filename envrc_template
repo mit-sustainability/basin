@@ -1,0 +1,24 @@
+export AWS_ACCESS_KEY_ID="xxxx"
+export AWS_SECRET_ACCESS_KEY="xxxx"
+export AWS_DEFAULT_REGION="us-east-1"
+export PLATFORM_ENV="local"
+
+export PG_WAREHOUSE_HOST="localhost"
+export PG_USER="xxxx"
+export PG_PASSWORD="xxxxxxx"
+
+export EM_WAREHOUSE_HOST="xxxxx"
+export EM_USER="xxxx"
+export EM_PASSWORD="xxxxxx"
+
+export DWRHS_HOST="xxxxxx"
+export DWRHS_USER="xxxxx"
+export DWRHS_PASSWORD="xxxxxx"
+export DWRHS_SID="DWRHS"
+
+export DATAHUB_API_KEY="xxxxxx"
+
+export IMAGE_TAG="basin_x.x.x"
+export DAGSTER_IMAGE_ECR="xxxxx"
+export DYLD_LIBRARY_PATH=/usr/local/lib:$DYLD_LIBRARY_PATH
+export FOOD_API_ENDPOINT="xxxxxxx"
