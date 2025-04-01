@@ -22,7 +22,7 @@ from orchestrator.resources.datahub import DataHubResource
 logger = get_dagster_logger()
 
 
-class InvoiceSchema(pa.SchemaModel):
+class InvoiceSchema(pa.DataFrameModel):
     sap_invoice_number: Series[Float] = pa.Field(description="SAP Invoice Number", nullable=True)
     invoice_number: Series[str] = pa.Field(description="Invoice Number", nullable=True)
     invoice_date: Series[DateTime] = pa.Field(description="Date of Invoice")

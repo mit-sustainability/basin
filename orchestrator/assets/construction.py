@@ -17,7 +17,7 @@ from orchestrator.resources.datahub import DataHubResource
 logger = get_dagster_logger()
 
 
-class ConstructionExpenseData(pa.SchemaModel):
+class ConstructionExpenseData(pa.DataFrameModel):
     """Validate the output data schema of construction cost asset"""
 
     new_construction: Series[int] = pa.Field(description="New Construction Cost in Million")

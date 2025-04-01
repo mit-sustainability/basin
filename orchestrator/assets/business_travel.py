@@ -28,7 +28,7 @@ from orchestrator.resources.mit_warehouse import MITWHRSResource
 logger = get_dagster_logger()
 
 
-class TravelSpendingData(pa.SchemaModel):
+class TravelSpendingData(pa.DataFrameModel):
     """Validate the output data schema of travel spending asset"""
 
     expense_amount: Series[float] = pa.Field(description="Expense Amount")
