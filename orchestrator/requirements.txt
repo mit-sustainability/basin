@@ -8,7 +8,6 @@ dagster-dbt==0.26.7
 dagster-pandas==0.26.7
 dagster-pandera==0.26.7
 pandera==0.23.1
-dagster-shell==0.25.13
 dask==2024.4.1
 dask-expr==1.0.11
 distributed
