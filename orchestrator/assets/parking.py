@@ -33,7 +33,7 @@ sel_columns = [
 ]
 
 
-class ParkingNewbatchData(pa.SchemaModel):
+class ParkingNewbatchData(pa.DataFrameModel):
     """Validate the output data schema of newbatch parking data"""
 
     date: Series[DateTime] = pa.Field(description="Waste collection building id")

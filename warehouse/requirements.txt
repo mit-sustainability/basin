@@ -1,6 +1,6 @@
-dbt-core==v1.8.8
-dbt-postgres==1.8.2
+dbt-core==1.9.3
+dbt-postgres==1.9.0
 dbt-extractor==0.5.1
-protobuf==4.25.3
-dbt-duckdb==1.8.2
-sqlfluff==3.1.0
+protobuf==5.29.4
+dbt-duckdb==1.9.2
+sqlfluff==3.3.1

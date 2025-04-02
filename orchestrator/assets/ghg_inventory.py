@@ -18,7 +18,7 @@ from orchestrator.resources.postgres_io_manager import PostgreConnResources
 logger = get_dagster_logger()
 
 
-class EnergySchema(pa.SchemaModel):
+class EnergySchema(pa.DataFrameModel):
     """Validate the output data schema of travel spending asset"""
 
     building_number: Series[str] = pa.Field(description="MIT Building Number")

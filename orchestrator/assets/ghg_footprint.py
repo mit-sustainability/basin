@@ -1,7 +1,6 @@
 from datetime import datetime
 from dagster import asset, Output, get_dagster_logger, MetadataValue
 import pandas as pd
-from pandera.typing import Series, DateTime
 
 
 from orchestrator.assets.utils import (
@@ -168,6 +167,37 @@ def energy_distribution(em_connect: PostgreConnResources) -> Output[pd.DataFrame
     # Convert FY columns to integer
     for col in ["BILLING_FY", "USE_FY"]:
         df[col] = df[col].astype("Int64")
+
+    df.columns = [normalize_column_name(col) for col in df.columns]
+    return Output(value=df, metadata=metadata)
+
+
+# TODO We need to standardize and document how is this PATH table got updated to ingest the new buildings
+@asset(io_manager_key="postgres_replace", compute_kind="python", group_name="raw")
+def building_geometry(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
+    """Load MIT buildings summary and geospatial information from energize-mit database"""
+    engine = em_connect.create_engine()
+    logger.info("Connect to energize_mit database to ingest the full energy_cdr table")
+    query = """
+            SELECT "ADDRESS", "BLDG_NAME", "BUILDING_NUMBER", "LAYER", "NUMBER_OF_RECORDS", "PATH", "SHAPE_AREA", "SHAPE_LENGTH", "SHAPEID", "X", "Y"
+            FROM sustain.spatial_building
+            """
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(query, conn)
+        logger.info("Query executed successfully. Energy distribution data fetched from energize-mit.")
+    except Exception as e:
+        logger.error("An error occurred:", e)
+        raise
+    finally:
+        engine.dispose()
+
+    unique_buildings = df["BUILDING_NUMBER"].unique()
+    logger.info(unique_buildings)
+    metadata = {
+        "unique_buildings": len(unique_buildings),
+    }
+    df["last_update"] = datetime.now()
 
     df.columns = [normalize_column_name(col) for col in df.columns]
     return Output(value=df, metadata=metadata)

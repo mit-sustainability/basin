@@ -236,3 +236,51 @@ models:
         description: "MIT Department, Lab, and Center name"
       - name: school_area
         description: "School Area"
+  - name: purchased_goods_invoice_dlc_category
+    description: "Purchased Goods Invoices grouped by DLC and Category"
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - dlc_name
+            - fiscal_year
+            - level_3
+    columns:
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: dlc_name
+        description: "MIT Department, Lab, and Center name"
+      - name: "level_3"
+        description: "Lowest level detailed commodity categorization."
+      - name: "level_2"
+        description: "Rolled up commodity category"
+      - name: emission
+        description: "Total DLC GHG emission (MtCO2) in the corresponding level_3 category"
+      - name: inflated_spend
+        description: "Total spend in USD inflated to current year"
+      - name: school_area
+        description: "School Area"
+  - name: purchased_goods_invoice_dlc_supplier
+    description: "Purchased Goods Invoices grouped by DLC and supplier"
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - dlc_name
+            - fiscal_year
+            - supplier
+    columns:
+      - name: fiscal_year
+        description: "MIT fiscal year (July to June)"
+      - name: dlc_name
+        description: "MIT Department, Lab, and Center name"
+      - name: supplier
+        description: "supplier name"
+      - name: emission
+        description: "Total DLC GHG emission (MtCO2) in the corresponding level_3 category"
+      - name: inflated_spend
+        description: "Total spend in USD inflated to current year"
+      - name: school_area
+        description: "School Area"

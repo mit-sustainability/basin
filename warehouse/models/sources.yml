@@ -583,6 +583,36 @@ sources:
             description: "Level 3 Category"
           - name: last_update
             description: "Last Update timestamp"
+      - name: building_geometry
+        description: Building geometry metadata (e.g., shape, location) for MIT main campus
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["building_geometry"]
+        columns:
+          - name: address
+            description: "Building address"
+          - name: bldg_name
+            description: "Full name of the building"
+          - name: building_number
+            description: "MIT building number"
+          - name: layer
+            description: "Layer source"
+          - name: number_of_records
+            description: "Number of records represented in the geometry"
+          - name: path
+            description: "Path to the data source or file"
+          - name: shape_area
+            description: "Area of the building shape"
+          - name: shape_length
+            description: "Perimeter or boundary length of the shape"
+          - name: shapeid
+            description: "Unique ID for the shape geometry"
+          - name: x
+            description: "X coordinate (longitude)"
+          - name: y
+            description: "Y coordinate (latitude)"
+
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

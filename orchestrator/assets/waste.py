@@ -34,7 +34,7 @@ class SmallStreamConfig(Config):
     year_to_ingest: int = 2024
 
 
-class WasteNewbatchData(pa.SchemaModel):
+class WasteNewbatchData(pa.DataFrameModel):
     """Validate the output data schema of newbatch waste asset"""
 
     key: Series[str] = pa.Field(alias="Key", description="Waste collection building id")
