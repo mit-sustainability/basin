@@ -172,7 +172,7 @@ def energy_distribution(em_connect: PostgreConnResources) -> Output[pd.DataFrame
     return Output(value=df, metadata=metadata)
 
 
-# TODO We need to standarize and document how is this PATH table got updated to ingest the new buildings
+# TODO We need to standardize and document how is this PATH table got updated to ingest the new buildings
 @asset(io_manager_key="postgres_replace", compute_kind="python", group_name="raw")
 def building_geometry(em_connect: PostgreConnResources) -> Output[pd.DataFrame]:
     """Load MIT buildings summary and geospatial information from energize-mit database"""

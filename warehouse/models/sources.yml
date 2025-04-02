@@ -610,7 +610,7 @@ sources:
             description: "Unique ID for the shape geometry"
           - name: x
             description: "X coordinate (longitude)"
-          - name: "y"
+          - name: y
             description: "Y coordinate (latitude)"
 
   - name: staging
