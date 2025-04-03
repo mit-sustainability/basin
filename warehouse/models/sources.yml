@@ -612,7 +612,31 @@ sources:
             description: "X coordinate (longitude)"
           - name: y
             description: "Y coordinate (latitude)"
-
+      - name: campus_tree_catalog
+        description: Tree inventory metadata including location, size, and classification for MIT main campus
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["campus_tree_catalog"]
+        columns:
+          - name: tree_id
+            description: "Unique identifier for the tree"
+          - name: common_name
+            description: "Common name of the tree species"
+          - name: longitude
+            description: "Longitude coordinate of the tree"
+          - name: latitude
+            description: "Latitude coordinate of the tree"
+          - name: age_class
+            description: "Age classification of the tree"
+          - name: condition_class
+            description: "Health or condition classification of the tree"
+          - name: canopy_radius
+            description: "Radius of the tree canopy in meters"
+          - name: height_class
+            description: "Height classification of the tree"
+          - name: last_update
+            description: "Date the tree data was last updated"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging
