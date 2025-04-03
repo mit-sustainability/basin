@@ -24,16 +24,16 @@ class TreeSchema(pa.DataFrameModel):
     """Validate the output data schema of travel spending asset"""
 
     tree_id: Series[int] = pa.Field(description="Tree ID")
-    common_name: Series[str] = pa.Field(description="Expense Amount")
-    longitude: Series[float] = pa.Field(description="Transaction date")
-    latitude: Series[float] = pa.Field(description="Energy use date")
+    common_name: Series[str] = pa.Field(description="Tree's common name")
+    longitude: Series[float] = pa.Field(description="Tree's longitude coordinate")
+    latitude: Series[float] = pa.Field(description="Tree's latitude coordinate")
     age_class: Series[str] = pa.Field(
         isin=["Mature", "Semi-mature", "Over-mature", "New planting", "Young"],
         description="Tree age",
     )
     condition_class: Series[str] = pa.Field(isin=["Good", "Poor", "Fair", "Dead"], description="Tree condition")
     canopy_radius: Series[float] = pa.Field(description="Tree Canopy Radius")
-    height_class: Series[str] = pa.Field(isin=["Large", "Medium", "Small"], description="Tree height class")
+    height_class: Series[str] = pa.Field(isin=["Large", "Medium", "Small"], description="Tree Height class")
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
@@ -44,7 +44,7 @@ class TreeSchema(pa.DataFrameModel):
     dagster_type=pandera_schema_to_dagster_type(TreeSchema),
 )
 def campus_tree_catalog(dhub: ResourceParam[DataHubResource]):
-    """This asset ingest tree Inventory from Data Hub"""
+    """This asset ingests tree Inventory from Data Hub"""
     project_id = dhub.get_project_id("Grounds")
     logger.info(f"Found project id: {project_id}!")
     download_links = dhub.search_files_from_project(project_id, "tree_inventory_April2025")
