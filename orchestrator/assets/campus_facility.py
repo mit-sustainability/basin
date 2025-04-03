@@ -27,7 +27,7 @@ class TreeSchema(pa.DataFrameModel):
     common_name: Series[str] = pa.Field(description="Expense Amount")
     longitude: Series[float] = pa.Field(description="Transaction date")
     latitude: Series[float] = pa.Field(description="Energy use date")
-    age_class: Series[int] = pa.Field(
+    age_class: Series[str] = pa.Field(
         isin=["Mature", "Semi-mature", "Over-mature", "New planting", "Young"],
         description="Tree age",
     )
