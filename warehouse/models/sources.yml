@@ -130,7 +130,7 @@ sources:
           - name: Description
             description: "BEA code and name"
       - name: historical_waste_recycle
-        description: "Waste recycle data from 2010 to 2023 June"
+        description: "Waste recycle data from 2010 to 2024 August"
         meta:
           dagster:
             asset_key: ["historical_waste_recycle"]
@@ -148,7 +148,7 @@ sources:
           - name: "fiscal_year"
             description: "MIT fiscal year (July to June)"
       - name: newbatch_waste_recycle
-        description: "New batch Waste recycle data scrapped from Casella Dashboard"
+        description: "New batch Waste recycle data scrapped from Casella Dashboard Sep to Dec 2024"
         meta:
           dagster:
             asset_key: ["newbatch_waste_recycle"]
@@ -166,7 +166,7 @@ sources:
           - name: "Tons"
             description: "Total tonnage of waste collected"
       - name: small_stream_recycle
-        description: "Small Stream recycle data collected an maintained by Facilities, currently only ingest 2023"
+        description: "Small Stream recycle data collected an maintained by Facilities, complete CY 2024"
         meta:
           dagster:
             asset_key: ["small_stream_recycle"]
