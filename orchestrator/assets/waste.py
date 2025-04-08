@@ -92,7 +92,7 @@ def newbatch_waste_recycle(dhub: ResourceParam[DataHubResource]):
         "Material",
         "Tons",
     ]
-    df_out = tonnage[cols]
+    df_out = tonnage[cols].copy()
     df_out.dropna(inplace=True)
     df_out["Material"] = df_out["Material"].str.title()
     return df_out
@@ -118,14 +118,14 @@ def small_stream_recycle(config: SmallStreamConfig, dhub: ResourceParam[DataHubR
     df = pd.read_excel(
         workbook,
         usecols="B:M",
-        skiprows=13,
+        skiprows=14,
         nrows=1,
         sheet_name=f"{target_year} small stream recycling",
         header=None,
     )
-    df_out = df.T
+    df_out = df.T.copy()
     df_out.columns = ["tons"]
-    df_out["service_date"] = pd.date_range(start=f"{target_year}-01-01", periods=len(df_out), freq="M")
+    df_out["service_date"] = pd.date_range(start=f"{target_year}-01-01", periods=len(df_out), freq="ME")
     df_out["material"] = "Hard-to-Recycle Materials"
     df_out["customer_name"] = "Small Stream Facility"
     df_out["diverted"] = df_out["tons"]
