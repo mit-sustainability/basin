@@ -661,7 +661,7 @@ sources:
           - name: last_update
             description: "Date the attendance records were last updated"
       - name: employee_directory
-        description: Employee Diretory of MIT and their affiliation
+        description: Employee Directory of MIT and their affiliation
         meta:
           owner: yu_cheng@mit.edu
           dagster:
