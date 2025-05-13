@@ -28,7 +28,10 @@ class CustomDagsterDbtTranslator(DagsterDbtTranslator):
 dagster_dbt_translator = CustomDagsterDbtTranslator(settings=DagsterDbtTranslatorSettings(enable_asset_checks=True))
 
 
-@dbt_assets(manifest=dbt_manifest_path, dagster_dbt_translator=dagster_dbt_translator)
+@dbt_assets(
+    manifest=dbt_manifest_path,
+    dagster_dbt_translator=dagster_dbt_translator,
+)
 def mitos_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     yield from dbt.cli(["build"], context=context).stream()
 

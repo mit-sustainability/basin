@@ -21,7 +21,7 @@ logger = get_dagster_logger()
 
 
 class TreeSchema(pa.DataFrameModel):
-    """Validate the output data schema of travel spending asset"""
+    """Validate the output data schema of tree asset"""
 
     tree_id: Series[int] = pa.Field(description="Tree ID")
     common_name: Series[str] = pa.Field(description="Tree's common name")
