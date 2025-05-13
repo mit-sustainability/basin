@@ -680,7 +680,7 @@ sources:
         meta:
           owner: yu_cheng@mit.edu
           dagster:
-            asset_key: ["attendance_records"]
+            asset_key: ["student_directory"]
         columns:
           - name: email
             description: "MIT email"

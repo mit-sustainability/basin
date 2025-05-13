@@ -34,6 +34,7 @@ from orchestrator.jobs.parking_job import parking_asset_job
 from orchestrator.jobs.purchased_goods import pgs_job
 from orchestrator.jobs.waste_job import waste_asset_job
 from orchestrator.jobs.dlc_footprint import footprint_job
+from orchestrator.jobs.engagement import attendance_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
@@ -85,6 +86,7 @@ defs = Definitions(
         food_asset_job,
         ghg_job,
         footprint_job,
+        attendance_job,
     ],
     sensors=[sensor_ghg_manual],
     resources={
