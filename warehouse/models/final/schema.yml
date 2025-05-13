@@ -284,3 +284,57 @@ models:
         description: "Total spend in USD inflated to current year"
       - name: school_area
         description: "School Area"
+  - name: event_role_summary
+    description: "Attendee role count for MITOS events"
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - event
+            - role
+    columns:
+      - name: event
+        description: "MITOS event"
+      - name: event_date
+        description: "Date of the event"
+      - name: role
+        description: "Role of attendee (student, employee, etc.)"
+      - name: attendee_count
+        description: "Count of attendee by role"
+  - name: event_department_summary
+    description: "Attendee role count for MITOS events"
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - event
+            - department_name
+    columns:
+      - name: event
+        description: "MITOS event"
+      - name: event_date
+        description: "Date of the event"
+      - name: department_name
+        description: "Department affiliation of attendee"
+      - name: attendee_count
+        description: "Count of attendee by department"
+  - name: event_student_summary
+    description: "Attendee role count for MITOS events"
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - event
+            - student_year
+    columns:
+      - name: event
+        description: "MITOS event"
+      - name: event_date
+        description: "Date of the event"
+      - name: student_year
+        description: "Year of the student (e.g., Freshman, 1, 2, G etc.)"
+      - name: attendee_count
+        description: "Count of attendee by student year"

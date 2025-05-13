@@ -390,6 +390,38 @@ models:
         description: "MIT Department, Lab, and Center name"
       - name: school_area
         description: "School Area"
+  - name: stg_attendance_records
+    description: "Combine Student and Employee directory to tag department and role to event attendees"
+    meta:
+      owner: yu_cheng@mit.edu
+      group: staging
+    columns:
+      - name: record_id
+        description: "Unique identifier for the attendance record"
+      - name: status
+        description: "Registration or participation status of the attendee"
+      - name: first_name
+        description: "First name of the attendee"
+      - name: last_name
+        description: "Last name of the attendee"
+      - name: email
+        description: "Email address of the attendee"
+      - name: event_date
+        description: "Date when the event occurred"
+      - name: event
+        description: "Name of the attended event"
+      - name: department_name
+        description: "Department name from either student or employee directory"
+      - name: student_year
+        description: "Academic year of the student (e.g., Freshman, Senior); NULL for non-students"
+      - name: role
+        description: "Derived role classification based on email domain and student record"
+        data_tests:
+          - accepted_values:
+              values: ['student', 'employee', 'alumni', 'external']
+      - name: last_update
+        description: "Timestamp when the record was last ingested"
+
 unit_tests:
   - name: test_waste_split_adjustment
     description: >

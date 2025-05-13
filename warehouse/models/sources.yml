@@ -637,6 +637,59 @@ sources:
             description: "Height classification of the tree"
           - name: last_update
             description: "Date the tree data was last updated"
+      - name: attendance_records
+        description: Event attendance_records for MITOS events
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["attendance_records"]
+        columns:
+          - name: status
+            description: "Attendance status of the participant (e.g., Present, Absent)"
+          - name: first_name
+            description: "First name of the attendee"
+          - name: last_name
+            description: "Last name of the attendee"
+          - name: email
+            description: "Temporary or primary email address of the attendee"
+          - name: event_date
+            description: "Date of the event"
+          - name: event
+            description: "Name or title of the event"
+          - name: record_id
+            description: "Internal record identifier for the attendance entry"
+          - name: last_update
+            description: "Date the attendance records were last updated"
+      - name: employee_directory
+        description: Employee Diretory of MIT and their affiliation
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["employee_directory"]
+        columns:
+          - name: title_category
+            description: "Directory of Title"
+          - name: department_name
+            description: "Affiliated department"
+          - name: email
+            description: "MIT employee email address"
+          - name: last_update
+            description: "Date of last update"
+      - name: student_directory
+        description: MIT student directory with their affiliations
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["attendance_records"]
+        columns:
+          - name: email
+            description: "MIT email"
+          - name: department_name
+            description: "Affiliated department"
+          - name: student_year
+            description: "Year of the student"
+          - name: last_update
+            description: "Date of last update"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging
