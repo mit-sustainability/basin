@@ -14,7 +14,7 @@ A river basin consists of many streams...
    3. Create the python virtual environment `pyenv virtualenv 3.11.5 mitos-dev`. This will create a virtual environment in the location: `~/.pyenv/versions/3.11.5/envs/mitos-dev`.
    4. Set your IDE's python interpreter path to `~/.pyenv/versions/3.11.5/envs/mitos-dev/bin/python`
    5. Alternatively, you may use other environment tools like `conda` and `poetry`
-2. Inside the python virtual environment, run `pip install —-upgrade pip`
+2. Inside the python virtual environment, run `pip install --upgrade pip`
 3. Inside the python virtual environment, run `make setup-dev` to install all project dependencies
 
 ## Contributing
