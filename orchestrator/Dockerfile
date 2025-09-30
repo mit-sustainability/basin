@@ -1,5 +1,5 @@
-# FROM --platform=linux/arm64 python:3.11-slim
-FROM --platform=linux/amd64 python:3.11-slim
+# FROM --platform=linux/arm64 python:3.11-slim-bookworm
+FROM --platform=linux/amd64 python:3.11-slim-bookworm
 
 
 RUN apt-get update && \
