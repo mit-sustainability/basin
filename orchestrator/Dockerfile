@@ -3,7 +3,6 @@ FROM --platform=linux/amd64 python:3.11-slim
 
 
 RUN apt-get update && \
-    apt-get upgrade -y && \
     apt-get install -y libpq-dev gcc ca-certificates build-essential curl jq git unzip wget
 
 
@@ -12,8 +11,7 @@ ENV ORACLE_HOME=/opt/oracle
 RUN mkdir -p $ORACLE_HOME
 WORKDIR $ORACLE_HOME
 RUN apt-get update -y && \
-    apt-get upgrade -y && \
-    apt-get install -y libaio1 wget  && \
+    apt-get install -y libaio wget  && \
     wget https://download.oracle.com/otn_software/linux/instantclient/1922000/instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip  && \
     unzip instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip && \
     rm -f instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip && \
