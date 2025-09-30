@@ -28,12 +28,13 @@ from orchestrator.resources.mit_warehouse import MITWHRSResource
 logger = get_dagster_logger()
 
 
+# TODO: update the trip_end_date to be a date range when updating a new FY
 class TravelSpendingData(pa.DataFrameModel):
     """Validate the output data schema of travel spending asset"""
 
     expense_amount: Series[float] = pa.Field(description="Expense Amount")
     expense_type: Series[str] = pa.Field(description="Expense Type")
-    trip_end_date: Series[DateTime] = pa.Field(lt="2025", description="Travel Spending Report Date")
+    trip_end_date: Series[DateTime] = pa.Field(lt="2025-07-01", description="Travel Spending Report Date")
     cost_object: Series[int] = pa.Field(ge=0, description="Cost Object ID", coerce=True)
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
