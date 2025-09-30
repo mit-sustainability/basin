@@ -1,5 +1,5 @@
-# FROM --platform=linux/arm64 python:3.11-slim-bookworm
-FROM --platform=linux/amd64 python:3.11-slim-bookworm
+#FROM --platform=linux/arm64 python:3.11-slim-bookworm
+FROM python:3.11-slim-bookworm
 
 
 RUN apt-get update && \
@@ -11,7 +11,7 @@ ENV ORACLE_HOME=/opt/oracle
 RUN mkdir -p $ORACLE_HOME
 WORKDIR $ORACLE_HOME
 RUN apt-get update -y && \
-    apt-get install -y libaio wget  && \
+    apt-get install -y libaio1 wget  && \
     wget https://download.oracle.com/otn_software/linux/instantclient/1922000/instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip  && \
     unzip instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip && \
     rm -f instantclient-basiclite-linux.x64-19.22.0.0.0dbru.zip && \
