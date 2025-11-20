@@ -78,27 +78,27 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
         if isinstance(obj, pd.DataFrame):
             with connect_postgresql(config=self._config) as con:
                 try:
-                    exists = (
-                        con.execute(
-                            text(
-                                f"SELECT 1 FROM information_schema.tables WHERE table_name = '{table}' AND table_schema = '{schema}';"
-                            )
-                        ).rowcount
-                        > 0
-                    )
-                    if self.write_method == "replace" and exists:
-                        logger.info("Clearing existing rows before replace.")
-                        con.execute(text(f'DELETE FROM {schema}."{table}";'))
-                    if_exists = "append" if self.write_method != "replace" or exists else "replace"
-                    obj.to_sql(
-                        con=con,
-                        name=table,
-                        schema=schema,
-                        if_exists=if_exists,
-                        chunksize=500,
-                        index=False,
-                    )
-                    con.commit()
+                    with con.begin():
+                        exists = (
+                            con.execute(
+                                text(
+                                    f"SELECT 1 FROM information_schema.tables WHERE table_name = '{table}' AND table_schema = '{schema}';"
+                                )
+                            ).rowcount
+                            > 0
+                        )
+                        if self.write_method == "replace" and exists:
+                            logger.info("Clearing existing rows before replace.")
+                            con.execute(text(f'DELETE FROM {schema}."{table}";'))
+                        if_exists = "append" if self.write_method != "replace" or exists else "replace"
+                        obj.to_sql(
+                            con=con,
+                            name=table,
+                            schema=schema,
+                            if_exists=if_exists,
+                            chunksize=500,
+                            index=False,
+                        )
                 except Exception as e:
                     logger.error(f"Error writing data: {e}")
         else:
