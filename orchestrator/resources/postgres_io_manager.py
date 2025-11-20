@@ -76,8 +76,6 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
         logger.info(f"schema: {schema} and table: {table}")
         logger.info(f"Write method: {self.write_method}")
         if isinstance(obj, pd.DataFrame):
-            # row_count = len(obj)
-            # context.log.info(f"Row count: {row_count}")
             with connect_postgresql(config=self._config) as con:
                 try:
                     exists = (
@@ -89,13 +87,14 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
                         > 0
                     )
                     if self.write_method == "replace" and exists:
-                        logger.info("Drop the table recursively.")
-                        con.execute(text(f'DROP TABLE {schema}."{table}" CASCADE;'))
+                        logger.info("Clearing existing rows before replace.")
+                        con.execute(text(f'DELETE FROM {schema}."{table}";'))
+                    if_exists = "append" if self.write_method != "replace" or exists else "replace"
                     obj.to_sql(
                         con=con,
                         name=table,
                         schema=schema,
-                        if_exists=("append" if self.write_method != "replace" else "replace"),
+                        if_exists=if_exists,
                         chunksize=500,
                         index=False,
                     )

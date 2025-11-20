@@ -76,7 +76,7 @@ class InvoiceConfig(Config):
     Example: change this from the asset launchpad to specify the files to load to the data platform.
     """
 
-    files_to_download: List[str] = ["PurchasedGoods_Invoice_FY2024"]
+    files_to_download: List[str] = ["PurchasedGoods_Invoice_FY2025"]
 
 
 @asset(
