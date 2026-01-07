@@ -31,7 +31,7 @@ def merge_files(input_files, output):
         click.ClickException: If no input files are provided.
 
     Example:
-        $ python merge_invoice_lines.py input1.csv input2.csv -o output.csv
+        $ python merge_invoice_lines.py input1.xlsx input2.xlsx -o output.csv
     """
     if not input_files:
         raise click.ClickException("Error: No input files provided.")
@@ -42,8 +42,8 @@ def merge_files(input_files, output):
         logger.info(f"Loaded file: {file}")
         logger.info(f"  Total entries: {len(df)}")
         if "Invoice Date" in df.columns:
-            start_date = df["Invoice Date"].min()
-            end_date = df["Invoice Date"].max()
+            start_date = pd.to_datetime(df["Invoice Date"]).min()
+            end_date = pd.to_datetime(df["Invoice Date"]).max()
             logger.info(f"  Date range: {start_date} to {end_date}")
         else:
             logger.warning(f"  'Invoice Date' column not found in {file}")
