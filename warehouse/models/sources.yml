@@ -740,3 +740,39 @@ sources:
             description: "Dollar spend"
           - name: wri_category
             description: "World Resource Institute food category"
+      - name: stg_utility_history
+        description: "Cleaned and joined utility data from the MIT warehouse, mapped to campus building groups and gross areas."
+        meta:
+          owner: yu_cheng@mit.edu
+          group: staging
+        columns:
+          - name: fiscal_year
+            description: "The fiscal year for the utility record (MIT Fiscal Year runs July-June)"
+          - name: calendar_month
+            description: "The numerical month of the year (01-12)"
+          - name: cost_collector_id
+            description: "Unique identifier for the MIT cost collector (building, lab, or system)"
+          - name: cost_collector_name
+            description: "The human-readable name of the building or system associated with the cost collector"
+          - name: profit_center_name
+            description: "The organizational unit responsible for the utility costs (e.g., DoF Buildings)"
+          - name: utility_type
+            description: "The category of utility (e.g., Electricity, Gas, Steam, Water)"
+          - name: utility_cost
+            description: "The dollar amount charged for the utility usage"
+          - name: utility_usage
+            description: "The raw quantity of the utility consumed"
+          - name: utility_unit
+            description: "The unit of measurement for usage (e.g., kWh, CCF, GAL)"
+          - name: utility_mmbtu
+            description: "The energy content converted to millions of British Thermal Units for benchmarking"
+          - name: district_electricity
+            description: "Boolean flag indicating if the usage is part of the MIT district electricity grid"
+          - name: building_group
+            description: "Classification of building types (e.g., main, leased, offcampus)"
+          - name: agg_bldg
+            description: "Aggregated building identifier for rolled-up reporting"
+          - name: ext_gross_area
+            description: "The external gross square footage of the building from the facilities database"
+          - name: last_update
+            description: "Timestamp when the record was processed"

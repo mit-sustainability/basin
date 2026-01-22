@@ -338,3 +338,69 @@ models:
         description: "Year of the student (e.g., Freshman, 1, 2, G etc.)"
       - name: attendee_count
         description: "Count of attendee by student year"
+  - name: fy_summary_utility
+    description: "Aggregated utility costs, usage, and gross area by fiscal year and building category"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: fiscal_year
+        description: "MIT Fiscal year of the July to June"
+      - name: utility_type
+        description: "Type of utility (e.g., Electricity, Gas, #2 Oil)"
+      - name: category
+        description: "Building category (e.g., District, Standalone)"
+        data_tests:
+          - accepted_values:
+              values: ['standalone', 'district']
+      - name: total_cost
+        description: "Total sum of utility costs"
+      - name: total_usage
+        description: "Total sum of utility usage"
+      - name: total_mmbtu
+        description: "Total utility usage converted to MMBtu"
+      - name: total_gross_area
+        description: "Total external gross area for the building group"
+  - name: fy_utility_intensity
+    description: "Annual utility costs, usage, and energy intensity metrics by utility type"
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - fiscal_year
+            - utility_type
+    columns:
+      - name: fiscal_year
+        description: "Fiscal year of the record"
+      - name: utility_type
+        description: "Type of utility (e.g., Electricity, Steam)"
+      - name: total_cost
+        description: "Total sum of utility costs"
+      - name: total_usage
+        description: "Total sum of utility usage"
+      - name: total_mmbtu
+        description: "Total utility usage converted to MMBtu"
+      - name: energy_intensity
+        description: "Energy intensity calculated as Total MMBtu / Total Gross Area"
+  - name: fy_utility_unit_cost
+    description: "Aggregated utility costs, usage, and gross area by fiscal year and building category"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: fiscal_year
+        description: "MIT Fiscal year of the July to June"
+      - name: utility_type
+        description: "Type of utility (e.g., Electricity, Gas, #2 Oil)"
+      - name: cup
+        description: "Building category (e.g., District, Standalone)"
+        data_tests:
+          - accepted_values:
+              values: ['CUP', 'Non-CUP']
+      - name: total_cost
+        description: "Total sum of utility costs"
+      - name: total_usage
+        description: "Total sum of utility usage"
+      - name: total_mmbtu
+        description: "Total utility usage converted to MMBtu"
+      - name: unit_cost
+        description: "Unit cost defined as Total cost divided by all usage, or mmbtu for energy"

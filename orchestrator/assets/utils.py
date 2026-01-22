@@ -137,7 +137,8 @@ def to_mmbtu(row: pd.Series) -> float:
         ("#6 Oil", "BBL"): 6.3,
         ("Electricity", "KWH"): 0.003412,
         ("Electricity", "MWH"): 3.412,
+        ("Produced Electricity", "KWH"): 0.003412,
         ("Steam", "MLB"): 1195,  # MLB = 1000 LB
         ("Water", "THR"): 0.0,
     }
-    return row["UTILITY_USAGE"] * conversion_factors.get((row["UTILITY_TYPE"], row["UTILITY_UNIT"]), np.nan)
+    return row["utility_usage"] * conversion_factors.get((row["utility_type"], row["utility_unit"]), np.nan)

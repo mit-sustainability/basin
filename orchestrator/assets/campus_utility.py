@@ -50,7 +50,7 @@ class BuildingMappingSchema(pa.DataFrameModel):
     io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
-    dagster_type=pandera_schema_to_dagster_type(BuildingMappingSchema),
+    # dagster_type=pandera_schema_to_dagster_type(BuildingMappingSchema),
 )
 def campus_building_mapping(dhub: ResourceParam[DataHubResource]):
     """This asset ingests tree Inventory from Data Hub"""
@@ -59,7 +59,7 @@ def campus_building_mapping(dhub: ResourceParam[DataHubResource]):
     download_links = dhub.search_files_from_project(project_id, "cost_collector_building_groups")
     if len(download_links) == 0:
         logger.error("No download links found!")
-        return empty_dataframe_from_model(BuildingMappingSchema)
+        return  # empty_dataframe_from_model(BuildingMappingSchema)
     # Load the tree catalog
     df = pd.read_csv(download_links[0])
 
@@ -118,10 +118,13 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
                 CASE
                     WHEN gl.GL_ACCOUNT_ID IN ('421112', '421114') THEN '#2 Oil'
                     WHEN gl.GL_ACCOUNT_ID IN ('421113') THEN '#6 Oil'
-                    WHEN gl.GL_ACCOUNT_ID IN ('421108', '421120', '421139', '421148', '411162', '421118') THEN 'Gas'
+                    WHEN gl.GL_ACCOUNT_ID IN ('421108', '421120', '421139', '421148', '421162', '421118') THEN 'Gas'
                     WHEN gl.GL_ACCOUNT_ID IN ('421111', '421110') THEN 'Electricity'
-                    WHEN gl.GL_ACCOUNT_ID IN ('421109', '421130', '600751', '600753') THEN 'Water'
+                    WHEN gl.GL_ACCOUNT_ID = '421109' THEN 'Water'
                     WHEN gl.GL_ACCOUNT_ID = '421107' THEN 'Sewer'
+                    WHEN gl.GL_ACCOUNT_ID = '600751' THEN 'Chilled Water'
+                    WHEN gl.GL_ACCOUNT_ID = '600752' THEN 'Produced Electricity'
+                    WHEN gl.GL_ACCOUNT_ID = '600750' THEN 'Steam'
                     ELSE 'Other'
                 END AS UTILITY_TYPE
             FROM WAREUSER.UTILITY_USAGE_DETAIL_WITH_CUP ut
@@ -143,10 +146,10 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
                 SUM(NUMBER_OF_BTU) AS total_btu,
                 SUM(NUMBER_OF_UNITS) AS utility_usage,
                 SUM(UTILITY_USAGE_AMOUNT) AS UTILITY_COST,
-                MAX(UNIT_OF_MEASURE) AS utility_unit
+                MAX(UNIT_OF_MEASURE) AS UTILITY_UNIT
             FROM grouped
             WHERE UTILITY_TYPE != 'Other'
-            AND GL_ACCOUNT_ID NOT IN ('411162', '421118', '421110')
+            AND GL_ACCOUNT_ID NOT IN ('421162', '421118', '421110')
             GROUP BY FISCAL_YEAR, COST_COLLECTOR_ID, COST_COLLECTOR_NAME, PROFIT_CENTER_NAME, UTILITY_TYPE, CALENDAR_MONTH
         ),
 
@@ -173,6 +176,7 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
             utu.COST_COLLECTOR_NAME,
             utu.PROFIT_CENTER_NAME,
             utu.UTILITY_TYPE,
+            utu.UTILITY_UNIT,
             utu.total_btu,
             utu.utility_usage,
             utc.UTILITY_COST AS utility_cost
@@ -193,6 +197,7 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
         "COST_COLLECTOR_NAME",
         "PROFIT_CENTER_NAME",
         "UTILITY_TYPE",
+        "UTILITY_UNIT",
         "TOTAL_BTU",
         "UTILITY_USAGE",
         "UTILITY_COST",
@@ -200,6 +205,7 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     df = pd.DataFrame(rows, columns=columns)
     df.columns = [normalize_column_name(col) for col in df.columns]
     logger.info("Query executed successfully. Load monthly utility usage and cost data")
+    logger.info(f"we got {len(df)} entries for utility since 2006")
     metadata = {
         "number_of_unique_cost_collectors": df["cost_collector_id"].nunique(),
         "beginning_fy": df["fiscal_year"].min(),
@@ -216,37 +222,41 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     deps=[utility_usage_cost, campus_building_mapping],
     io_manager_key="postgres_replace",
     compute_kind="python",
+    key_prefix="staging",
     group_name="staging",
 )
 def stg_utility_history(pg_engine: PostgreConnResources):
     """Combine utility usage and cost with building groups mapping"""
 
-    # Load USEEIO emission factors
     engine = pg_engine.create_engine()
     udf = pd.read_sql_query("SELECT * FROM raw.utility_usage_cost", engine)
     bg_mapping = pd.read_sql_query("SELECT * FROM raw.campus_building_mapping", engine)
+
+    # Type Casting for selected columns
+    udf["cost_collector_id"] = udf["cost_collector_id"].astype(str)
+    udf["fiscal_year"] = udf["fiscal_year"].astype(int)
+    udf["calendar_month"] = udf["calendar_month"].astype(int)
+    bg_mapping["cost_collector_id"] = bg_mapping["cost_collector_id"].astype(str)
     bg_mapping["district_electricity"] = bg_mapping["district_electricity"].astype(bool)
 
     # Merge to append building information
     mdf = udf.merge(
         bg_mapping[
             [
-                "Cost Collector Id",
+                "cost_collector_id",
                 "district_electricity",
-                "Building Group",
+                "building_group",
                 "agg_bldg",
-                "EXT_GROSS_AREA",
+                "ext_gross_area",
             ]
         ],
-        left_on="COST_COLLECTOR_ID",
-        right_on="Cost Collector Id",
+        on="cost_collector_id",
         how="left",
     )
 
-    # Adjust 2021 June Gas usage
-    mask = (mdf["FISCAL_YEAR"] == 2021) & (mdf["CALENDAR_MONTH"] == 6) & (mdf["COST_COLLECTOR_ID"] == 1814201)
-
-    mdf.loc[mask, ["CALENDAR_MONTH", "UTILITY_COST", "TOTAL_BTU", "UTILITY_USAGE"]] = [
+    # Adjust 2021 June Gas usage (matching ensure column dtypes)
+    mask = (mdf["fiscal_year"] == 2021) & (mdf["calendar_month"] == 6) & (mdf["cost_collector_id"] == "1814201")
+    mdf.loc[mask, ["calendar_month", "utility_cost", "total_btu", "utility_usage"]] = [
         6,  # move record to June
         707448.70,  # replacement cost
         0,  # replacement BTU
@@ -254,7 +264,7 @@ def stg_utility_history(pg_engine: PostgreConnResources):
     ]
 
     # Calculate MMBtu for Gas usage
-    mdf["utility_mmbtu"] = udf.apply(to_mmbtu, axis=1)
+    mdf["utility_mmbtu"] = mdf.apply(to_mmbtu, axis=1)
     # Select necessary Columns
     out_cols = [
         "fiscal_year",
