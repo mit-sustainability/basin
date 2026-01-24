@@ -188,7 +188,7 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     )
     rows = dwrhs.execute_query(query, chunksize=100000)
     if len(rows) == 0:
-        raise Failure(description="Faile to load any data", metadata={"num_rows": len(rows)})
+        raise Failure(description="Failed to load any data", metadata={"num_rows": len(rows)})
     columns = [
         "FISCAL_YEAR",
         "CALENDAR_MONTH",
