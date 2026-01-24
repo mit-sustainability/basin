@@ -2,6 +2,7 @@ from datetime import datetime
 import textwrap
 from dagster import (
     asset,
+    Failure,
     get_dagster_logger,
     Output,
     ResourceParam,
@@ -12,7 +13,6 @@ import pandera as pa
 from pandera.typing import Series, DateTime
 
 from orchestrator.assets.utils import (
-    empty_dataframe_from_model,
     normalize_column_name,
     to_mmbtu,
 )
@@ -28,21 +28,21 @@ class BuildingMappingSchema(pa.DataFrameModel):
 
     cost_collector_id: Series[int] = pa.Field(description="Cost Collector Id")
     cost_collector_name: Series[str] = pa.Field(description="Cost Collector Name")
-    profit_center_id: Series[int] = pa.Field(description="Profit Center Id")
-    profit_center_name: Series[str] = pa.Field(description="Profit Center Name")
-    building_identifier: Series[str] = pa.Field(description="Building Identifier")
+    profit_center_id: Series[str] = pa.Field(description="Profit Center Id", nullable=True)
+    profit_center_name: Series[str] = pa.Field(description="Profit Center Name", nullable=True)
+    building_identifier: Series[str] = pa.Field(description="Building Identifier", nullable=True)
 
     # District Utility Columns
-    district_steam: Series[float] = pa.Field(description="District Steam connection")
-    district_chilledwater: Series[float] = pa.Field(description="District Chilled Water connection")
-    district_electricity: Series[float] = pa.Field(description="District Electricity connection")
-    district_hotwater: Series[float] = pa.Field(description="District Hot Water connection")
+    district_steam: Series[bool] = pa.Field(description="District Steam connection")
+    district_chilledwater: Series[bool] = pa.Field(description="District Chilled Water connection")
+    district_electricity: Series[bool] = pa.Field(description="District Electricity connection")
+    district_hotwater: Series[bool] = pa.Field(description="District Hot Water connection")
 
     # Building Groups and metadata
     building_group: Series[str] = pa.Field(description="Building Group")
-    combined_building_number: Series[str] = pa.Field(description="Combined Building Number")
-    agg_bldg: Series[str] = pa.Field(description="Aggregate Building")
-    ext_gross_area: Series[float] = pa.Field(description="External Gross Area")
+    combined_building_number: Series[str] = pa.Field(description="Combined Building Number", nullable=True)
+    agg_bldg: Series[str] = pa.Field(description="Aggregate Building", nullable=True)
+    ext_gross_area: Series[float] = pa.Field(description="External Gross Area", nullable=True)
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
@@ -50,7 +50,7 @@ class BuildingMappingSchema(pa.DataFrameModel):
     io_manager_key="postgres_replace",
     compute_kind="python",
     group_name="raw",
-    # dagster_type=pandera_schema_to_dagster_type(BuildingMappingSchema),
+    dagster_type=pandera_schema_to_dagster_type(BuildingMappingSchema),
 )
 def campus_building_mapping(dhub: ResourceParam[DataHubResource]):
     """This asset ingests tree Inventory from Data Hub"""
@@ -58,12 +58,9 @@ def campus_building_mapping(dhub: ResourceParam[DataHubResource]):
     logger.info(f"Found project id: {project_id}!")
     download_links = dhub.search_files_from_project(project_id, "cost_collector_building_groups")
     if len(download_links) == 0:
-        logger.error("No download links found!")
-        return  # empty_dataframe_from_model(BuildingMappingSchema)
-    # Load the tree catalog
+        raise Failure("No download links found!")
     df = pd.read_csv(download_links[0])
 
-    # Load the category to emission factor code mapping
     cols = [
         "Cost Collector Id",
         "Cost Collector Name",
@@ -120,7 +117,7 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
                     WHEN gl.GL_ACCOUNT_ID IN ('421113') THEN '#6 Oil'
                     WHEN gl.GL_ACCOUNT_ID IN ('421108', '421120', '421139', '421148', '421162', '421118') THEN 'Gas'
                     WHEN gl.GL_ACCOUNT_ID IN ('421111', '421110') THEN 'Electricity'
-                    WHEN gl.GL_ACCOUNT_ID = '421109' THEN 'Water'
+                    WHEN gl.GL_ACCOUNT_ID = '421109' THEN 'Water'x
                     WHEN gl.GL_ACCOUNT_ID = '421107' THEN 'Sewer'
                     WHEN gl.GL_ACCOUNT_ID = '600751' THEN 'Chilled Water'
                     WHEN gl.GL_ACCOUNT_ID = '600752' THEN 'Produced Electricity'
@@ -190,6 +187,8 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     """
     )
     rows = dwrhs.execute_query(query, chunksize=100000)
+    if len(rows) == 0:
+        raise Failure(description="Faile to load any data", metadata={"num_rows": len(rows)})
     columns = [
         "FISCAL_YEAR",
         "CALENDAR_MONTH",
