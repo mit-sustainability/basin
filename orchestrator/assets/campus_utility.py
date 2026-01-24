@@ -24,7 +24,7 @@ logger = get_dagster_logger()
 
 
 class BuildingMappingSchema(pa.DataFrameModel):
-    """Validate the output data schema of tree asset"""
+    """Validate the output data schema of Cost Collector to Building Mapping"""
 
     cost_collector_id: Series[int] = pa.Field(description="Cost Collector Id")
     cost_collector_name: Series[str] = pa.Field(description="Cost Collector Name")
@@ -53,7 +53,7 @@ class BuildingMappingSchema(pa.DataFrameModel):
     dagster_type=pandera_schema_to_dagster_type(BuildingMappingSchema),
 )
 def campus_building_mapping(dhub: ResourceParam[DataHubResource]):
-    """This asset ingests tree Inventory from Data Hub"""
+    """This asset ingests Cost Collector to Building Mapping from Data Hub"""
     project_id = dhub.get_project_id("Energize-MIT")
     logger.info(f"Found project id: {project_id}!")
     download_links = dhub.search_files_from_project(project_id, "cost_collector_building_groups")
@@ -83,7 +83,7 @@ def campus_building_mapping(dhub: ResourceParam[DataHubResource]):
     total_buildings = len(output_df)
 
     metadata = {
-        "unique_tree_counts": unique_buildings,
+        "unique_building_counts": unique_buildings,
         "total_buildings": total_buildings,
     }
 
@@ -253,7 +253,7 @@ def stg_utility_history(pg_engine: PostgreConnResources):
         how="left",
     )
 
-    # Adjust 2021 June Gas usage (matching ensure column dtypes)
+    # Adjust 2021 June gas usage (ensure matching column dtypes)
     mask = (mdf["fiscal_year"] == 2021) & (mdf["calendar_month"] == 6) & (mdf["cost_collector_id"] == "1814201")
     mdf.loc[mask, ["calendar_month", "utility_cost", "total_btu", "utility_usage"]] = [
         6,  # move record to June
@@ -262,7 +262,7 @@ def stg_utility_history(pg_engine: PostgreConnResources):
         1934740,  # replacement usage units
     ]
 
-    # Calculate MMBtu for Gas usage
+    # Calculate MMBtu for various utility types
     mdf["utility_mmbtu"] = mdf.apply(to_mmbtu, axis=1)
     # Select necessary Columns
     out_cols = [

@@ -18,5 +18,5 @@ SELECT
     total_cost,
     total_usage,
     total_mmbtu,
-    total_mmbtu / total_gross_area AS energy_itensity
+    total_mmbtu / total_gross_area AS energy_intensity
 FROM fy_campus_utility

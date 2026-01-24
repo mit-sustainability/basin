@@ -383,7 +383,7 @@ models:
       - name: energy_intensity
         description: "Energy intensity calculated as Total MMBtu / Total Gross Area"
   - name: fy_utility_unit_cost
-    description: "Aggregated utility costs, usage, and gross area by fiscal year and building category"
+    description: "Calculated unit costs for utilities by fiscal year and CUP/Non-CUP category"
     meta:
       owner: yu_cheng@mit.edu
     columns:
