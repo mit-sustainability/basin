@@ -23,6 +23,7 @@ from orchestrator.assets import (
     ghg_footprint,
     campus_facility,
     engagement,
+    campus_utility,
 )
 
 from orchestrator.jobs.business_travel_job import business_asset_job
@@ -35,6 +36,7 @@ from orchestrator.jobs.purchased_goods import pgs_job
 from orchestrator.jobs.waste_job import waste_asset_job
 from orchestrator.jobs.dlc_footprint import footprint_job
 from orchestrator.jobs.engagement import attendance_job
+from orchestrator.jobs.campus_utility import campus_utility_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
@@ -61,6 +63,7 @@ all_scopes_assets = load_assets_from_modules([ghg_inventory])
 footprint_assets = load_assets_from_modules([ghg_footprint])
 campus_facility_assets = load_assets_from_modules([campus_facility])
 engagement_assets = load_assets_from_modules([engagement])
+utility_assets = load_assets_from_modules([campus_utility])
 
 defs = Definitions(
     assets=[mitos_dbt_assets]
@@ -74,7 +77,8 @@ defs = Definitions(
     + all_scopes_assets
     + footprint_assets
     + campus_facility_assets
-    + engagement_assets,
+    + engagement_assets
+    + utility_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
@@ -87,6 +91,7 @@ defs = Definitions(
         ghg_job,
         footprint_job,
         attendance_job,
+        campus_utility_job,
     ],
     sensors=[sensor_ghg_manual],
     resources={

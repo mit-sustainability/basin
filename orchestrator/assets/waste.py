@@ -5,6 +5,7 @@ from dagster import (
     AssetCheckResult,
     AssetCheckSpec,
     Config,
+    Failure,
     get_dagster_logger,
     Output,
     ResourceParam,
@@ -31,7 +32,7 @@ class SmallStreamConfig(Config):
     Example: change this to the sheetname pointing to the current calendar year
     """
 
-    year_to_ingest: int = 2024
+    year_to_ingest: int = 2025
 
 
 class WasteNewbatchData(pa.DataFrameModel):
@@ -57,7 +58,7 @@ def historical_waste_recycle(dhub: ResourceParam[DataHubResource]):
     """This asset ingest the historical_waste_recycle data from the Data Hub"""
     project_id = dhub.get_project_id("Material Matters")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "historical_waste_recycle")
+    download_links = dhub.search_files_from_project(project_id, "historical_waste_recycle.csv")
     if len(download_links) == 0:
         logger.error("No download links found!")
         return pd.DataFrame()
@@ -109,16 +110,14 @@ def small_stream_recycle(config: SmallStreamConfig, dhub: ResourceParam[DataHubR
     logger.info(f"Found project id: {project_id}!")
     download_links = dhub.search_files_from_project(project_id, "MIT_small_stream_waste")
     if len(download_links) == 0:
-        logger.error("No download links found!")
-        return pd.DataFrame()
-    # Load the data
+        raise Failure("No download links found!")
     target_year = config.year_to_ingest
     logger.info(f"Loading small stream data from year {target_year}")
     workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
     df = pd.read_excel(
         workbook,
         usecols="B:M",
-        skiprows=14,
+        skiprows=15,  # Adjusted due to added categories since 2024
         nrows=1,
         sheet_name=f"{target_year} small stream recycling",
         header=None,

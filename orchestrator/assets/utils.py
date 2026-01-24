@@ -7,6 +7,7 @@ from typing import List
 import aiohttp
 import asyncio
 from dagster import asset, AssetIn, ResourceParam, get_dagster_logger
+import numpy as np
 import pandas as pd
 import pandera as pa
 import pytz
@@ -122,3 +123,22 @@ async def fetch_all_async(url: str, data_list: List[dict]):
     while not results.empty():
         final_results.append(results.get())
     return final_results
+
+
+def to_mmbtu(row: pd.Series) -> float:
+    """Convert MIT utility usage to MMBtu for downstream allocation charts."""
+
+    conversion_factors = {
+        ("Gas", "THM"): 0.1,
+        ("Gas", "CCF"): 0.1037,
+        ("#2 Oil", "GAL"): 0.139,
+        ("#2 Oil", "BBL"): 5.84,  # 42 Gallon/Barrel (but only #6 use Barrel)
+        ("#6 Oil", "GAL"): 0.151,
+        ("#6 Oil", "BBL"): 6.3,
+        ("Electricity", "KWH"): 0.003412,
+        ("Electricity", "MWH"): 3.412,
+        ("Produced Electricity", "KWH"): 0.003412,
+        ("Steam", "MLB"): 1.195,  # MLB = 1000 LB
+        ("Water", "CCF"): 0.0,
+    }
+    return row["utility_usage"] * conversion_factors.get((row["utility_type"], row["utility_unit"]), np.nan)
