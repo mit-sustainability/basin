@@ -103,7 +103,7 @@ class InvoiceConfig(Config):
 
 
 @asset(
-    io_manager_key="postgres_replace",  # only use this postgres_replace when loading from scratch
+    io_manager_key="postgres_append",  # only use this postgres_replace when loading from scratch
     compute_kind="python",
     group_name="raw",
     dagster_type=pandera_schema_to_dagster_type(InvoiceSchema),
