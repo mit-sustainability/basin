@@ -9,7 +9,6 @@ from dagster import (
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
-import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime, Float
@@ -46,7 +45,7 @@ class InvoiceSchema(pa.DataFrameModel):
 
 
 def parse_billing(row: pd.Series):
-    """Parse the Billing information in the invoice dataset to atrribute to specific accounts"""
+    """Parse the Billing information in the invoice dataset to attribute to specific accounts"""
     billing_str = str(row["Billing"]) if pd.notna(row["Billing"]) else ""
     original_total = row.get("Total", 0.0)
     results = []
