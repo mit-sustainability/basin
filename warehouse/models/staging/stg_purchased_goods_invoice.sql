@@ -29,7 +29,9 @@ ef AS (
     FROM attached AS a
     LEFT JOIN {{ source('raw', 'emission_factor_naics') }} AS n
         ON a.code = n."Code"
-    WHERE a.header_status IN ('Approved') AND a.total > 0
+    WHERE
+        a.header_status IN ('Approved')
+        AND a.po_status IN ('Closed', 'Soft Closed', 'Issued')
 ),
 
 current_cpi AS (
@@ -65,7 +67,7 @@ adjusted AS (
         level_1,
         level_2,
         level_3,
-        total,
+        spend AS total,
         description,
         billing,
         supplier,

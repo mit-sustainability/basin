@@ -3,18 +3,18 @@ from typing import List
 from dagster import (
     asset,
     Config,
+    Failure,
     get_dagster_logger,
+    Output,
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
-import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series, DateTime, Float
 
 from orchestrator.assets.utils import (
     add_dhub_sync,
-    empty_dataframe_from_model,
     normalize_column_name,
 )
 from orchestrator.resources.datahub import DataHubResource
@@ -41,30 +41,52 @@ class InvoiceSchema(pa.DataFrameModel):
     supplier: Series[str] = pa.Field(description="Supplier Name", nullable=True)
     supplier_number: Series[Float] = pa.Field(description="Supplier Number", nullable=True)
     billing: Series[str] = pa.Field(description="Billing Description")
-    cost_object: Series[str] = pa.Field(description="Cost Object ID")
+    cost_object: Series[str] = pa.Field(description="Cost Object ID", nullable=True)
 
 
 def parse_billing(row: pd.Series):
-    """Parse the billing column to extract the cost object and total amount if
-    multiple accounts are present in the same row."""
-    if pd.isna(row["Billing"]):
-        return [{"Total": np.nan, "cost_object": np.nan}]
-
-    parts = re.split(r" ; ", row["Billing"]) if ";" in row["Billing"] else [row["Billing"]]
+    """Parse the Billing information in the invoice dataset to attribute to specific accounts"""
+    billing_str = str(row["Billing"]) if pd.notna(row["Billing"]) else ""
+    original_total = row.get("Total", 0.0)
     results = []
 
-    for part in parts:
-        amount = re.search(r"(\d+\.\d+)(?= USD)", part)
-        cost_obj = re.search(r"CostObj: (\d{7})", part)  # First try to find "CostObj:" followed by 7 digits
-        if not cost_obj:
-            # Fallback to match the later 7-digit number after '-'
-            cost_obj = re.search(r"(?<=-)\d{7}\b", part)
+    # Multi-account Allocation
+    if "USD" in billing_str:
+        parts = re.split(r"\s*;\s*", billing_str)
+        for part in parts:
+            if not part.strip():
+                continue
+            new_row = row.to_dict()
+
+            # Extract Amount, allow negative, and handle comma
+            amount_match = re.search(r"(-?[\d,]+\.\d+)\s*USD", part)
+            if amount_match:
+                clean_amount = amount_match.group(1).replace(",", "")
+                new_row["Allocated Amount"] = float(clean_amount)
+            else:
+                new_row["Allocated Amount"] = 0.0
+
+            # Extract Cost Object
+            cost_obj_match = re.search(r"CostObj:\s*(\d{7})", part)
+            if cost_obj_match:
+                new_row["Cost Object"] = cost_obj_match.group(1)
+            else:
+                fallback_match = re.search(r"\b(\d{7})\b", part)
+                new_row["Cost Object"] = fallback_match.group(1) if fallback_match else None
+
+            results.append(new_row)
+
+    # Single Account Fallback and extract Cost Object
+    elif pd.notna(row["Billing"]):
         new_row = row.to_dict()
-        if amount and cost_obj:
-            new_row["Total"] = amount.group(1)
-            new_row["cost_object"] = cost_obj.group(1)
-        elif cost_obj:
-            new_row["cost_object"] = cost_obj.group(0)
+        cost_obj_match = re.search(r"\b(\d{7})\b", billing_str)
+        new_row["Cost Object"] = cost_obj_match.group(1) if cost_obj_match else None
+        new_row["Allocated Amount"] = original_total  # Take the full original total
+        results.append(new_row)
+
+    else:
+        new_row = row.to_dict()
+        new_row["Allocated Amount"] = 0.0
         results.append(new_row)
 
     return results
@@ -80,7 +102,7 @@ class InvoiceConfig(Config):
 
 
 @asset(
-    io_manager_key="postgres_append",  # only use this when loading from scratch, else "postgres_append"
+    io_manager_key="postgres_append",  # only use this postgres_replace when loading from scratch
     compute_kind="python",
     group_name="raw",
     dagster_type=pandera_schema_to_dagster_type(InvoiceSchema),
@@ -91,26 +113,52 @@ def purchased_goods_invoice(config: InvoiceConfig, dhub: ResourceParam[DataHubRe
     project_id = dhub.get_project_id("Scope3 Purchased Goods")
     logger.info(f"Found project id: {project_id}!")
     dfs = []
+    raw_total_amount = 0.0
     for file in config.files_to_download:
         download_links = dhub.search_files_from_project(project_id, file, tags=["invoice"])
         if len(download_links) == 0:
-            logger.info("No download links found!")
-            return empty_dataframe_from_model(InvoiceSchema)
-        # Load the data
+            logger.error("No download links found!")
+            raise Failure("No download links found!")
         logger.info(f"Downloading {file}...")
         df = pd.read_csv(download_links[0])
         logger.info(f"Loading {len(df)} entries from {file}")
         df.dropna(subset=["Billing"], inplace=True)
-        expanded = df.apply(parse_billing, axis=1).explode().reset_index(drop=True)
+        df["Total"] = pd.to_numeric(df["Total"], errors="coerce").fillna(0.0)
+        raw_total_amount += df["Total"].sum()
+        expanded = df.apply(parse_billing, axis=1).explode()
         df_fy = pd.DataFrame(expanded.tolist())
-        df_fy["Total"] = pd.to_numeric(df_fy["Total"])
+        df_fy["Allocated Amount"] = pd.to_numeric(df_fy["Allocated Amount"], errors="coerce").fillna(0.0)
         dfs.append(df_fy)
     combined = pd.concat(dfs, axis=0)
     combined["Invoice Date"] = pd.to_datetime(combined["Invoice Date"])
     combined["PO Order Date"] = pd.to_datetime(combined["PO Order Date"])
     combined.sort_values("Invoice Date", inplace=True)
     combined.columns = [normalize_column_name(col) for col in combined.columns]
-    return combined
+
+    # Check the total before and after allocation
+    allocated_total_amount = combined["allocated_amount"].sum()
+    diff = abs(raw_total_amount - allocated_total_amount)
+    combined["total"] = combined["allocated_amount"]
+    combined.drop(columns=["allocated_amount"], inplace=True)
+
+    metadata = {
+        "raw_total_amount": float(raw_total_amount),
+        "allocated_total_amount": float(allocated_total_amount),
+        "difference": float(diff),
+        "total_entries": int(len(combined)),
+    }
+
+    if diff > 0.05:
+        error_msg = (
+            f"CRITICAL DATA INTEGRITY FAILURE: Allocations do not match Invoices.\n"
+            f"Original Invoice Total: {raw_total_amount:,.2f}\n"
+            f"Allocated Split Total:  {allocated_total_amount:,.2f}\n"
+            f"Difference:             {diff:,.2f}"
+        )
+        logger.error(error_msg)
+        # Choosing to raise exception blocks the asset from finishing
+        raise Failure(error_msg)
+    return Output(value=combined, metadata=metadata)
 
 
 @asset(
@@ -127,6 +175,7 @@ def purchased_goods_mapping(dhub: ResourceParam[DataHubResource]):
     download_links = dhub.search_files_from_project(project_id, "purchased_goods_eeio_mapping_2024")
     if len(download_links) == 0:
         logger.error("No download links found!")
+        raise Failure("No download links found!")
     # Load the data
     df = pd.read_csv(download_links[0])
     cols_mapping = {
@@ -152,7 +201,7 @@ def purchased_goods_duplicated_category(dhub: ResourceParam[DataHubResource]):
     download_links = dhub.search_files_from_project(project_id, "duplicated_pns_category")
     if len(download_links) == 0:
         logger.error("No download links found!")
-    # Load the data
+        raise Failure("No download links found!")
     df = pd.read_csv(download_links[0])
     df["id"] = df.index
     return df
