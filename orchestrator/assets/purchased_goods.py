@@ -136,8 +136,10 @@ def purchased_goods_invoice(config: InvoiceConfig, dhub: ResourceParam[DataHubRe
     combined.columns = [normalize_column_name(col) for col in combined.columns]
 
     # Check the total before and after allocation
+    RELATIVE_TOLERANCE = 0.001
     allocated_total_amount = combined["allocated_amount"].sum()
     diff = abs(raw_total_amount - allocated_total_amount)
+    percent_diff = (diff / raw_total_amount) if raw_total_amount != 0 else 0
     combined["total"] = combined["allocated_amount"]
     combined.drop(columns=["allocated_amount"], inplace=True)
 
@@ -145,15 +147,16 @@ def purchased_goods_invoice(config: InvoiceConfig, dhub: ResourceParam[DataHubRe
         "raw_total_amount": float(raw_total_amount),
         "allocated_total_amount": float(allocated_total_amount),
         "difference": float(diff),
+        "percent_diff": float(percent_diff),
         "total_entries": int(len(combined)),
     }
 
-    if diff > 0.05:
+    if percent_diff > RELATIVE_TOLERANCE:
         error_msg = (
             f"CRITICAL DATA INTEGRITY FAILURE: Allocations do not match Invoices.\n"
             f"Original Invoice Total: {raw_total_amount:,.2f}\n"
             f"Allocated Split Total:  {allocated_total_amount:,.2f}\n"
-            f"Difference:             {diff:,.2f}"
+            f"Percent Difference:     {percent_diff:,.4f}"
         )
         logger.error(error_msg)
         # Choosing to raise exception blocks the asset from finishing
