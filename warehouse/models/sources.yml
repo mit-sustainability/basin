@@ -387,6 +387,8 @@ sources:
             description: "Supplier's unique identifier or number."
           - name: "billing"
             description: "Details related to the billing process or status."
+          - name: "cost_object"
+            description: "Cost Object ID that are responsible for the invoice"
       - name: purchased_goods_mapping
         description: "Mapping table for purchased goods invoice to different category levels and EEIO codes"
         meta:
