@@ -85,7 +85,7 @@ filtered AS (
     SELECT a.* FROM adjusted AS a
     LEFT JOIN {{ source('raw', 'purchased_goods_duplicated_category') }} AS d
         ON a.level_3 = d.duplicated_level3
-    WHERE d.duplicated_level3 IS NOT NULL
+    WHERE d.duplicated_level3 IS NULL
 ),
 
 
