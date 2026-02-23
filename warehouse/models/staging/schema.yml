@@ -187,7 +187,7 @@ models:
         description: "Lowest level detailed commodity categorization."
         data_tests:
           - dbt_utils.not_accepted_values:
-              values: ['Waste Disposal', 'Construction/Maintenance Services', 'General Travel Expenses', 'Waste Disposal']
+              values: ['Waste Disposal', 'Construction/Maintenance Services', 'General Travel Expenses']
       - name: "total"
         description: "Total USD spend for the invoice"
       - name: "description"
