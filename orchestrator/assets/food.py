@@ -85,7 +85,7 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
     combined["contract_month"] = pd.to_datetime(combined["contract_month"])
     combined.sort_values("contract_month", inplace=True)
     # Map dinning hall names
-    dinning_hall_mapping = {
+    dining_hall_mapping = {
         "MIT Baker  15912": "Baker",
         "MIT McCormick 15915": "McCormick",
         "MIT Simmons 15914": "Simmons",
@@ -97,7 +97,7 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
         "MIT - Bosworth's Cafe": "Bosworth's",
         "MIT Catering": "Catering",
     }
-    combined["customer_name"] = combined["customer_name"].replace(dinning_hall_mapping)
+    combined["customer_name"] = combined["customer_name"].replace(dining_hall_mapping)
     metadata = {
         "total_entries": len(combined),
         "last_updated": MetadataValue.text(combined["contract_month"].max().strftime("%Y-%m-%d")),
