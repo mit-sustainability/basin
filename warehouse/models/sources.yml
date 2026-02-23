@@ -730,7 +730,7 @@ sources:
             description: "Volume in gallon"
           - name: dist_qty
             description: "Distribution quantity"
-          - name: dist_item_umo
+          - name: dist_item_uom
             description: "Distribution item unit of measure"
           - name: reporting_qty
             description: "Reporting quantity"
