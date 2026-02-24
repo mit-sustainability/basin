@@ -6,7 +6,10 @@ from dagster import (
     asset,
     AssetIn,
     Config,
+    Failure,
+    Output,
     get_dagster_logger,
+    MetadataValue,
     ResourceParam,
 )
 import pandas as pd
@@ -35,7 +38,7 @@ sel_cols = [
     "lbs",
     "gal",
     "dist_qty",
-    "dist_item_umo",
+    "dist_item_uom",
     "reporting_qty",
     "mfr_item_reporting_uom",
     "case_qty",
@@ -50,10 +53,7 @@ class FoodOrderConfig(Config):
     Example: change this from the asset launchpad to specify the files to load to the data platform.
     """
 
-    files_to_download: List[str] = [
-        "MIT_v2_JUL2021_JUN2022",
-        "MIT_v2_JUL2022_JUN2023",
-    ]
+    files_to_download: List[str] = ["BA_food_invoice_items_FY21_FY25"]
 
 
 @asset(
@@ -71,10 +71,13 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
         download_links = dhub.search_files_from_project(project_id, file)
         if len(download_links) == 0:
             logger.info("No download links found!")
-            return  # empty_dataframe_from_model(InvoiceSchema)
+            raise Failure("No download links found!")
         # Load the data
-        logger.info(f"Downloading {file}...")
-        df = pd.read_excel(download_links[0])
+        url = download_links[0]
+        try:
+            df = pd.read_csv(url)
+        except Exception:
+            df = pd.read_excel(url)
         logger.info(f"Loading {len(df)} entries from {file}")
         dfs.append(df)
     combined = pd.concat(dfs, axis=0)
@@ -82,7 +85,7 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
     combined["contract_month"] = pd.to_datetime(combined["contract_month"])
     combined.sort_values("contract_month", inplace=True)
     # Map dinning hall names
-    dinning_hall_mapping = {
+    dining_hall_mapping = {
         "MIT Baker  15912": "Baker",
         "MIT McCormick 15915": "McCormick",
         "MIT Simmons 15914": "Simmons",
@@ -90,9 +93,16 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
         "MIT Next House 15913": "Next House",
         "MIT Maseeh Hall": "Maseeh Hall",
         "MIT - Forbes Family CafÃ©": "Forbes Family",
+        "MIT - Forbes Family Café": "Forbes Family",
+        "MIT - Bosworth's Cafe": "Bosworth's",
+        "MIT Catering": "Catering",
     }
-    combined["customer_name"] = combined["customer_name"].map(dinning_hall_mapping)
-    return combined[sel_cols]
+    combined["customer_name"] = combined["customer_name"].replace(dining_hall_mapping)
+    metadata = {
+        "total_entries": len(combined),
+        "last_updated": MetadataValue.text(combined["contract_month"].max().strftime("%Y-%m-%d")),
+    }
+    return Output(value=combined[sel_cols], metadata=metadata)
 
 
 @asset(
@@ -142,23 +152,37 @@ def food_order_categorize(df: pd.DataFrame):
         ]
     ].fillna(value="")
     df["title"] = filled.agg(" ".join, axis=1)
-    print(df["title"])
-    inputs = [{"body": entry} for entry in df["title"].values]
+    unique_titles = pd.unique(df["title"])
+    inputs = [{"body": entry} for entry in unique_titles]
 
-    # Predict food category through API
-    results = asyncio.run(fetch_all_async(food_cat_endpoint, inputs))
+    # Predict food category through API with bounded concurrency to avoid Lambda/API timeouts.
+    results = asyncio.run(
+        fetch_all_async(
+            food_cat_endpoint,
+            inputs,
+            max_concurrency=64,
+            request_timeout_seconds=30,
+            connect_timeout_seconds=5,
+            max_retries=2,
+        )
+    )
 
     for item in results:
         item["body"] = json.loads(item["body"])
 
     bodies = [item["body"] for item in results]
     predict = pd.DataFrame(bodies)
-    df["simap_category"] = predict["Cat1"]
+    category_by_title = dict(zip(unique_titles, predict["Cat1"]))
+    df["simap_category"] = df["title"].map(category_by_title)
 
     # Select output columns
     out_cols = sel_cols.copy()
     out_cols.append("simap_category")
-    return df[out_cols]
+
+    metadata = {
+        "unique_titles": len(unique_titles),
+    }
+    return Output(value=df[out_cols], metadata=metadata)
 
 
 # Sync back to DataHub

@@ -1,6 +1,7 @@
 """Shared objects and functions for all assets."""
 
 from datetime import datetime
+import random
 from queue import Queue  # Use Queue for thread-safe results collection
 from typing import List
 
@@ -90,28 +91,88 @@ def normalize_column_name(col_name):
     return col_name
 
 
-async def post_api_request(url, data, session):
-    """Make API request with async"""
-    async with session.post(url, json=data) as response:
-        response.raise_for_status()  # Raise an exception for non-2xx status codes
-        return await response.json()
+async def post_api_request(
+    url: str,
+    data: dict,
+    session: aiohttp.ClientSession,
+    semaphore: asyncio.Semaphore,
+    max_retries: int = 3,
+    base_backoff_seconds: float = 0.5,
+):
+    """Make API request with retries and bounded concurrency."""
+    for attempt in range(max_retries + 1):
+        retry_wait_seconds = None
+        try:
+            async with semaphore:
+                async with session.post(url, json=data) as response:
+                    # Retry only transient server throttling/failures.
+                    if response.status in (429, 500, 502, 503, 504):
+                        if attempt == max_retries:
+                            response.raise_for_status()
+                        retry_after = response.headers.get("Retry-After")
+                        retry_wait_seconds = (
+                            float(retry_after)
+                            if retry_after and retry_after.isdigit()
+                            else base_backoff_seconds * (2**attempt) + random.uniform(0, 0.2)
+                        )
+                    else:
+                        # Non-transient HTTP errors should fail fast (avoid wasting retries).
+                        response.raise_for_status()
+                        return await response.json()
+
+            if retry_wait_seconds is not None:
+                # Sleep outside semaphore so backoff does not block a concurrency slot.
+                await asyncio.sleep(retry_wait_seconds)
+                continue
+        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
+            if attempt == max_retries:
+                raise
+            # Add jitter to reduce synchronized retry storms.
+            wait_seconds = base_backoff_seconds * (2**attempt) + random.uniform(0, 0.2)
+            await asyncio.sleep(wait_seconds)
 
 
-async def fetch_all_async(url: str, data_list: List[dict]):
+async def fetch_all_async(
+    url: str,
+    data_list: List[dict],
+    max_concurrency: int = 10,
+    request_timeout_seconds: int = 60,
+    connect_timeout_seconds: int = 10,
+    max_retries: int = 3,
+):
     """Fetch multiple results async using asyncio and aiohttp
 
     Args:
         url: API endpoint to request from
         data_list: list of data payload dictionaries
+        max_concurrency: number of requests allowed in-flight at once
+        request_timeout_seconds: overall timeout per request
+        connect_timeout_seconds: timeout for connection setup
+        max_retries: number of retries per request
     Returns:
         list of results from the API requests.
     """
+    if len(data_list) == 0:
+        return []
+
     results = Queue()  # Thread-safe queue for results
     tasks = []
+    timeout = aiohttp.ClientTimeout(total=request_timeout_seconds, connect=connect_timeout_seconds)
+    semaphore = asyncio.Semaphore(max_concurrency)
 
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         for data in data_list:
-            tasks.append(asyncio.ensure_future(post_api_request(url, data, session)))
+            tasks.append(
+                asyncio.create_task(
+                    post_api_request(
+                        url=url,
+                        data=data,
+                        session=session,
+                        semaphore=semaphore,
+                        max_retries=max_retries,
+                    )
+                )
+            )
 
         # Wait for all tasks to complete and append results in order
         for task in tasks:
