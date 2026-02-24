@@ -101,6 +101,7 @@ async def post_api_request(
 ):
     """Make API request with retries and bounded concurrency."""
     for attempt in range(max_retries + 1):
+        retry_wait_seconds = None
         try:
             async with semaphore:
                 async with session.post(url, json=data) as response:
@@ -109,17 +110,20 @@ async def post_api_request(
                         if attempt == max_retries:
                             response.raise_for_status()
                         retry_after = response.headers.get("Retry-After")
-                        wait_seconds = (
+                        retry_wait_seconds = (
                             float(retry_after)
                             if retry_after and retry_after.isdigit()
                             else base_backoff_seconds * (2**attempt) + random.uniform(0, 0.2)
                         )
-                        await asyncio.sleep(wait_seconds)
-                        continue
+                    else:
+                        # Non-transient HTTP errors should fail fast (avoid wasting retries).
+                        response.raise_for_status()
+                        return await response.json()
 
-                    # Non-transient HTTP errors should fail fast (avoid wasting retries).
-                    response.raise_for_status()
-                    return await response.json()
+            if retry_wait_seconds is not None:
+                # Sleep outside semaphore so backoff does not block a concurrency slot.
+                await asyncio.sleep(retry_wait_seconds)
+                continue
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
             if attempt == max_retries:
                 raise
