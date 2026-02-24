@@ -154,10 +154,9 @@ async def fetch_all_async(
     results = Queue()  # Thread-safe queue for results
     tasks = []
     timeout = aiohttp.ClientTimeout(total=request_timeout_seconds, connect=connect_timeout_seconds)
-    connector = aiohttp.TCPConnector(limit=max_concurrency, limit_per_host=max_concurrency)
     semaphore = asyncio.Semaphore(max_concurrency)
 
-    async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         for data in data_list:
             tasks.append(
                 asyncio.create_task(
