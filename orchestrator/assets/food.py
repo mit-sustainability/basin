@@ -89,9 +89,9 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
         "MIT Baker  15912": "Baker",
         "MIT McCormick 15915": "McCormick",
         "MIT Simmons 15914": "Simmons",
-        "Massachusetts Institute of Technology New Vassar 55692 Bon Appetit": "New Vessar",
+        "Massachusetts Institute of Technology New Vassar 55692 Bon Appetit": "New Vassar",
         "MIT Next House 15913": "Next House",
-        "MIT Maseeh Hall": "Maseeh Hall",
+        "MIT Maseeh Hall": "Maseeh",
         "MIT - Forbes Family CafÃ©": "Forbes Family",
         "MIT - Forbes Family Café": "Forbes Family",
         "MIT - Bosworth's Cafe": "Bosworth's",
@@ -183,6 +183,26 @@ def food_order_categorize(df: pd.DataFrame):
         "unique_titles": len(unique_titles),
     }
     return Output(value=df[out_cols], metadata=metadata)
+
+
+@asset(
+    io_manager_key="postgres_replace",  # only use this when loading from scratch, else "postgres_append"
+    compute_kind="python",
+    group_name="raw",
+)
+def dining_hall_swipes(dhub: ResourceParam[DataHubResource]) -> Output[pd.DataFrame]:
+    """This asset ingest the dining hall swipes data provided by Dining Services"""
+    project_id = dhub.get_project_id("Scope3 Food")
+    logger.info(f"Found project id: {project_id}!")
+    download_links = dhub.search_files_from_project(project_id, "dining_hall_swipes_FY22_FY25")
+    if len(download_links) == 0:
+        raise Failure("No download links found!")
+    df = pd.read_csv(download_links[0])
+    df.columns = [normalize_column_name(col) for col in df.columns]
+    metadata = {
+        "fiscal_years": MetadataValue.json(df["fiscal_year"].unique().tolist()),
+    }
+    return Output(value=df, metadata=metadata)
 
 
 # Sync back to DataHub

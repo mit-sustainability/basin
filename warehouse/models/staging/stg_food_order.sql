@@ -38,7 +38,12 @@ wgt AS (
 ghg AS (
     SELECT
         w.*,
-        w.weight_kg * w.weight_emission_factor AS co2eq
+        w.weight_kg * w.weight_emission_factor AS weight_co2eq,
+        CASE
+            WHEN w.weight_kg != 0 THEN w.weight_kg * w.weight_emission_factor
+            -- Fallback to Spend
+            ELSE w.spend * w.spend_emission_factor
+        END AS combined_co2eq
     FROM wgt AS w
 
 )
