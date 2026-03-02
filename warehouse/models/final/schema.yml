@@ -404,3 +404,21 @@ models:
         description: "Total utility usage converted to MMBtu"
       - name: unit_cost
         description: "Unit cost defined as Total cost divided by all usage, or mmbtu for energy"
+  - name: dining_food_summary
+    description: "Summary of food-related spend and carbon emissions (CO2eq) by fiscal year and customer."
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: fiscal_year
+        description: "MIT Fiscal year (July to June)."
+      - name: customer_name
+        description: "Name of the entity or department responsible for the food order."
+        data_tests:
+          - accepted_values:
+              values: ['Baker', 'McCormick', 'Simmons', 'New Vassar', 'Next House', 'Maseeh', 'Forbes Family', "Bosworth's", 'Catering']
+      - name: total_spend
+        description: "Total spend on food items."
+      - name: weight_co2eq
+        description: "GHG emission in kg CO2eq calculated based on item weight (combined lbs and gallons)."
+      - name: combined_co2eq
+        description: "GHG emission in kg CO2eq using weight-based priority, falling back to spend-based factors when weight is unavailable."
