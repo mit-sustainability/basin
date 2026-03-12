@@ -692,6 +692,19 @@ sources:
             description: "Year of the student"
           - name: last_update
             description: "Date of last update"
+      - name: dining_hall_swipes
+        description: MIT dining hall swipes data
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["dining_hall_swipes"]
+        columns:
+          - name: dining_hall
+            description: "Residential dining hall name"
+          - name: fiscal_year
+            description: "MIT fiscal year (July to June)"
+          - name: swipe_count
+            description: "Total swipes count including all meals and periods"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging
