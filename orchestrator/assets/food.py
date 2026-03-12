@@ -191,7 +191,7 @@ def food_order_categorize(df: pd.DataFrame):
     group_name="raw",
 )
 def dining_hall_swipes(dhub: ResourceParam[DataHubResource]) -> Output[pd.DataFrame]:
-    """This asset ingest the dining hall swipes data provided by Dining Services"""
+    """This asset ingests the dining hall swipes data provided by Dining Services"""
     project_id = dhub.get_project_id("Scope3 Food")
     logger.info(f"Found project id: {project_id}!")
     download_links = dhub.search_files_from_project(project_id, "dining_hall_swipes_FY22_FY25")
