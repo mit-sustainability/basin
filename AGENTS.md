@@ -58,12 +58,34 @@ Use these repo-local skills when the task matches:
 
 New feature work should normally involve both implementation and test-coverage review, even when the change is small.
 
+## Spec-Kit Scripts
+
+The `.specify/scripts/bash/` directory contains the shell automation that powers the spec-driven development workflow used by this repository. The `speckit-*` skills in `.agents/skills/` call these scripts internally. You do not need to invoke them directly unless you are bootstrapping a new feature branch outside of a skill.
+
+| Script | Purpose |
+|--------|---------|
+| `create-new-feature.sh` | Creates a numbered git branch (`###-short-name`) and a matching spec directory under `specs/`, then copies the spec template. Run once at the start of spec-driven work. |
+| `setup-plan.sh` | Copies the plan template into the current feature's spec directory. Run after `create-new-feature.sh` when a feature needs a written implementation plan. |
+| `check-prerequisites.sh` | Validates that required spec artifacts (`spec.md`, `plan.md`, optionally `tasks.md`) exist before proceeding to the next workflow phase. Used internally by the speckit skills as a gate. |
+| `update-agent-context.sh` | Parses `plan.md` and injects project metadata (language, framework, storage) into agent instruction files (`AGENTS.md`, `CLAUDE.md`, `.github/agents/copilot-instructions.md`, etc.) so AI assistants stay in sync with the current feature context. |
+| `common.sh` | Shared helper functions (branch detection, path resolution, JSON escaping, template lookup) used by all other scripts. Not invoked directly. |
+
+When to call these manually:
+- Use `create-new-feature.sh` when starting a new spec-driven feature and no skill is available.
+- Use `setup-plan.sh` when you have a `spec.md` but the feature directory is missing `plan.md`.
+- Use `check-prerequisites.sh --paths-only` to inspect resolved feature paths without triggering validation.
+- Use `update-agent-context.sh` after editing `plan.md` to propagate changes into agent instruction files.
+
+The `specs/README.md` file documents the full workflow these scripts support.
+
 ## AWS Knowledge MCP
 
-This repository includes a repo-local Codex MCP configuration at `.codex/config.toml` for the managed AWS Knowledge MCP endpoint:
+This repository ships a `.codex/config.toml` file used by the OpenAI Codex CLI (`codex` command). It registers the managed AWS Knowledge MCP endpoint as an available tool server:
 
 - `https://knowledge-mcp.global.api.aws`
 
-Use it for up-to-date AWS documentation, regional availability, and official AWS guidance when the client supports remote MCP over HTTP.
+This file is **MCP server configuration only**. It has no relationship to the spec-kit workflow or the `.specify/` directory. Spec-kit state lives entirely in `specs/`, `.specify/`, and `.agents/skills/`.
+
+Use the AWS Knowledge MCP for up-to-date AWS documentation, regional availability, and official AWS guidance when running inside the Codex CLI or any other client that loads `.codex/config.toml`.
 
 Always consult the AWS Knowledge MCP server for AWS-specific questions before relying on memory alone.
