@@ -13,6 +13,7 @@ pandas
 pandera
 pyarrow
 requests
+playwright
 datasets
 python-dateutil
 matplotlib

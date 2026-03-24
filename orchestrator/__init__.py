@@ -13,6 +13,7 @@ from dagster_aws.s3 import S3Resource
 from orchestrator.assets.postgres import mitos_dbt_assets
 from orchestrator.assets import (
     business_travel,
+    website_content_health,
     commuting,
     construction,
     food,
@@ -27,6 +28,10 @@ from orchestrator.assets import (
 )
 
 from orchestrator.jobs.business_travel_job import business_asset_job
+from orchestrator.jobs.website_content_health import (
+    website_content_health_job,
+    website_content_health_link_check_job,
+)
 from orchestrator.jobs.construction_job import construction_asset_job
 from orchestrator.jobs.commuting_job import commuting_asset_job
 from orchestrator.jobs.food_job import food_asset_job
@@ -46,6 +51,7 @@ from orchestrator.constants import (
 )
 from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.mit_warehouse import MITWHRSResource
+from orchestrator.resources.playwright import PlaywrightBrowserResource
 from orchestrator.schedules.mitos_warehouse import schedules
 from orchestrator.sensors.s3_bucket import sensor_ghg_manual
 
@@ -64,6 +70,7 @@ footprint_assets = load_assets_from_modules([ghg_footprint])
 campus_facility_assets = load_assets_from_modules([campus_facility])
 engagement_assets = load_assets_from_modules([engagement])
 utility_assets = load_assets_from_modules([campus_utility])
+website_content_assets = load_assets_from_modules([website_content_health])
 
 defs = Definitions(
     assets=[mitos_dbt_assets]
@@ -78,7 +85,8 @@ defs = Definitions(
     + footprint_assets
     + campus_facility_assets
     + engagement_assets
-    + utility_assets,
+    + utility_assets
+    + website_content_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
@@ -92,6 +100,8 @@ defs = Definitions(
         footprint_job,
         attendance_job,
         campus_utility_job,
+        website_content_health_job,
+        website_content_health_link_check_job,
     ],
     sensors=[sensor_ghg_manual],
     resources={
@@ -104,5 +114,6 @@ defs = Definitions(
         "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
+        "playwright_browser": PlaywrightBrowserResource(base_url="https://sustainability.mit.edu"),
     },
 )

@@ -68,6 +68,12 @@ class DataHubResource:
         logger.info("Instantiate the DHub resource")
         self.auth_token = auth_token
         self.api_endpoint = "https://data.mit.edu/api"
+        self.jwt = None
+        self.headers = {"accept": "application/json"}
+
+    def _ensure_authorized(self):
+        if self.jwt:
+            return
         self.jwt = data_hub_authorize(self.auth_token)
         self.headers = {
             "accept": "application/json",
@@ -76,6 +82,7 @@ class DataHubResource:
 
     def list_projects(self):
         """Return a list of projects the user has access to."""
+        self._ensure_authorized()
         url = f"{self.api_endpoint}/user"
         res = requests.get(url, headers=self.headers, timeout=default_timeout)
         if res.status_code == 200:
@@ -93,6 +100,7 @@ class DataHubResource:
 
     def get_download_link(self, file_id):
         """Return a download link for the file"""
+        self._ensure_authorized()
         url = f"{self.api_endpoint}/file/{file_id}"
         res = requests.get(url, headers=self.headers, timeout=default_timeout)
         if res.status_code == 200:
@@ -101,6 +109,7 @@ class DataHubResource:
 
     def search_files_from_project(self, project_id, search_term, **kwargs):
         """Return a list of file download links matching the search term in the project"""
+        self._ensure_authorized()
         url = f"{self.api_endpoint}/search"
         data = {
             "term": search_term,
@@ -125,6 +134,7 @@ class DataHubResource:
 
     def get_upload_link(self, meta):
         """Get upload link to datahub"""
+        self._ensure_authorized()
         url = f"{self.api_endpoint}/file"
         res = requests.post(url, headers=self.headers, json=meta, timeout=default_timeout)
         if res.status_code == 200:

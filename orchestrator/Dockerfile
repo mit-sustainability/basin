@@ -54,6 +54,7 @@ RUN dbt \
 # Install orchestrator dependencies
 COPY orchestrator/requirements.txt requirements.txt
 RUN pip install -r requirements.txt
+RUN playwright install --with-deps chromium
 
 # # Copy libs in and install w3b_dp package
 # # COPY libs libs

@@ -23,6 +23,7 @@
 - Credentials and endpoints are supplied by environment variables, not static files.
 - Data Hub-based domains rely on successful project discovery and file search before reading source files.
 - AWS-backed automation relies on S3 metadata reads, ECR image publishing, and EC2 restart commands succeeding in sequence.
+- Website content health monitoring relies on Playwright browser installation, MIT Sustainability sitemap availability, and outbound HTTPS requests for page and internal link checks.
 
 ## Documentation Contract
 

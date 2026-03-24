@@ -29,6 +29,7 @@ Use this file as the durable, human-readable backlog for work that is not yet co
 | BL-003 | Document runtime environment contracts | proposed | docs | `specs/001-platform-baseline/`, `README.md`, workflow docs |  | optional | Make environment variables, secrets expectations, and service dependencies easier to audit across local, CI, and deployment flows. |
 | BL-004 | Simplify spec workflow for data-platform work | in_progress | docs | `AGENTS.md`, `specs/README.md`, `specs/BACKLOG.md`, `.specify/memory/constitution.md` | `website-content-health` | no | Shift the repo to a backlog-first workflow where feature spec folders are optional for routine pipeline, dbt, resource, and utility work. |
 | BL-005 | Add repo-local execution, review, and test personas | in_progress | docs | `.agents/skills`, `AGENTS.md` | `website-content-health` | no | Define Codex skills for Dagster asset implementation, code review, and unit-test coverage so parallel agents can take clearer roles. |
+| BL-006 | Add MIT Sustainability website content health scan | done | pipeline | `orchestrator/assets/website_content_health.py`, `orchestrator/jobs/website_content_health.py`, `orchestrator/schedules/mitos_warehouse.py`, `orchestrator/tests/`, `specs/002-website-content-health/` | `website-content-health` | `specs/002-website-content-health/` | Scrape MIT Sustainability pages into partitioned Dagster assets and record page content plus hyperlink health for scheduled monitoring. |
 
 ## Maintenance Rules
 

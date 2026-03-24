@@ -12,6 +12,7 @@
 
 - `orchestrator/__init__.py` assembles a single `Definitions` object.
 - Asset modules are loaded from domain-focused files such as `food.py`, `waste.py`, `commuting.py`, `business_travel.py`, `purchased_goods.py`, `construction.py`, `engagement.py`, `campus_utility.py`, `ghg_inventory.py`, and `ghg_footprint.py`.
+- The platform also includes a website content health domain that uses Playwright plus sitemap discovery to scan `https://sustainability.mit.edu` into raw page and hyperlink monitoring tables.
 - Shared resources include:
   - PostgreSQL IO managers and connection resources
   - dbt CLI resource
@@ -34,6 +35,7 @@
 - `orchestrator/schedules/mitos_warehouse.py` defines:
   - a daily dbt materialization schedule across all dbt assets
   - a monthly business travel job schedule
+  - a weekly website content health schedule that fans out five partitioned runs across the MIT Sustainability crawl
 - `orchestrator/sensors/s3_bucket.py` defines an S3 file update sensor that triggers the GHG inventory job when `all-scopes-sync/quickbase_data.csv` changes in `mitos-landing-zone`.
 - Local developer entry points:
   - `make setup-dev`
@@ -67,6 +69,7 @@
   - MIT warehouse credentials
   - energy management warehouse credentials
   - food categorization API endpoint
+- The website content health scan also depends on Playwright browser binaries and outbound HTTPS access to `https://sustainability.mit.edu`.
 - `orchestrator/constants.py` can parse the dbt project on load when `DAGSTER_DBT_PARSE_PROJECT_ON_LOAD` is set.
 - PostgreSQL writes are managed through an IO manager that treats asset keys as schema and table names and supports `replace` or `append` semantics.
 

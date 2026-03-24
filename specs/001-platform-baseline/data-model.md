@@ -6,6 +6,7 @@
 
 - Represents a bounded sustainability data slice implemented in `orchestrator/assets/`.
 - Examples include food, waste, business travel, purchased goods, commuting, construction, campus utility, engagement, and GHG inventory.
+- Additional examples include website content health monitoring for MIT Sustainability pages and hyperlinks.
 - Owns raw ingestion and any Python-side normalization that is not delegated to dbt.
 
 ### Asset Job
@@ -32,6 +33,7 @@
 
 - Represents an output consumed outside the immediate transform step.
 - Examples include final warehouse tables, dbt docs on GitHub Pages, and Data Hub synchronized files.
+- Raw monitoring tables such as website page snapshots and hyperlink health outputs are also publication artifacts for operator workflows.
 
 ## Relationships
 

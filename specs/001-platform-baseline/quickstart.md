@@ -9,12 +9,14 @@ Use this guide to inspect and verify the current platform behavior that the base
 1. Install Python 3.11.5 and create a virtual environment.
 2. Run `pip install --upgrade pip`.
 3. Run `make setup-dev` from the repository root.
+4. If you need to run the website content scan locally, run `playwright install chromium` after Python dependencies are installed.
 
 ## Verify the Orchestrator
 
 1. Ensure environment variables for warehouse, Data Hub, and any required upstream systems are available.
 2. Run `cd orchestrator && ./run_dagster_local.sh`.
 3. Confirm Dagster loads assets, jobs, schedules, and sensors from `orchestrator/__init__.py`.
+4. For the website content health domain, verify that Dagster exposes five partitions for `website_content_health_job` and that manual materialization can target any single bucket or all five buckets.
 
 ## Verify Tests
 
