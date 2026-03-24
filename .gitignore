@@ -159,4 +159,6 @@ orchestrator/.dagster/*
 /dist/
 /.pids
 .vscode/
+.codex/*
+!.codex/config.toml
 diff.md

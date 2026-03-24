@@ -21,7 +21,7 @@ This platform is a batch data system, not an interactive application. Specs and 
 All work MUST document the external systems it relies on: PostgreSQL warehouse, MIT Data Hub, dbt, AWS services, MIT warehouse resources, and any network APIs such as the food categorizer. Required environment variables, authentication assumptions, and failure modes must be named directly in the spec rather than implied.
 
 ### V. Minimal and Testable Change Surface
-Changes SHOULD stay within the smallest domain slice that solves the problem. Specs MUST identify the minimum affected files, expected tests, and operational checks. Broad refactors, cross-domain rewrites, or new abstractions require explicit justification in the plan.
+Changes SHOULD stay within the smallest domain slice that solves the problem. Backlog items and, when needed, specs MUST identify the minimum affected files, expected tests, and operational checks. Broad refactors, cross-domain rewrites, or new abstractions require explicit justification in the plan.
 
 ## Repository Constraints
 
@@ -33,6 +33,9 @@ Changes SHOULD stay within the smallest domain slice that solves the problem. Sp
 
 ## Development Workflow
 
+- This repository is backlog-first. `specs/BACKLOG.md` is the default work queue, and most routine data-platform work does not require a dedicated feature spec folder.
+- Every backlog item must state a narrow outcome and expected scope so it can be owned independently.
+- A dedicated feature spec is required only for cross-domain, contract-changing, schedule-changing, deployment-changing, integration-heavy, or otherwise ambiguous work.
 - Every spec for a behavioral change must name the user-facing or operator-facing outcome, affected domain, and expected execution trigger.
 - Every plan must list the concrete repository paths it will touch across `orchestrator/`, `warehouse/`, `.github/workflows/`, and docs when relevant.
 - Every implementation must preserve or improve tests for changed resources, transformations, or orchestration logic. If no test exists yet, the plan must say what verification will substitute and why.
@@ -42,4 +45,4 @@ Changes SHOULD stay within the smallest domain slice that solves the problem. Sp
 
 This constitution governs all Spec Kit artifacts in this repository. Amendments require updating this file and any impacted spec, plan, or checklist expectations in the same change. Reviewers should reject specs that omit execution boundaries, external dependencies, or verification strategy.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-23 | **Last Amended**: 2026-03-23
+**Version**: 1.1.0 | **Ratified**: 2026-03-23 | **Last Amended**: 2026-03-23
