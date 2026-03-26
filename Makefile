@@ -12,6 +12,9 @@ build-dagster-docker:
 setup-dagster:
 	cd orchestrator && pip install -r requirements.txt && pip install -e .
 
+setup-playwright:
+	cd orchestrator && python -m playwright install chromium
+
 setup-dbt:
 	cd warehouse && bash setup.sh
 
@@ -24,8 +27,11 @@ dbt_manifest:
 serve-dbt-catalog:
 	cd warehouse && dbt docs generate && dbt docs serve
 
-setup-dev:  setup-dbt  setup-dagster  # setup-libs setup-pants
+setup-dev:  setup-dbt  setup-dagster setup-playwright  # setup-libs setup-pants
 	@echo "Done, enjoy building! 🎉"
 
 run-tests:
 	cd orchestrator && ./execute_unit_tests.sh
+
+verify-website-content-health:
+	PYTHONPATH=. python orchestrator/scripts/verify_website_content_health_ingest.py
