@@ -1,2 +1,6 @@
+sandbox_mode = "workspace-write"
 [mcp_servers.awsKnowledge]
 url = "https://knowledge-mcp.global.api.aws"
+
+[sandbox_workspace_write]
+network_access = true

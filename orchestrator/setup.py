@@ -10,6 +10,7 @@ setup(
         "dagster-pandera",
         "dagster-dbt",
         "dagster-aws",
+        "playwright",
     ],
     extras_require={
         "dev": ["dagster-webserver", "pytest"],
