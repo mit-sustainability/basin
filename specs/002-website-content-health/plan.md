@@ -4,12 +4,11 @@
 
 ## Summary
 
-Add a new website-content-health domain to the orchestrator. The slice uses the MIT Sustainability sitemap as the crawl frontier, assigns URLs into five static buckets, scrapes each page with Playwright, writes page and link outputs to PostgreSQL through the existing pandas IO manager, and schedules a weekly fan-out over all partitions.
+Add a new website-content-health domain to the orchestrator. The slice uses owned MIT Sustainability section roots as the crawl frontier, recursively discovers in-scope pages, scrapes each page with Playwright, writes page and link outputs to PostgreSQL through the existing pandas IO manager, and schedules the full job to run on a recurring cadence.
 
 ## Touched Paths
 
 - `orchestrator/assets/website_content_health.py`
-- `orchestrator/partitions/website_content_health.py`
 - `orchestrator/jobs/website_content_health.py`
 - `orchestrator/schedules/mitos_warehouse.py`
 - `orchestrator/__init__.py`
@@ -24,13 +23,12 @@ Add a new website-content-health domain to the orchestrator. The slice uses the 
 
 ## Technical Decisions
 
-- Use static partitions named `bucket_0` through `bucket_4` so operators can run or backfill a full website scan deterministically.
-- Use sitemap discovery to avoid baking navigation structure into code.
+- Use recursive discovery from owned section seed URLs to avoid hard-coding individual pages while keeping the crawl bounded.
 - Use a single multi-asset to avoid rendering each page twice when producing the two output tables.
-- Append raw scan rows so repeated scans preserve history; include `scanned_at` and `scan_partition` in both outputs.
-- Limit built-in health checks to direct HTTP status classification, with external URLs marked as unchecked rather than aggressively probed.
+- Replace raw outputs on each materialization and include `scanned_at` in the outputs for run-level freshness.
+- Validate unique internal and external HTTP links directly and attach those validation results back to source-page link rows.
 
 ## Verification
 
-- Add focused unit tests for sitemap parsing, partition selection, metadata extraction helpers, and the schedule fan-out behavior.
+- Add focused unit tests for recursive discovery, metadata extraction helpers, link validation, and schedule registration behavior.
 - Run targeted pytest modules for the new asset and schedule logic.
