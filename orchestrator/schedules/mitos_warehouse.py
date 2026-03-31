@@ -7,7 +7,7 @@ from orchestrator.jobs.website_content_health import website_content_health_job
 
 website_content_health_schedule = ScheduleDefinition(
     job=website_content_health_job,
-    cron_schedule="0 6 * * 1",
+    cron_schedule="0 9 1 * *",
 )
 
 schedules = [

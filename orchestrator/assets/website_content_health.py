@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from collections import deque
 from datetime import datetime, timezone
 from hashlib import md5
 from typing import Iterable
@@ -30,7 +30,6 @@ ALLOWED_SECTION_ROOTS = {
     "resources",
     "partners",
     "about-us",
-    "article",
 }
 SECTION_SEED_URLS = [f"{BASE_URL}/{section}" for section in sorted(ALLOWED_SECTION_ROOTS)]
 REQUEST_TIMEOUT_SECONDS = 20
@@ -158,11 +157,6 @@ def _is_document_url(url: str) -> bool:
     return any(path.endswith(suffix) for suffix in DOCUMENT_SUFFIXES)
 
 
-def _should_validate_link_url(url: str, base_domain: str) -> bool:
-    parsed = urlparse(url)
-    return parsed.scheme in {"http", "https"}
-
-
 def _should_track_link_url(url: str, base_domain: str) -> bool:
     if not url:
         return False
@@ -187,22 +181,17 @@ def _should_crawl_url(url: str, base_domain: str) -> bool:
     return _is_allowed_section_url(url)
 
 
-def _candidate_last_updates(meta_values: Iterable[str | None], time_values: Iterable[str | None]) -> list[str]:
-    candidates: list[str] = []
-    for value in [*meta_values, *time_values]:
-        if value:
-            cleaned = value.strip()
-            if cleaned:
-                candidates.append(cleaned)
-    return candidates
-
-
 def _resolve_last_update(
     meta_values: Iterable[str | None],
     time_values: Iterable[str | None],
     header_value: str | None,
 ) -> str | None:
-    for candidate in _candidate_last_updates(meta_values, time_values):
+    for value in [*meta_values, *time_values]:
+        if not value:
+            continue
+        candidate = value.strip()
+        if not candidate:
+            continue
         try:
             return pd.to_datetime(candidate, utc=True).isoformat()
         except (TypeError, ValueError):
@@ -291,20 +280,6 @@ def _page_health(http_status: int | None) -> str:
     return "broken"
 
 
-def _safe_text_content(page, selector: str) -> str | None:
-    locator = page.locator(selector)
-    if locator.count() == 0:
-        return None
-    return locator.first.text_content()
-
-
-def _safe_attribute(page, selector: str, attribute_name: str) -> str | None:
-    locator = page.locator(selector)
-    if locator.count() == 0:
-        return None
-    return locator.first.get_attribute(attribute_name)
-
-
 def _failed_page_snapshot(page_url: str, http_status: int | None = None) -> PageSnapshot:
     category, topic = _derive_category_topic(page_url)
     return PageSnapshot(
@@ -339,8 +314,19 @@ def _scrape_page_snapshot(browser_context, page_url: str) -> PageSnapshot:
                 return _failed_page_snapshot(page_url, http_status=getattr(response, "status", None))
 
         title = page.title().strip()
-        content_text = _safe_text_content(page, "main") or _safe_text_content(page, "body") or ""
-        meta_description = _safe_attribute(page, "meta[name='description']", "content")
+        main_locator = page.locator("main")
+        body_locator = page.locator("body")
+        content_text = (
+            main_locator.first.text_content()
+            if main_locator.count() > 0
+            else body_locator.first.text_content()
+            if body_locator.count() > 0
+            else ""
+        )
+        meta_description_locator = page.locator("meta[name='description']")
+        meta_description = (
+            meta_description_locator.first.get_attribute("content") if meta_description_locator.count() > 0 else None
+        )
         meta_values = page.eval_on_selector_all(
             "meta[property='article:modified_time'], meta[property='og:updated_time'], meta[name='lastmod'], meta[name='dcterms.modified'], meta[name='date']",
             "(nodes) => nodes.map((node) => node.getAttribute('content'))",
@@ -430,14 +416,6 @@ def _crawl_internal_urls(browser_context, seed_urls: Iterable[str], base_url: st
     return sorted(discovered)
 
 
-def _discover_site_urls(session: requests.Session, browser_context) -> list[str]:
-    logger.info(
-        "Using recursive internal-link crawl from owned section seeds: %s",
-        ", ".join(sorted(ALLOWED_SECTION_ROOTS)),
-    )
-    return _crawl_internal_urls(browser_context, seed_urls=SECTION_SEED_URLS, base_url=BASE_URL)
-
-
 def _validate_unique_links(
     link_urls: Iterable[str], base_domain: str
 ) -> dict[str, tuple[str, int | None, str | None, str | None]]:
@@ -472,62 +450,64 @@ def _scan_site(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     scanned_at = datetime.now(timezone.utc).isoformat()
     logger.info("Starting website content health scan for %s", SCAN_SCOPE)
-    with requests.Session() as session:
-        session.headers.update({"User-Agent": "BASIN website content health scanner/1.0"})
-        with browser_resource.browser_context() as browser_context:
-            discovered_urls = _discover_site_urls(session, browser_context)
-            logger.info("Discovered %s total URLs to scan", len(discovered_urls))
-            if not discovered_urls:
-                empty_pages = pd.DataFrame(columns=PAGE_COLUMNS)
-                empty_link_refs = pd.DataFrame(columns=LINK_REF_COLUMNS)
-                return empty_pages, empty_link_refs
+    with browser_resource.browser_context() as browser_context:
+        logger.info(
+            "Using recursive internal-link crawl from owned section seeds: %s",
+            ", ".join(sorted(ALLOWED_SECTION_ROOTS)),
+        )
+        discovered_urls = _crawl_internal_urls(browser_context, seed_urls=SECTION_SEED_URLS, base_url=BASE_URL)
+        logger.info("Discovered %s total URLs to scan", len(discovered_urls))
+        if not discovered_urls:
+            empty_pages = pd.DataFrame(columns=PAGE_COLUMNS)
+            empty_link_refs = pd.DataFrame(columns=LINK_REF_COLUMNS)
+            return empty_pages, empty_link_refs
 
-            page_rows: list[dict[str, object]] = []
-            raw_link_rows: list[dict[str, object]] = []
-            base_domain = urlparse(BASE_URL).netloc
-            for index, page_url in enumerate(discovered_urls, start=1):
-                if index == 1 or index % PROGRESS_LOG_EVERY == 0 or index == len(discovered_urls):
-                    logger.info(
-                        "Website content health progress: scanning page %s/%s: %s",
-                        index,
-                        len(discovered_urls),
-                        page_url,
-                    )
-                snapshot = _scrape_page_snapshot(browser_context, page_url)
-                page_rows.append(
+        page_rows: list[dict[str, object]] = []
+        raw_link_rows: list[dict[str, object]] = []
+        base_domain = urlparse(BASE_URL).netloc
+        for index, page_url in enumerate(discovered_urls, start=1):
+            if index == 1 or index % PROGRESS_LOG_EVERY == 0 or index == len(discovered_urls):
+                logger.info(
+                    "Website content health progress: scanning page %s/%s: %s",
+                    index,
+                    len(discovered_urls),
+                    page_url,
+                )
+            snapshot = _scrape_page_snapshot(browser_context, page_url)
+            page_rows.append(
+                {
+                    "page_url": snapshot.page_url,
+                    "page_path": urlparse(snapshot.page_url).path or "/",
+                    "page_title": snapshot.page_title,
+                    "category": snapshot.category,
+                    "topic": snapshot.topic,
+                    "last_update": snapshot.last_update,
+                    "http_status": snapshot.http_status,
+                    "page_health": snapshot.page_health,
+                    "meta_description": snapshot.meta_description,
+                    "content_text": snapshot.content_text,
+                    "content_hash": snapshot.content_hash,
+                    "link_count": len(snapshot.links),
+                    "scanned_at": scanned_at,
+                }
+            )
+            for link in snapshot.links:
+                is_document = _is_document_url(link["link_url"])
+                raw_link_rows.append(
                     {
-                        "page_url": snapshot.page_url,
-                        "page_path": urlparse(snapshot.page_url).path or "/",
-                        "page_title": snapshot.page_title,
-                        "category": snapshot.category,
-                        "topic": snapshot.topic,
-                        "last_update": snapshot.last_update,
-                        "http_status": snapshot.http_status,
-                        "page_health": snapshot.page_health,
-                        "meta_description": snapshot.meta_description,
-                        "content_text": snapshot.content_text,
-                        "content_hash": snapshot.content_hash,
-                        "link_count": len(snapshot.links),
+                        "source_page_url": snapshot.page_url,
+                        "link_url": link["link_url"],
+                        "link_text": link["link_text"],
+                        "is_internal": urlparse(link["link_url"]).netloc == base_domain,
+                        "is_document": is_document,
                         "scanned_at": scanned_at,
                     }
                 )
-                for link in snapshot.links:
-                    is_document = _is_document_url(link["link_url"])
-                    raw_link_rows.append(
-                        {
-                            "source_page_url": snapshot.page_url,
-                            "link_url": link["link_url"],
-                            "link_text": link["link_text"],
-                            "is_internal": urlparse(link["link_url"]).netloc == base_domain,
-                            "is_document": is_document,
-                            "scanned_at": scanned_at,
-                        }
-                    )
-            logger.info(
-                "Completed website crawl: %s page rows, %s link refs",
-                len(page_rows),
-                len(raw_link_rows),
-            )
+        logger.info(
+            "Completed website crawl: %s page rows, %s link refs",
+            len(page_rows),
+            len(raw_link_rows),
+        )
 
     pages_df = pd.DataFrame(page_rows, columns=PAGE_COLUMNS)
     link_refs_df = pd.DataFrame(raw_link_rows, columns=LINK_REF_COLUMNS)

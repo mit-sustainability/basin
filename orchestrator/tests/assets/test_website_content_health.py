@@ -14,7 +14,6 @@ from orchestrator.assets.website_content_health import (
     _build_unique_links_df,
     _classify_link_health,
     _crawl_internal_urls,
-    _discover_site_urls,
     _derive_category_topic,
     _is_internal_url,
     _is_allowed_section_url,
@@ -23,7 +22,6 @@ from orchestrator.assets.website_content_health import (
     _resolve_last_update,
     _should_crawl_url,
     _should_track_link_url,
-    _should_validate_link_url,
     _validate_unique_links,
 )
 
@@ -110,14 +108,6 @@ def test_document_urls_are_detected_without_affecting_crawl_scope():
     assert _is_document_url(f"{BASE_URL}/sites/default/files/report.pdf") is True
     assert _is_document_url("https://example.com/files/spreadsheet.xlsx") is True
     assert _is_document_url(f"{BASE_URL}/about-us/team") is False
-
-
-def test_should_validate_link_url_checks_all_http_links():
-    base_domain = "sustainability.mit.edu"
-
-    assert _should_validate_link_url(f"{BASE_URL}/sites/default/files/report.pdf", base_domain) is True
-    assert _should_validate_link_url("https://docs.google.com/document/d/abc123/edit", base_domain) is True
-    assert _should_validate_link_url("https://example.com/resource", base_domain) is True
 
 
 def test_check_link_health_validates_generic_external_links():
@@ -231,21 +221,6 @@ def test_crawl_internal_urls_recursively_discovers_same_site_pages():
         f"{BASE_URL}/resources",
         f"{BASE_URL}/resources/blog",
     ]
-
-
-def test_discover_site_urls_uses_owned_section_seed_urls():
-    from unittest.mock import patch
-
-    browser_context = object()
-
-    with patch(
-        "orchestrator.assets.website_content_health._crawl_internal_urls",
-        return_value=[f"{BASE_URL}/about-us", f"{BASE_URL}/resources/blog"],
-    ) as crawl_mock:
-        discovered = _discover_site_urls(object(), browser_context)
-
-    assert discovered == [f"{BASE_URL}/about-us", f"{BASE_URL}/resources/blog"]
-    crawl_mock.assert_called_once_with(browser_context, seed_urls=SECTION_SEED_URLS, base_url=BASE_URL)
 
 
 def test_scrape_page_snapshot_returns_unreachable_snapshot_when_navigation_fails():
