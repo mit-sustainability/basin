@@ -24,6 +24,7 @@
 - Data Hub-based domains rely on successful project discovery and file search before reading source files.
 - AWS-backed automation relies on S3 metadata reads, ECR image publishing, and EC2 restart commands succeeding in sequence.
 - Website content health monitoring relies on Playwright browser installation, MIT Sustainability sitemap availability, and outbound HTTPS requests for page and internal link checks.
+- MBTA transit monthly monitoring relies on Playwright browser installation, MBTA portal credentials supplied by environment variables, and successful Data Hub reads and syncs for historical and merged monthly tables.
 
 ## Documentation Contract
 

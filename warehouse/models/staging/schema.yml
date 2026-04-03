@@ -162,6 +162,31 @@ models:
         description: "Daily unique parker for lot 1038"
       - name: "total_unique"
         description: "Daily unique parker for all lots"
+  - name: stg_transit_monthly
+    description: "Merged historical and portal-backed MBTA transit monthly usage summary"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: "month"
+        description: "Billing month in YYYY-MM format"
+      - name: "local_bus"
+        description: "Total local bus taps for the month"
+      - name: "rapid_transit"
+        description: "Total rapid transit taps for the month"
+      - name: "total_taps"
+        description: "Total taps across all services for the month"
+      - name: "active_rider"
+        description: "Unique riders with at least one tap in the month"
+      - name: "unique_rider"
+        description: "Unique riders enrolled in the month"
+      - name: "active_ratio"
+        description: "Ratio of active riders to unique riders"
+      - name: "source_type"
+        description: "Data provenance marker"
+      - name: "source_filename"
+        description: "Source file name backing the monthly summary"
+      - name: "downloaded_at"
+        description: "Ingestion timestamp"
   - name: stg_purchased_goods_invoice
     description: "CPI adjusted and GHG emission enriched invoice data for purchased goods"
     meta:

@@ -345,6 +345,58 @@ sources:
             description: "Type of holiday"
           - name: "last_update"
             description: "update timestamp"
+      - name: historical_transit_monthly
+        description: "Historical MBTA transit monthly usage summary prior to portal-backed increments"
+        meta:
+          dagster:
+            asset_key: ["historical_transit_monthly"]
+        columns:
+          - name: "month"
+            description: "Billing month in YYYY-MM format"
+          - name: "local_bus"
+            description: "Total local bus taps for the month"
+          - name: "rapid_transit"
+            description: "Total rapid transit taps for the month"
+          - name: "total_taps"
+            description: "Total taps across all services for the month"
+          - name: "active_rider"
+            description: "Unique riders with at least one tap in the month"
+          - name: "unique_rider"
+            description: "Unique riders enrolled in the month"
+          - name: "active_ratio"
+            description: "Ratio of active riders to unique riders"
+          - name: "source_type"
+            description: "Data provenance marker, expected to be historical"
+          - name: "source_filename"
+            description: "Historical source file name from Data Hub"
+          - name: "downloaded_at"
+            description: "Ingestion timestamp"
+      - name: newbatch_transit_monthly
+        description: "Incremental MBTA transit monthly usage summary downloaded from the billing portal"
+        meta:
+          dagster:
+            asset_key: ["newbatch_transit_monthly"]
+        columns:
+          - name: "month"
+            description: "Billing month in YYYY-MM format"
+          - name: "local_bus"
+            description: "Total local bus taps for the month"
+          - name: "rapid_transit"
+            description: "Total rapid transit taps for the month"
+          - name: "total_taps"
+            description: "Total taps across all services for the month"
+          - name: "active_rider"
+            description: "Unique riders with at least one tap in the month"
+          - name: "unique_rider"
+            description: "Unique riders enrolled in the month"
+          - name: "active_ratio"
+            description: "Ratio of active riders to unique riders"
+          - name: "source_type"
+            description: "Data provenance marker, expected to be newbatch"
+          - name: "source_filename"
+            description: "Portal workbook file name"
+          - name: "downloaded_at"
+            description: "Download timestamp"
       - name: purchased_goods_invoice
         description: "Purchased goods invoice since FY2019"
         meta:
