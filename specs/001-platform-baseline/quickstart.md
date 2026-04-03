@@ -17,6 +17,7 @@ Use this guide to inspect and verify the current platform behavior that the base
 2. Run `cd orchestrator && ./run_dagster_local.sh`.
 3. Confirm Dagster loads assets, jobs, schedules, and sensors from `orchestrator/__init__.py`.
 4. For the website content health domain, verify that Dagster exposes five partitions for `website_content_health_job` and that manual materialization can target any single bucket or all five buckets.
+5. For the Confluence wiki domain, set `CONFLUENCE_BASE_URL`, `CONFLUENCE_PAT`, and optionally `CONFLUENCE_SPACE_KEY`, then materialize `confluence_wiki_snapshot_job` to populate `raw.confluence_mitos_pages`.
 
 ## Verify Tests
 
