@@ -3,7 +3,10 @@ from datetime import datetime
 from dagster import (
     asset,
     AssetIn,
+    Failure,
     get_dagster_logger,
+    MetadataValue,
+    Output,
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
@@ -83,6 +86,8 @@ def newbatch_parking_daily(dwrhs: MITWHRSResource):
             GROUP BY ENTRY_DATE, PARKING_LOT_ID
             """
     rows = dwrhs.execute_query(query, chunksize=100000)
+    if len(rows) == 0:
+        raise Failure("No parking data found!")
     columns = [
         "date",
         "parking_lot",
@@ -92,7 +97,10 @@ def newbatch_parking_daily(dwrhs: MITWHRSResource):
     df = pd.DataFrame(rows, columns=columns)
     df["last_update"] = datetime.now()
     logger.info(f"Last updated batch parking transaction data since date: {df.date.min()}")
-    return df
+    return Output(
+        value=df,
+        metadata={"last_update": MetadataValue.text(max(df.date).strftime("%Y-%m-%d"))},
+    )
 
 
 @asset(
