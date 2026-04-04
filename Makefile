@@ -13,7 +13,7 @@ setup-dagster:
 	cd orchestrator && python -m pip install -r requirements.txt && python -m pip install -e .
 
 setup-playwright:
-	cd orchestrator && python -m pip install -e . && python -m playwright install chromium
+	cd orchestrator && python -m playwright install chromium
 
 setup-dbt:
 	cd warehouse && bash setup.sh
@@ -27,7 +27,7 @@ dbt_manifest:
 serve-dbt-catalog:
 	cd warehouse && dbt docs generate && dbt docs serve
 
-setup-dev:  setup-dbt  setup-dagster  # setup-libs setup-pants
+setup-dev:  setup-dbt  setup-dagster  setup-playwright  # setup-libs setup-pants
 	@echo "Done, enjoy building! 🎉"
 
 run-tests:

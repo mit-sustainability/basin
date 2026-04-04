@@ -6,7 +6,15 @@ import tempfile
 from typing import Optional
 from urllib.parse import urlparse
 
-from dagster import Config, Failure, MetadataValue, Output, ResourceParam, asset, get_dagster_logger
+from dagster import (
+    Config,
+    Failure,
+    MetadataValue,
+    Output,
+    ResourceParam,
+    asset,
+    get_dagster_logger,
+)
 import pandas as pd
 
 from orchestrator.assets.utils import add_dhub_sync
@@ -16,7 +24,7 @@ from orchestrator.resources.playwright import PlaywrightBrowserResource
 
 logger = get_dagster_logger()
 
-TRANSIT_PROJECT_NAME = "Parking"
+TRANSIT_PROJECT_NAME = "Commuter MBTA"
 TRANSIT_HISTORY_SEARCH_TERM = "historical_transit_monthly"
 TRANSIT_DOWNLOAD_URL = "https://passprogram.mbta.com"
 TRANSIT_BILLING_HISTORY_URL = "https://mobility.mbta.com/Company/Billing/BillingHistory.aspx"
@@ -42,11 +50,29 @@ TRANSIT_REQUIRED_WORKBOOK_COLUMNS = {
     "Local Bus",
     "Rapid Transit",
 }
+TRANSIT_SOURCE_RENAME_MAP = {
+    "Local Bus": "local_bus",
+    "Rapid Transit": "rapid_transit",
+    "Total # of Taps": "total_taps",
+    "Active_Rider": "active_rider",
+    "Unique_Rider": "unique_rider",
+    "Active_Ratio": "active_ratio",
+    "Month": "month",
+}
+TRANSIT_NORMALIZED_COLUMNS = [
+    "local_bus",
+    "rapid_transit",
+    "total_taps",
+    "active_rider",
+    "unique_rider",
+    "active_ratio",
+    "month",
+]
 
 
 class TransitMonthlyConfig(Config):
     start_month: str
-    end_month: Optional[str] = None
+    end_month: str | None = None
 
 
 @dataclass(frozen=True)
@@ -91,56 +117,72 @@ def _normalize_transit_monthly_summary(
     source_filename: str,
     downloaded_at: datetime,
 ) -> pd.DataFrame:
-    missing_columns = set(TRANSIT_REQUIRED_SOURCE_COLUMNS) - set(df.columns)
-    if missing_columns:
-        raise Failure(f"Transit monthly data is missing required columns: {sorted(missing_columns)}")
-
-    normalized = (
-        df.loc[:, TRANSIT_REQUIRED_SOURCE_COLUMNS]
-        .rename(
-            columns={
-                "Local Bus": "local_bus",
-                "Rapid Transit": "rapid_transit",
-                "Total # of Taps": "total_taps",
-                "Active_Rider": "active_rider",
-                "Unique_Rider": "unique_rider",
-                "Active_Ratio": "active_ratio",
-                "Month": "month",
-            }
+    if set(TRANSIT_REQUIRED_SOURCE_COLUMNS).issubset(df.columns):
+        normalized = df.loc[:, TRANSIT_REQUIRED_SOURCE_COLUMNS].rename(columns=TRANSIT_SOURCE_RENAME_MAP)
+    elif set(TRANSIT_NORMALIZED_COLUMNS).issubset(df.columns):
+        normalized = df.loc[:, TRANSIT_NORMALIZED_COLUMNS].copy()
+    else:
+        missing_source_columns = set(TRANSIT_REQUIRED_SOURCE_COLUMNS) - set(df.columns)
+        missing_normalized_columns = set(TRANSIT_NORMALIZED_COLUMNS) - set(df.columns)
+        raise Failure(
+            "Transit monthly data is missing required columns. "
+            f"Expected either source columns {sorted(TRANSIT_REQUIRED_SOURCE_COLUMNS)} "
+            f"or normalized columns {sorted(TRANSIT_NORMALIZED_COLUMNS)}. "
+            f"Missing source columns: {sorted(missing_source_columns)}. "
+            f"Missing normalized columns: {sorted(missing_normalized_columns)}."
         )
-        .copy()
-    )
+
+    normalized = normalized.copy()
     normalized["month"] = normalized["month"].map(_normalize_month_string)
-    integer_columns = ["local_bus", "rapid_transit", "total_taps", "active_rider", "unique_rider"]
+    integer_columns = [
+        "local_bus",
+        "rapid_transit",
+        "total_taps",
+        "active_rider",
+        "unique_rider",
+    ]
     normalized[integer_columns] = normalized[integer_columns].fillna(0).astype(int)
     normalized["active_ratio"] = normalized["active_ratio"].astype(float)
     normalized["source_type"] = source_type
     normalized["source_filename"] = source_filename
     normalized["downloaded_at"] = downloaded_at
+    normalized["statement_month"] = pd.Series([pd.NA] * len(normalized), dtype="string")
     normalized = normalized.sort_values("month").drop_duplicates(subset=["month"], keep="last")
     return normalized.reset_index(drop=True)
 
 
-def _process_transit_workbook(workbook_path: Path) -> dict[str, object]:
+def _process_transit_workbook(workbook_path: Path) -> list[dict[str, object]]:
     df = pd.read_excel(workbook_path, sheet_name="Invoice Detail")
     missing_columns = TRANSIT_REQUIRED_WORKBOOK_COLUMNS - set(df.columns)
     if missing_columns:
         raise Failure(f"Transit workbook is missing required columns: {sorted(missing_columns)}")
 
-    month_values = pd.to_datetime(df["Month of Use"], format="%m/%Y", errors="raise")
-    month = month_values.mode().iloc[0].strftime("%Y-%m")
-    active_rider = int(df.loc[df["Total # of Taps"] > 0, "Customer Number"].nunique())
-    unique_rider = int(df["Customer Number"].nunique())
-    active_ratio = float(active_rider / unique_rider) if unique_rider else 0.0
-    return {
-        "local_bus": int(df["Local Bus"].fillna(0).sum()),
-        "rapid_transit": int(df["Rapid Transit"].fillna(0).sum()),
-        "total_taps": int(df["Total # of Taps"].fillna(0).sum()),
-        "active_rider": active_rider,
-        "unique_rider": unique_rider,
-        "active_ratio": active_ratio,
-        "month": month,
-    }
+    df = df.copy()
+    month_values = pd.to_datetime(df["Month of Use"], format="%m/%Y", errors="coerce")
+    df = df.loc[month_values.notna()].copy()
+    if df.empty:
+        raise Failure("Transit workbook did not contain any valid `Month of Use` rows.")
+
+    df["month"] = month_values.loc[month_values.notna()].dt.strftime("%Y-%m").to_numpy()
+
+    monthly_rows: list[dict[str, object]] = []
+    for month, month_df in df.groupby("month", sort=True):
+        active_rider = int(month_df.loc[month_df["Total # of Taps"] > 0, "Customer Number"].nunique())
+        unique_rider = int(month_df["Customer Number"].nunique())
+        active_ratio = float(active_rider / unique_rider) if unique_rider else 0.0
+        monthly_rows.append(
+            {
+                "local_bus": int(month_df["Local Bus"].fillna(0).sum()),
+                "rapid_transit": int(month_df["Rapid Transit"].fillna(0).sum()),
+                "total_taps": int(month_df["Total # of Taps"].fillna(0).sum()),
+                "active_rider": active_rider,
+                "unique_rider": unique_rider,
+                "active_ratio": active_ratio,
+                "month": month,
+            }
+        )
+
+    return monthly_rows
 
 
 def _find_month_link(page, month: str):
@@ -178,7 +220,10 @@ def _download_requested_workbooks(
                 month_link.wait_for(state="visible", timeout=TRANSIT_PORTAL_TIMEOUT_MS)
                 with page.expect_download() as download_info:
                     month_link.click()
-                    page.wait_for_selector(TRANSIT_DOWNLOAD_BUTTON_SELECTOR, timeout=TRANSIT_PORTAL_TIMEOUT_MS)
+                    page.wait_for_selector(
+                        TRANSIT_DOWNLOAD_BUTTON_SELECTOR,
+                        timeout=TRANSIT_PORTAL_TIMEOUT_MS,
+                    )
                     page.click(TRANSIT_DOWNLOAD_BUTTON_SELECTOR)
 
                 download = download_info.value
@@ -234,30 +279,33 @@ def newbatch_transit_monthly(
     password = os.getenv("MBTA_TRANSIT_PASSWORD")
     if not username or not password:
         raise Failure("MBTA transit credentials are missing. Set `MBTA_TRANSIT_USERNAME` and `MBTA_TRANSIT_PASSWORD`.")
-
     requested_months = _month_range(config.start_month, config.end_month)
     logger.info(f"Downloading transit billing months: {requested_months}")
     downloaded_files = _download_requested_workbooks(requested_months, transit_browser, username, password)
 
     summaries = []
     for downloaded in downloaded_files:
-        row = _process_transit_workbook(downloaded.file_path)
-        row["source_type"] = "newbatch"
-        row["source_filename"] = downloaded.file_path.name
-        row["downloaded_at"] = datetime.now()
-        summaries.append(row)
+        downloaded_at = datetime.now()
+        rows = _process_transit_workbook(downloaded.file_path)
+        for row in rows:
+            row["source_type"] = "newbatch"
+            row["source_filename"] = downloaded.file_path.name
+            row["downloaded_at"] = downloaded_at
+            row["statement_month"] = downloaded.month
+            summaries.append(row)
         downloaded.file_path.unlink(missing_ok=True)
 
     if not summaries:
         raise Failure("No transit workbooks were downloaded for the requested months.")
 
     transit_df = pd.DataFrame(summaries)
-    transit_df = transit_df.sort_values("month").drop_duplicates(subset=["month"], keep="last").reset_index(drop=True)
+    transit_df = transit_df.sort_values(["month", "statement_month", "downloaded_at"]).reset_index(drop=True)
     return Output(
         transit_df,
         metadata={
             "requested_months": MetadataValue.json(requested_months),
-            "downloaded_month_count": len(transit_df.index),
+            "downloaded_month_count": transit_df["month"].nunique(),
+            "statement_row_count": len(transit_df.index),
         },
     )
 
@@ -266,7 +314,7 @@ dhub_transit_monthly_sync = add_dhub_sync(
     asset_name="dhub_transit_monthly_sync",
     table_key=["staging", "stg_transit_monthly"],
     config={
-        "filename": TRANSIT_HISTORY_SEARCH_TERM,
+        "filename": f"{TRANSIT_HISTORY_SEARCH_TERM}.csv",
         "project_name": TRANSIT_PROJECT_NAME,
         "description": "Merged historical and incremental MBTA transit monthly usage summary",
         "title": "MBTA Transit Monthly Summary",

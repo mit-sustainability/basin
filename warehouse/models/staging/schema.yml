@@ -163,7 +163,7 @@ models:
       - name: "total_unique"
         description: "Daily unique parker for all lots"
   - name: stg_transit_monthly
-    description: "Merged historical and portal-backed MBTA transit monthly usage summary"
+    description: "Historical MBTA monthly usage adjusted by portal-backed monthly correction rows"
     meta:
       owner: yu_cheng@mit.edu
     columns:
@@ -183,10 +183,10 @@ models:
         description: "Ratio of active riders to unique riders"
       - name: "source_type"
         description: "Data provenance marker"
-      - name: "source_filename"
-        description: "Source file name backing the monthly summary"
       - name: "downloaded_at"
         description: "Ingestion timestamp"
+      - name: "statement_month"
+        description: "Latest statement month contributing an adjustment to the usage month"
   - name: stg_purchased_goods_invoice
     description: "CPI adjusted and GHG emission enriched invoice data for purchased goods"
     meta:

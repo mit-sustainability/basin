@@ -21,6 +21,7 @@
 ## External Dependency Contract
 
 - Credentials and endpoints are supplied by environment variables, not static files.
+- Local Apple Silicon development that touches the Oracle-backed MIT warehouse resource runs through the Intel `oracle_client` Python environment so the Oracle client library can initialize reliably.
 - Data Hub-based domains rely on successful project discovery and file search before reading source files.
 - AWS-backed automation relies on S3 metadata reads, ECR image publishing, and EC2 restart commands succeeding in sequence.
 - Website content health monitoring relies on Playwright browser installation, MIT Sustainability sitemap availability, and outbound HTTPS requests for page and internal link checks.
