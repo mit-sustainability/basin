@@ -16,6 +16,7 @@ class PlaywrightBrowserResource(ConfigurableResource):
     headless: bool = True
     browser_name: str = "chromium"
     base_url: str | None = None
+    accept_downloads: bool = False
 
     @contextmanager
     def browser_context(self) -> Iterator[object]:
@@ -33,7 +34,11 @@ class PlaywrightBrowserResource(ConfigurableResource):
                 raise Failure(f"Unsupported Playwright browser `{self.browser_name}`.")
 
             browser = browser_launcher.launch(headless=self.headless)
-            context_kwargs = {"base_url": self.base_url} if self.base_url else {}
+            context_kwargs = {}
+            if self.base_url:
+                context_kwargs["base_url"] = self.base_url
+            if self.accept_downloads:
+                context_kwargs["accept_downloads"] = True
             browser_context = browser.new_context(**context_kwargs)
             try:
                 yield browser_context

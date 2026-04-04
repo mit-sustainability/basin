@@ -15,6 +15,7 @@ from orchestrator.assets import (
     business_travel,
     website_content_health,
     commuting,
+    transit,
     construction,
     food,
     parking,
@@ -71,6 +72,7 @@ campus_facility_assets = load_assets_from_modules([campus_facility])
 engagement_assets = load_assets_from_modules([engagement])
 utility_assets = load_assets_from_modules([campus_utility])
 website_content_assets = load_assets_from_modules([website_content_health])
+transit_assets = load_assets_from_modules([transit])
 
 defs = Definitions(
     assets=[mitos_dbt_assets]
@@ -86,7 +88,8 @@ defs = Definitions(
     + campus_facility_assets
     + engagement_assets
     + utility_assets
-    + website_content_assets,
+    + website_content_assets
+    + transit_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
@@ -115,5 +118,9 @@ defs = Definitions(
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
         "playwright_browser": PlaywrightBrowserResource(base_url="https://sustainability.mit.edu"),
+        "transit_browser": PlaywrightBrowserResource(
+            base_url="https://passprogram.mbta.com",
+            accept_downloads=True,
+        ),
     },
 )
