@@ -24,6 +24,7 @@
 - Local Apple Silicon development that touches the Oracle-backed MIT warehouse resource runs through the Intel `oracle_client` Python environment so the Oracle client library can initialize reliably.
 - Data Hub-based domains rely on successful project discovery and file search before reading source files.
 - AWS-backed automation relies on S3 metadata reads, ECR image publishing, and EC2 restart commands succeeding in sequence.
+- Selected heavy assets may be launched from the EC2-hosted Dagster instance into ad hoc ECS Fargate Spot tasks via Dagster Pipes. Those remote tasks must write owned Postgres tables directly and use the same environment-driven credentials contract as the EC2 service.
 - Website content health monitoring relies on Playwright browser installation, MIT Sustainability sitemap availability, and outbound HTTPS requests for page and internal link checks.
 - MBTA transit monthly monitoring relies on Playwright browser installation, MBTA portal credentials supplied by environment variables, and successful Data Hub reads and syncs for historical and merged monthly tables.
 

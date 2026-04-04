@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import md5
+import os
 from typing import Iterable
 from urllib.parse import urljoin, urlparse
 
@@ -12,14 +13,15 @@ from dagster import (
     AssetOut,
     MetadataValue,
     Output,
-    ResourceParam,
     asset,
     get_dagster_logger,
     multi_asset,
 )
+from dagster_aws.pipes import PipesECSClient
 import pandas as pd
 import requests
 
+from orchestrator.resources.ecs import build_ecs_run_task_params
 from orchestrator.resources.playwright import PlaywrightBrowserResource
 
 
@@ -631,26 +633,73 @@ def _links_output_metadata(links_df: pd.DataFrame) -> dict[str, object]:
     }
 
 
+def _website_content_health_ecs_command() -> list[str]:
+    return ["python", "-m", "orchestrator.remote_tasks.website_content_health"]
+
+
+def _extract_website_content_health_remote_metadata(
+    custom_messages: list[object],
+) -> dict[str, dict[str, object]]:
+    if not custom_messages:
+        raise RuntimeError("Remote website content health task did not report any metadata.")
+
+    latest_message = custom_messages[-1]
+    if not isinstance(latest_message, dict):
+        raise RuntimeError("Remote website content health metadata payload must be a dictionary.")
+
+    pages_metadata = latest_message.get("pages")
+    link_refs_metadata = latest_message.get("link_refs")
+    if not isinstance(pages_metadata, dict) or not isinstance(link_refs_metadata, dict):
+        raise RuntimeError(
+            "Remote website content health metadata payload must include `pages` and `link_refs` objects."
+        )
+
+    return {
+        "mit_sustainability_pages": pages_metadata,
+        "mit_sustainability_link_refs": link_refs_metadata,
+    }
+
+
+def _run_remote_website_content_health_scan(
+    context,
+    ecs_pipes_client: PipesECSClient,
+):
+    invocation = ecs_pipes_client.run(
+        context=context,
+        run_task_params=build_ecs_run_task_params(command=_website_content_health_ecs_command()),
+        pipes_container_name=os.getenv("ECS_CONTAINER_NAME"),
+    )
+    remote_metadata = _extract_website_content_health_remote_metadata(list(invocation.get_custom_messages()))
+    return invocation, remote_metadata
+
+
 @multi_asset(
     outs={
         "mit_sustainability_pages": AssetOut(io_manager_key="postgres_replace", group_name="raw"),
         "mit_sustainability_link_refs": AssetOut(io_manager_key="postgres_replace", group_name="raw"),
     },
-    compute_kind="playwright",
+    compute_kind="ecs",
 )
 def mit_sustainability_content_health(
-    playwright_browser: ResourceParam[PlaywrightBrowserResource],
+    context,
+    ecs_pipes_client: PipesECSClient,
 ):
-    pages_df, link_refs_df = _scan_site(playwright_browser)
+    invocation, remote_metadata = _run_remote_website_content_health_scan(context, ecs_pipes_client)
     yield Output(
-        value=pages_df,
+        value=None,
         output_name="mit_sustainability_pages",
-        metadata=_pages_output_metadata(pages_df),
+        metadata={
+            **remote_metadata["mit_sustainability_pages"],
+            **invocation.metadata,
+        },
     )
     yield Output(
-        value=link_refs_df,
+        value=None,
         output_name="mit_sustainability_link_refs",
-        metadata=_link_refs_output_metadata(link_refs_df),
+        metadata={
+            **remote_metadata["mit_sustainability_link_refs"],
+            **invocation.metadata,
+        },
     )
 
 

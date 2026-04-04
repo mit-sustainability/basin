@@ -4,6 +4,7 @@ dagster-graphql==1.12.22
 dagster-postgres==0.28.22
 dagster-docker==0.28.22
 dagster-aws==0.28.22
+dagster-pipes
 dagster-dbt==0.28.22
 dagster-pandas==0.28.22
 dagster-pandera==0.28.22

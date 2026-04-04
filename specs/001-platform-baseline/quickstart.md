@@ -18,7 +18,7 @@ Use this guide to inspect and verify the current platform behavior that the base
 1. Ensure environment variables for warehouse, Data Hub, and any required upstream systems are available.
 2. Run `cd orchestrator && ./run_dagster_local.sh`.
 3. Confirm Dagster loads assets, jobs, schedules, and sensors from `orchestrator/__init__.py`.
-4. For the website content health domain, verify that Dagster exposes five partitions for `website_content_health_job` and that manual materialization can target any single bucket or all five buckets.
+4. For the website content health domain, verify that the EC2-hosted Dagster instance can launch the configured ECS task definition and that the task can reach the warehouse before materializing the scan asset.
 5. For the MBTA transit monthly domain, ensure `MBTA_TRANSIT_USERNAME` and `MBTA_TRANSIT_PASSWORD` are set before running the portal-backed backfill asset.
 
 ## Verify Tests

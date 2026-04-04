@@ -7,7 +7,7 @@ from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
     PostgreConnResources,
 )
-from dagster_aws.pipes import PipesLambdaClient
+from dagster_aws.pipes import PipesECSClient, PipesLambdaClient
 from dagster_aws.s3 import S3Resource
 
 from orchestrator.assets.postgres import mitos_dbt_assets
@@ -117,6 +117,7 @@ defs = Definitions(
         "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
+        "ecs_pipes_client": PipesECSClient(client=boto3.client("ecs")),
         "playwright_browser": PlaywrightBrowserResource(base_url="https://sustainability.mit.edu"),
         "transit_browser": PlaywrightBrowserResource(
             base_url="https://passprogram.mbta.com",
