@@ -5,7 +5,7 @@ from dagster import Failure
 from orchestrator.resources.ecs import (
     DEFAULT_CAPACITY_PROVIDER_STRATEGY,
     build_ecs_run_task_params,
-    get_ecs_capacity_provider_strategy,
+    _parse_capacity_provider_strategy,
 )
 
 
@@ -20,7 +20,7 @@ def ecs_env(monkeypatch):
 
 
 def test_build_ecs_run_task_params_uses_spot_default(ecs_env):
-    params = build_ecs_run_task_params(command=["python", "-m", "orchestrator.remote_tasks.website_content_health"])
+    params = build_ecs_run_task_params(command=["python", "-m", "some.module"])
 
     assert params["cluster"] == "basin-cluster"
     assert params["taskDefinition"] == "basin-task:1"
@@ -31,27 +31,22 @@ def test_build_ecs_run_task_params_uses_spot_default(ecs_env):
     assert params["overrides"]["containerOverrides"][0]["command"] == [
         "python",
         "-m",
-        "orchestrator.remote_tasks.website_content_health",
+        "some.module",
     ]
 
 
-def test_get_ecs_capacity_provider_strategy_uses_explicit_json(monkeypatch):
-    monkeypatch.setenv(
-        "ECS_CAPACITY_PROVIDER_STRATEGY",
-        '[{"capacityProvider":"FARGATE_SPOT","weight":4},{"capacityProvider":"FARGATE","weight":1}]',
-    )
-
-    assert get_ecs_capacity_provider_strategy() == [
+def test_parse_capacity_provider_strategy_uses_explicit_json():
+    assert _parse_capacity_provider_strategy(
+        '[{"capacityProvider":"FARGATE_SPOT","weight":4},{"capacityProvider":"FARGATE","weight":1}]'
+    ) == [
         {"capacityProvider": "FARGATE_SPOT", "weight": 4},
         {"capacityProvider": "FARGATE", "weight": 1},
     ]
 
 
-def test_get_ecs_capacity_provider_strategy_rejects_invalid_json(monkeypatch):
-    monkeypatch.setenv("ECS_CAPACITY_PROVIDER_STRATEGY", "not-json")
-
+def test_parse_capacity_provider_strategy_rejects_invalid_json():
     with pytest.raises(Failure):
-        get_ecs_capacity_provider_strategy()
+        _parse_capacity_provider_strategy("not-json")
 
 
 def test_build_ecs_run_task_params_rejects_invalid_assign_public_ip(ecs_env, monkeypatch):

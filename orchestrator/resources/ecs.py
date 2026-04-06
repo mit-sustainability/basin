@@ -50,10 +50,6 @@ def _parse_capacity_provider_strategy(raw_value: str | None) -> list[dict[str, A
     return parsed_value
 
 
-def get_ecs_capacity_provider_strategy() -> list[dict[str, Any]]:
-    return _parse_capacity_provider_strategy(os.getenv("ECS_CAPACITY_PROVIDER_STRATEGY"))
-
-
 def build_ecs_run_task_params(
     *,
     command: Sequence[str],
@@ -63,10 +59,12 @@ def build_ecs_run_task_params(
     if assign_public_ip not in {"ENABLED", "DISABLED"}:
         raise Failure("`ECS_ASSIGN_PUBLIC_IP` must be either `ENABLED` or `DISABLED`.")
 
-    container_name = _require_env("ECS_CONTAINER_NAME")
+    required_values = {
+        name: _require_env(name) for name in ("ECS_CLUSTER", "ECS_TASK_DEFINITION", "ECS_CONTAINER_NAME")
+    }
     return {
-        "cluster": _require_env("ECS_CLUSTER"),
-        "taskDefinition": _require_env("ECS_TASK_DEFINITION"),
+        "cluster": required_values["ECS_CLUSTER"],
+        "taskDefinition": required_values["ECS_TASK_DEFINITION"],
         "networkConfiguration": {
             "awsvpcConfiguration": {
                 "subnets": _parse_csv_env("ECS_SUBNET_IDS"),
@@ -74,11 +72,11 @@ def build_ecs_run_task_params(
                 "assignPublicIp": assign_public_ip,
             }
         },
-        "capacityProviderStrategy": get_ecs_capacity_provider_strategy(),
+        "capacityProviderStrategy": _parse_capacity_provider_strategy(os.getenv("ECS_CAPACITY_PROVIDER_STRATEGY")),
         "overrides": {
             "containerOverrides": [
                 {
-                    "name": container_name,
+                    "name": required_values["ECS_CONTAINER_NAME"],
                     "command": list(command),
                     "environment": [dict(item) for item in environment] if environment else [],
                 }

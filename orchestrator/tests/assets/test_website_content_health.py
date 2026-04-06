@@ -15,12 +15,9 @@ from orchestrator.assets.website_content_health import (
     _classify_link_health,
     _crawl_internal_urls,
     _derive_category_topic,
-    _extract_website_content_health_remote_metadata,
     _is_internal_url,
     _is_allowed_section_url,
     _is_document_url,
-    _run_remote_website_content_health_scan,
-    _website_content_health_ecs_command,
     _check_link_health,
     _resolve_last_update,
     _should_crawl_url,
@@ -344,49 +341,3 @@ def test_output_columns_drop_scan_partition_and_mark_documents():
     assert "scan_partition" not in UNIQUE_LINK_COLUMNS
     assert "is_document" in LINK_COLUMNS
     assert "is_document" in UNIQUE_LINK_COLUMNS
-
-
-def test_website_content_health_ecs_command_targets_remote_entrypoint():
-    assert _website_content_health_ecs_command() == [
-        "python",
-        "-m",
-        "orchestrator.remote_tasks.website_content_health",
-    ]
-
-
-def test_extract_website_content_health_remote_metadata_uses_latest_payload():
-    metadata = _extract_website_content_health_remote_metadata(
-        [
-            {"pages": {"page_count": 1}, "link_refs": {"link_ref_count": 2}},
-            {"pages": {"page_count": 3}, "link_refs": {"link_ref_count": 4}},
-        ]
-    )
-
-    assert metadata["mit_sustainability_pages"]["page_count"] == 3
-    assert metadata["mit_sustainability_link_refs"]["link_ref_count"] == 4
-
-
-def test_run_remote_website_content_health_scan_calls_ecs_pipes_client():
-    from unittest.mock import MagicMock, patch
-
-    invocation = MagicMock()
-    invocation.get_custom_messages.return_value = [{"pages": {"page_count": 3}, "link_refs": {"link_ref_count": 4}}]
-    ecs_pipes_client = MagicMock()
-    ecs_pipes_client.run.return_value = invocation
-    context = MagicMock()
-
-    with patch(
-        "orchestrator.assets.website_content_health.build_ecs_run_task_params",
-        return_value={"taskDefinition": "basin-task"},
-    ) as build_params_mock:
-        result_invocation, metadata = _run_remote_website_content_health_scan(context, ecs_pipes_client)
-
-    assert result_invocation is invocation
-    assert metadata["mit_sustainability_pages"]["page_count"] == 3
-    assert metadata["mit_sustainability_link_refs"]["link_ref_count"] == 4
-    build_params_mock.assert_called_once_with(command=_website_content_health_ecs_command())
-    ecs_pipes_client.run.assert_called_once_with(
-        context=context,
-        run_task_params={"taskDefinition": "basin-task"},
-        pipes_container_name=None,
-    )

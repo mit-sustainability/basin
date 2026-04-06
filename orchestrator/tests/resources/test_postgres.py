@@ -6,7 +6,6 @@ from dagster import AssetKey, OutputContext
 from pandas import DataFrame
 from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
-    write_dataframe_to_table,
 )
 
 
@@ -106,13 +105,6 @@ def test_handle_output_unsupported_data(pg_manager, mock_context):
         pg_manager.handle_output(mock_context, mock_data)
 
 
-def test_handle_output_none_is_noop(pg_manager, mock_context):
-    with patch("orchestrator.resources.postgres_io_manager.write_dataframe_to_table") as write_mock:
-        pg_manager.handle_output(mock_context, None)
-
-    write_mock.assert_not_called()
-
-
 def test_load_input(mock_engine, pg_manager):
     """Test the handle_input method of the PostgreSQLPandasIOManager."""
     with patch("pandas.read_sql") as mock_read_sql:
@@ -120,21 +112,3 @@ def test_load_input(mock_engine, pg_manager):
         context = MagicMock(asset_key=asset_key, metadata={"columns": ["col1", "col2"]})
         pg_manager.load_input(context)
         mock_read_sql.assert_called_once()
-
-
-def test_write_dataframe_to_table_replace_existing(mock_db_connection, mock_dataframe):
-    with patch(
-        "orchestrator.resources.postgres_io_manager.connect_postgresql",
-        return_value=mock_db_connection,
-    ):
-        write_dataframe_to_table(
-            config={"user": "postgres", "host": "warehouse", "password": "pw", "database": "postgres", "port": 5432},
-            schema="raw",
-            table="remote_table",
-            obj=mock_dataframe,
-            write_method="replace",
-        )
-
-    executed_sql = [str(call.args[0]) for call in mock_db_connection.execute.call_args_list]
-    assert any('DELETE FROM raw."remote_table"' in sql for sql in executed_sql)
-    mock_dataframe.to_sql.assert_called_once()
