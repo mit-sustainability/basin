@@ -144,7 +144,10 @@ def historical_parking_daily(dhub: ResourceParam[DataHubResource]):
     df = pd.read_csv(download_links[0])
     df["date"] = pd.to_datetime(df["date"])
     logger.info(f"Loaded historical parking data till: {df.date.max()}!")
-    return df[sel_columns]
+    return Output(
+        value=df[sel_columns],
+        metadata={"last_update": MetadataValue.text(max(df.date).strftime("%Y-%m-%d"))},
+    )
 
 
 @asset(
@@ -244,7 +247,10 @@ def daily_parking_trend(
     logger.info(f"Successfully merge and predict parking trends till {df_out.ds.max()}")
     out_cols = sel_columns.copy()
     out_cols.append("trend")
-    return df_out[out_cols]
+    return Output(
+        value=df_out[out_cols],
+        metadata={"prediction_end_date": MetadataValue.text(config.prediction_end_date)},
+    )
 
 
 dhub_waste_sync = add_dhub_sync(
