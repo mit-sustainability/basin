@@ -85,7 +85,7 @@ def newbatch_parking_daily(dwrhs: MITWHRSResource):
                 AND TO_CHAR(ENTRY_DATE, 'DY', 'NLS_DATE_LANGUAGE = AMERICAN') NOT IN ('SAT', 'SUN')
             GROUP BY ENTRY_DATE, PARKING_LOT_ID
             """
-    rows = dwrhs.execute_query(query, chunksize=100000)
+    rows = dwrhs.execute_query(query, chunksize=10000)
     if len(rows) == 0:
         raise Failure("No parking data found!")
     columns = [
