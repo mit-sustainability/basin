@@ -3,6 +3,7 @@ from typing import Optional
 
 from dagster import (
     ConfigurableResource,
+    Failure,
     get_dagster_logger,
 )
 import oracledb
@@ -70,4 +71,4 @@ class MITWHRSResource(ConfigurableResource):
             return final
         except DatabaseError as e:
             logger.error(f"Fail to connect to MIT warehouse: {e}")
-            return []
+            raise Failure(f"Fail to connect to MIT warehouse: {e}") from e
