@@ -174,9 +174,8 @@ def newbatch_parking_daily(config: ParkingNewbatchConfig, dwrhs: MITWHRSResource
     return Output(
         value=df,
         metadata={
-            "last_update": MetadataValue.text(max(df.date).strftime("%Y-%m-%d")),
-            "query_start_date": MetadataValue.text(config.start_date),
-            "query_end_date": MetadataValue.text(config.end_date or ""),
+            "query_end_date": MetadataValue.text(max(df.date).strftime("%Y-%m-%d")),
+            "query_start_date": MetadataValue.text(min(df.date).strftime("%Y-%m-%d")),
         },
     )
 
