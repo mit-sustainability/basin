@@ -101,5 +101,5 @@ def test_daily_parking_trend_uses_prediction_end_date_from_config(monkeypatch):
     )
 
     assert captured["future_df"]["ds"].max() == pd.Timestamp("2025-01-15")
-    assert len(result.index) == 1
-    assert result["trend"].tolist() == [1.0]
+    assert len(result.value.index) == 1
+    assert result.value["trend"].tolist() == [1.0]
