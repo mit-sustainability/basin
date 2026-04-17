@@ -1,7 +1,7 @@
 import os
 
 import boto3
-from dagster import Definitions, load_assets_from_modules
+from dagster import Definitions, resource, load_assets_from_modules
 from dagster_dbt import DbtCliResource
 from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
@@ -74,6 +74,17 @@ utility_assets = load_assets_from_modules([campus_utility])
 website_content_assets = load_assets_from_modules([website_content_health])
 transit_assets = load_assets_from_modules([transit])
 
+
+@resource
+def lambda_pipes_client_resource():
+    return PipesLambdaClient(client=boto3.client("lambda"))
+
+
+@resource
+def ecs_pipes_client_resource():
+    return PipesECSClient(client=boto3.client("ecs"))
+
+
 defs = Definitions(
     assets=[mitos_dbt_assets]
     + construction_assets
@@ -116,8 +127,8 @@ defs = Definitions(
         "dhub": DataHubResource(auth_token=dh_api_key),
         "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
-        "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
-        "ecs_pipes_client": PipesECSClient(client=boto3.client("ecs")),
+        "lambda_pipes_client": lambda_pipes_client_resource,
+        "ecs_pipes_client": ecs_pipes_client_resource,
         "playwright_browser": PlaywrightBrowserResource(base_url="https://sustainability.mit.edu"),
         "transit_browser": PlaywrightBrowserResource(
             base_url="https://passprogram.mbta.com",
