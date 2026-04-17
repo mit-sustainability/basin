@@ -1,13 +1,13 @@
 import os
 
 import boto3
-from dagster import Definitions, load_assets_from_modules, resource
+from dagster import Definitions, resource, load_assets_from_modules
 from dagster_dbt import DbtCliResource
 from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
     PostgreConnResources,
 )
-from dagster_aws.pipes import PipesLambdaClient
+from dagster_aws.pipes import PipesECSClient, PipesLambdaClient
 from dagster_aws.s3 import S3Resource
 
 from orchestrator.assets.postgres import mitos_dbt_assets
@@ -76,8 +76,13 @@ transit_assets = load_assets_from_modules([transit])
 
 
 @resource
-def lambda_pipes_client_resource() -> PipesLambdaClient:
+def lambda_pipes_client_resource():
     return PipesLambdaClient(client=boto3.client("lambda"))
+
+
+@resource
+def ecs_pipes_client_resource():
+    return PipesECSClient(client=boto3.client("ecs"))
 
 
 defs = Definitions(
@@ -123,6 +128,7 @@ defs = Definitions(
         "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": lambda_pipes_client_resource,
+        "ecs_pipes_client": ecs_pipes_client_resource,
         "playwright_browser": PlaywrightBrowserResource(base_url="https://sustainability.mit.edu"),
         "transit_browser": PlaywrightBrowserResource(
             base_url="https://passprogram.mbta.com",

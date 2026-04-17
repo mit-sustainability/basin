@@ -24,6 +24,9 @@
 - Local Apple Silicon development that touches the Oracle-backed MIT warehouse resource runs through the Intel `oracle_client` Python environment so the Oracle client library can initialize reliably.
 - Data Hub-based domains rely on successful project discovery and file search before reading source files.
 - AWS-backed automation relies on S3 metadata reads, ECR image publishing, and EC2 restart commands succeeding in sequence.
+- Selected heavy assets may be launched from the EC2-hosted Dagster instance into ad hoc ECS Fargate Spot tasks via Dagster Pipes. Those remote tasks must write owned Postgres tables directly and use the same environment-driven credentials contract as the EC2 service.
+- `purchased_goods_invoice` is controlled directly by its Dagster `InvoiceConfig`. The asset config selects `execution_mode` (`local` or `ecs`) and `write_mode` (`append` or `replace`) for that run without relying on separate environment-variable defaults.
+- `purchased_goods_invoice` no longer depends on a static Dagster Postgres IO manager write mode. Both local and ECS execution paths write the owned raw table through the same explicit Postgres contract so `append` versus `replace` stays aligned.
 - Website content health monitoring relies on Playwright browser installation, MIT Sustainability sitemap availability, and outbound HTTPS requests for page and internal link checks.
 - MBTA transit monthly monitoring relies on Playwright browser installation, MBTA portal credentials supplied by environment variables, and successful Data Hub reads and syncs for historical and merged monthly tables.
 
