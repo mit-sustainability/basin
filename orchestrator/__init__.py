@@ -1,15 +1,15 @@
 import os
 
 import boto3
-from dagster import Definitions, load_assets_from_modules
+from dagster import Definitions, load_assets_from_modules, resource
 from dagster_dbt import DbtCliResource
+from dagster_aws.pipes import PipesECSClient, PipesLambdaClient
+from dagster_aws.s3 import S3Resource
+
 from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
     PostgreConnResources,
 )
-from dagster_aws.pipes import PipesLambdaClient
-from dagster_aws.s3 import S3Resource
-
 from orchestrator.assets.postgres import mitos_dbt_assets
 from orchestrator.assets import (
     business_travel,
@@ -27,7 +27,6 @@ from orchestrator.assets import (
     engagement,
     campus_utility,
 )
-
 from orchestrator.jobs.business_travel_job import business_asset_job
 from orchestrator.jobs.confluence_wiki_snapshot import confluence_wiki_snapshot_job
 from orchestrator.jobs.website_content_health import (
@@ -76,6 +75,36 @@ engagement_assets = load_assets_from_modules([engagement])
 utility_assets = load_assets_from_modules([campus_utility])
 website_content_assets = load_assets_from_modules([website_content_health])
 
+
+@resource
+def lambda_pipes_client_resource():
+    return PipesLambdaClient(client=boto3.client("lambda"))
+
+
+@resource
+def ecs_pipes_client_resource():
+    return PipesECSClient(client=boto3.client("ecs"))
+
+
+resources = {
+    "dbt": DbtCliResource(project_dir=os.fspath(dbt_project_dir)),
+    "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
+    "postgres_append": PostgreSQLPandasIOManager(**PG_CREDENTIALS, write_method="append"),
+    "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
+    "em_connect": PostgreConnResources(**EM_CREDENTIALS),
+    "dhub": DataHubResource(auth_token=dh_api_key),
+    "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
+    "confluence": ConfluenceResource(
+        base_url=os.getenv("CONFLUENCE_BASE_URL", "https://wikis.mit.edu/confluence"),
+        auth_token=os.getenv("CONFLUENCE_PAT", ""),
+        space_key=os.getenv("CONFLUENCE_SPACE_KEY", "MITOS"),
+    ),
+    "s3": S3Resource(region_name="us-east-1"),
+    "lambda_pipes_client": lambda_pipes_client_resource,
+    "playwright_browser": PlaywrightBrowserResource(base_url="https://sustainability.mit.edu"),
+    "ecs_pipes_client": ecs_pipes_client_resource,
+}
+
 defs = Definitions(
     assets=[mitos_dbt_assets]
     + construction_assets
@@ -110,21 +139,5 @@ defs = Definitions(
         website_content_health_link_check_job,
     ],
     sensors=[sensor_ghg_manual],
-    resources={
-        "dbt": DbtCliResource(project_dir=os.fspath(dbt_project_dir)),
-        "postgres_replace": PostgreSQLPandasIOManager(**PG_CREDENTIALS),
-        "postgres_append": PostgreSQLPandasIOManager(**PG_CREDENTIALS, write_method="append"),
-        "pg_engine": PostgreConnResources(**PG_CREDENTIALS),
-        "em_connect": PostgreConnResources(**EM_CREDENTIALS),
-        "dhub": DataHubResource(auth_token=dh_api_key),
-        "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
-        "confluence": ConfluenceResource(
-            base_url=os.getenv("CONFLUENCE_BASE_URL", "https://wikis.mit.edu/confluence"),
-            auth_token=os.getenv("CONFLUENCE_PAT", ""),
-            space_key=os.getenv("CONFLUENCE_SPACE_KEY", "MITOS"),
-        ),
-        "s3": S3Resource(region_name="us-east-1"),
-        "lambda_pipes_client": PipesLambdaClient(client=boto3.client("lambda")),
-        "playwright_browser": PlaywrightBrowserResource(base_url="https://sustainability.mit.edu"),
-    },
+    resources=resources,
 )

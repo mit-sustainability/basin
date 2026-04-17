@@ -7,6 +7,10 @@ A river basin consists of many streams...
 - `warehouse` -> DBT project which builds our BigQuery data warehouse
 - `orchestrator` -> Dagster Assets/Schedules/Dockerfile
 
+## Repository Highlights
+- `orchestrator/assets/website_content_health.py` crawls `https://sustainability.mit.edu` into raw page snapshot and hyperlink health tables for scheduled monitoring.
+- `orchestrator/assets/confluence_wiki.py` snapshots the MITOS Confluence space into `raw.confluence_mitos_pages`, preserving storage XHTML plus normalized markdown for downstream RAG ingestion.
+
 ## Environment Setup
 1. Install Python 3.11.5 and create virtual environment:
    1. Install pyenv and pyenv-virtualenv to manage python versions and virtual environments `brew install pyenv pyenv-virtualenv` (See [pyenv](https://github.com/pyenv/pyenv) for details)

@@ -4,6 +4,7 @@ import pytest
 from dagster import Failure
 import requests
 
+from orchestrator.resources import confluence as confluence_module
 from orchestrator.resources.confluence import ConfluenceResource
 
 
@@ -59,7 +60,7 @@ def test_confluence_list_pages_flattens_paginated_api_results():
         },
     ]
 
-    with patch.object(resource, "_request_json", side_effect=paginated_responses) as request_mock:
+    with patch.object(ConfluenceResource, "_request_json", side_effect=paginated_responses) as request_mock:
         pages = resource.list_pages()
 
     # The resource should treat the two paginated responses as one logical page list.
@@ -74,6 +75,13 @@ def test_confluence_request_errors_raise_failure():
     response = Mock()
     response.raise_for_status.side_effect = requests.HTTPError("boom")
 
-    with patch("orchestrator.resources.confluence.requests.get", return_value=response):
+    with patch.object(confluence_module.requests, "get", return_value=response):
         with pytest.raises(Failure):
             resource._request_json("/rest/api/content", params={})
+
+
+def test_confluence_request_validates_required_configuration():
+    resource = ConfluenceResource(auth_token="", base_url="https://wikis.mit.edu/confluence", space_key="MITOS")
+
+    with pytest.raises(Failure, match="CONFLUENCE_PAT"):
+        resource._request_json("/rest/api/content", params={})

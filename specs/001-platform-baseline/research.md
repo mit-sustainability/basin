@@ -47,6 +47,7 @@
 ### Deployment and publishing
 
 - `.github/workflows/build-and-deploy.yaml` builds the Dagster image, pushes it to ECR, copies `docker-compose.yaml` to EC2, pulls environment variables from AWS Secrets Manager, and restarts the service.
+- The EC2-hosted deployment can selectively launch ad hoc ECS tasks for heavy assets because `dagster-aws` includes `PipesECSClient`; this is a better fit than `EcsRunLauncher` when only some workloads should leave EC2.
 - `.github/workflows/build-docs.yaml` installs dbt, generates docs, customizes the generated site, and deploys it to GitHub Pages.
 - Some Dagster assets also sync processed data back to MIT Data Hub via helper-generated assets such as the food sync path.
 

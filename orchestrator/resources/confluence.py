@@ -32,6 +32,22 @@ class ConfluenceResource(ConfigurableResource):
     page_limit: int = 100
     timeout_seconds: int = 30
 
+    def _validate_configuration(self) -> None:
+        missing_env_vars = [
+            env_var
+            for field_value, env_var in (
+                (self.base_url, "CONFLUENCE_BASE_URL"),
+                (self.auth_token, "CONFLUENCE_PAT"),
+                (self.space_key, "CONFLUENCE_SPACE_KEY"),
+            )
+            if not (field_value or "").strip()
+        ]
+        if missing_env_vars:
+            missing_vars = ", ".join(missing_env_vars)
+            raise Failure(
+                "Confluence configuration is incomplete. " f"Set the required environment variable(s): {missing_vars}."
+            )
+
     def _headers(self) -> dict[str, str]:
         """Confluence PATs are sent as bearer tokens."""
 
@@ -41,6 +57,7 @@ class ConfluenceResource(ConfigurableResource):
         }
 
     def _request_json(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
+        self._validate_configuration()
         url = f"{self.base_url.rstrip('/')}{path}"
         try:
             response = requests.get(

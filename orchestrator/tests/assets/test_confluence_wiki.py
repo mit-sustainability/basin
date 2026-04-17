@@ -28,6 +28,30 @@ def test_storage_to_markdown_strips_macros_and_rewrites_links():
     assert "- Alpha" in markdown
 
 
+def test_storage_to_markdown_keeps_text_inside_non_toc_macros_and_layout_wrappers():
+    converter = ConfluenceStorageToMarkdown(base_url="https://wikis.mit.edu/confluence")
+
+    markdown = converter.convert(
+        """
+        <ac:layout>
+          <ac:layout-section>
+            <ac:layout-cell>
+              <p>Panel intro</p>
+              <ac:structured-macro ac:name="expand">
+                <ac:parameter ac:name="title">Details</ac:parameter>
+                <ac:rich-text-body><p>Hidden body</p></ac:rich-text-body>
+              </ac:structured-macro>
+            </ac:layout-cell>
+          </ac:layout-section>
+        </ac:layout>
+        """
+    )
+
+    assert "Panel intro" in markdown
+    assert "Details" in markdown
+    assert "Hidden body" in markdown
+
+
 def test_build_confluence_snapshot_refreshes_changed_pages_and_reuses_existing_rows():
     synced_at = datetime(2026, 4, 2, tzinfo=timezone.utc)
     pages = [

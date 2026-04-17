@@ -38,7 +38,8 @@ CONFLUENCE_SNAPSHOT_COLUMNS = [
     "version",
     "synced_at",
 ]
-SKIPPED_BLOCK_TAGS = {"ac:structured-macro", "ac:layout", "ac:layout-section", "ac:layout-cell"}
+FULLY_SKIPPED_MACRO_NAMES = {"toc"}
+WRAPPER_BLOCK_TAGS = {"ac:layout", "ac:layout-section", "ac:layout-cell"}
 BLOCK_TAGS = {"p", "div", "section", "article", "table", "tr"}
 LIST_TAGS = {"ul", "ol"}
 HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
@@ -85,15 +86,18 @@ class ConfluenceStorageToMarkdown(HTMLParser):
         return markdown.strip()
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
-        if tag in SKIPPED_BLOCK_TAGS:
+        attr_map = dict(attrs)
+        if tag == "ac:structured-macro" and attr_map.get("ac:name") in FULLY_SKIPPED_MACRO_NAMES:
             self.skip_stack.append(tag)
             return
         if self.skip_stack:
             return
 
-        attr_map = dict(attrs)
         if tag in HEADING_TAGS:
             self._start_heading(tag)
+            return
+        if tag in WRAPPER_BLOCK_TAGS:
+            self._ensure_block_break()
             return
         if tag in BLOCK_TAGS:
             self._ensure_block_break()
@@ -128,7 +132,7 @@ class ConfluenceStorageToMarkdown(HTMLParser):
                 self.skip_stack.pop()
             return
 
-        if tag in HEADING_TAGS | BLOCK_TAGS | BLOCK_PREFIXES.keys():
+        if tag in HEADING_TAGS | BLOCK_TAGS | WRAPPER_BLOCK_TAGS | BLOCK_PREFIXES.keys():
             self._ensure_block_break()
             return
         if tag in INLINE_MARKERS:

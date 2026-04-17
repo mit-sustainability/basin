@@ -6,18 +6,22 @@ Use this guide to inspect and verify the current platform behavior that the base
 
 ## Local Setup
 
-1. Install Python 3.11.5 and create a virtual environment.
-2. Run `pip install --upgrade pip`.
-3. Run `make setup-dev` from the repository root.
-4. If you need to run the website content scan locally, run `playwright install chromium` after Python dependencies are installed.
+1. On Apple Silicon, ensure Rosetta is installed because the Oracle-backed local runtime uses an Intel (`x86_64`) Python process.
+2. Install Python 3.11.5 and create the `oracle_client` pyenv virtual environment.
+3. Open the repository root in VS Code so the workspace settings select the Intel terminal profile and `oracle_client` interpreter automatically.
+4. Run `pip install --upgrade pip`.
+5. Run `make setup-dev` from the repository root.
+6. `make setup-dev` installs dbt, Dagster, the editable orchestrator package, and `playwright install chromium`.
 
 ## Verify the Orchestrator
 
 1. Ensure environment variables for warehouse, Data Hub, and any required upstream systems are available.
 2. Run `cd orchestrator && ./run_dagster_local.sh`.
 3. Confirm Dagster loads assets, jobs, schedules, and sensors from `orchestrator/__init__.py`.
-4. For the website content health domain, verify that Dagster exposes five partitions for `website_content_health_job` and that manual materialization can target any single bucket or all five buckets.
-5. For the Confluence wiki domain, set `CONFLUENCE_BASE_URL`, `CONFLUENCE_PAT`, and optionally `CONFLUENCE_SPACE_KEY`, then materialize `confluence_wiki_snapshot_job` to populate `raw.confluence_mitos_pages`.
+4. For `purchased_goods_invoice`, choose `execution_mode` and `write_mode` from the Dagster launchpad or run config for the specific materialization you want to run.
+5. If selective ECS offload is enabled, verify that the EC2-hosted Dagster instance can launch the configured ECS task definition and that the task can reach the warehouse before materializing an offloaded asset.
+6. For the website content health domain, verify that Dagster exposes five partitions for `website_content_health_job` and that manual materialization can target any single bucket or all five buckets.
+7. For the Confluence wiki domain, set `CONFLUENCE_BASE_URL`, `CONFLUENCE_PAT`, and optionally `CONFLUENCE_SPACE_KEY`, then materialize `confluence_wiki_snapshot_job` to populate `raw.confluence_mitos_pages`.
 
 ## Verify Tests
 
