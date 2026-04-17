@@ -29,6 +29,7 @@
 - `purchased_goods_invoice` is controlled directly by its Dagster `InvoiceConfig`. The asset config selects `execution_mode` (`local` or `ecs`) and `write_mode` (`append` or `replace`) for that run without relying on separate environment-variable defaults.
 - `purchased_goods_invoice` no longer depends on a static Dagster Postgres IO manager write mode. Both local and ECS execution paths write the owned raw table through the same explicit Postgres contract so `append` versus `replace` stays aligned.
 - Website content health monitoring relies on Playwright browser installation, MIT Sustainability sitemap availability, and outbound HTTPS requests for page and internal link checks.
+- MBTA transit monthly monitoring relies on Playwright browser installation, MBTA portal credentials supplied by environment variables, and successful Data Hub reads and syncs for historical and merged monthly tables.
 
 ## Documentation Contract
 
