@@ -1,7 +1,7 @@
 import os
 
 import boto3
-from dagster import Definitions, load_assets_from_modules
+from dagster import Definitions, load_assets_from_modules, resource
 from dagster_dbt import DbtCliResource
 from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
@@ -73,6 +73,12 @@ engagement_assets = load_assets_from_modules([engagement])
 utility_assets = load_assets_from_modules([campus_utility])
 website_content_assets = load_assets_from_modules([website_content_health])
 transit_assets = load_assets_from_modules([transit])
+
+
+@resource
+def lambda_pipes_client_resource() -> PipesLambdaClient:
+    return PipesLambdaClient(client=boto3.client("lambda"))
+
 
 defs = Definitions(
     assets=[mitos_dbt_assets]
