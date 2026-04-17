@@ -8,7 +8,7 @@ setup(
         "dagster==1.12.22",
         "dagster-aws==0.28.22",
         "dagster-dbt==0.28.22",
-        "dagster-pipes",
+        "dagster-pipes==1.12.22",
         "dagster-pandas==0.28.22",
         "dagster-pandera==0.28.22",
         "dagster-postgres==0.28.22",

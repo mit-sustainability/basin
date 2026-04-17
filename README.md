@@ -6,7 +6,7 @@ A river basin consists of many streams...
 - `.github` -> Github Actions workflows
 - `warehouse` -> DBT project which builds our PostgreSQL warehouse layers
 - `orchestrator` -> Dagster Assets/Schedules/Dockerfile
-- `orchestrator/pipes` -> Thin ECS Dagster Pipes entrypoints for assets that support remote execution; see [orchestrator/pipes/README.md](/Users/yucheng/Documents/Projects/basin/orchestrator/pipes/README.md)
+- `orchestrator/pipes` -> Thin ECS Dagster Pipes entrypoints for assets that support remote execution; see [orchestrator/pipes/README.md](./orchestrator/pipes/README.md)
 
 ## Environment Setup
 1. On Apple Silicon, install Rosetta because the Oracle-backed local runtime needs an Intel (`x86_64`) Python process:

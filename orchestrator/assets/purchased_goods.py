@@ -11,10 +11,7 @@ from dagster import (
     MaterializeResult,
 )
 from dagster_aws.pipes import PipesECSClient
-from dagster_pandera import pandera_schema_to_dagster_type
 import pandas as pd
-import pandera as pa
-from pandera.typing import Series, DateTime, Float
 from sqlalchemy import text
 
 from orchestrator.assets.utils import (
@@ -33,28 +30,6 @@ PURCHASED_GOODS_INVOICE_ECS_COMMAND = [
     "orchestrator.pipes.purchased_goods_invoice",
 ]
 PURCHASED_GOODS_INVOICE_TABLE = "purchased_goods_invoice"
-
-
-class InvoiceSchema(pa.DataFrameModel):
-    sap_invoice_number: Series[Float] = pa.Field(description="SAP Invoice Number", nullable=True)
-    invoice_number: Series[str] = pa.Field(description="Invoice Number", nullable=True)
-    invoice_date: Series[DateTime] = pa.Field(description="Date of Invoice")
-    header_status: Series[str] = pa.Field(description="Status of the Invoice Header")
-    po_number: Series[Float] = pa.Field(description="Purchase Order Number", nullable=True)
-    po_order_date: Series[DateTime] = pa.Field(description="Purchase Order Date", nullable=True)
-    po_status: Series[str] = pa.Field(description="Status of the Purchase Order", nullable=True)
-    commodity: Series[str] = pa.Field(description="Commodity Type", nullable=True)
-    po_line_commodity: Series[str] = pa.Field(description="Commodity Type at PO Line", nullable=True)
-    category: Series[str] = pa.Field(description="Category of the Item", nullable=True)
-    line_number: Series[int] = pa.Field(description="Line Number")
-    total: Series[float] = pa.Field(description="Total Amount")
-    po_line_number: Series[Float] = pa.Field(description="Purchase Order Line Number", nullable=True)
-    po_line_total: Series[float] = pa.Field(description="Total at PO Line")
-    description: Series[str] = pa.Field(description="Description of the Item", nullable=True)
-    supplier: Series[str] = pa.Field(description="Supplier Name", nullable=True)
-    supplier_number: Series[Float] = pa.Field(description="Supplier Number", nullable=True)
-    billing: Series[str] = pa.Field(description="Billing Description")
-    cost_object: Series[str] = pa.Field(description="Cost Object ID", nullable=True)
 
 
 def parse_billing(row: pd.Series):
@@ -137,7 +112,7 @@ def load_purchased_goods_invoice_data(
     config: InvoiceConfig,
     dhub: DataHubResource,
 ) -> tuple[pd.DataFrame, dict[str, float | int]]:
-    """Load and validate purchased goods invoice data before it is materialized."""
+    """Load purchased goods invoice data before it is materialized."""
     project_id = dhub.get_project_id("Scope3 Purchased Goods")
     logger.info(f"Found project id: {project_id}!")
     dfs = []
@@ -188,8 +163,7 @@ def load_purchased_goods_invoice_data(
         logger.error(error_msg)
         raise Failure(error_msg)
 
-    validated = InvoiceSchema.validate(combined)
-    return validated, metadata
+    return combined, metadata
 
 
 def write_purchased_goods_invoice_to_postgres(df: pd.DataFrame, write_mode: str) -> None:
@@ -240,7 +214,6 @@ def run_purchased_goods_invoice_on_ecs(
 @asset(
     compute_kind="python",
     group_name="raw",
-    dagster_type=pandera_schema_to_dagster_type(InvoiceSchema),
 )
 def purchased_goods_invoice(
     context: AssetExecutionContext,
@@ -248,7 +221,7 @@ def purchased_goods_invoice(
     dhub: ResourceParam[DataHubResource],
     ecs_pipes_client: PipesECSClient,
 ):
-    """This asset ingest the specified pruchased goods invoice files
+    """This asset ingests the specified purchased goods invoice files
     from the Data Hub"""
     if config.execution_mode == "ecs":
         return run_purchased_goods_invoice_on_ecs(context, config, ecs_pipes_client)
