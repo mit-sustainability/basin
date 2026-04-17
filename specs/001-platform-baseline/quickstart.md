@@ -20,7 +20,8 @@ Use this guide to inspect and verify the current platform behavior that the base
 3. Confirm Dagster loads assets, jobs, schedules, and sensors from `orchestrator/__init__.py`.
 4. For `purchased_goods_invoice`, choose `execution_mode` and `write_mode` from the Dagster launchpad or run config for the specific materialization you want to run.
 5. If selective ECS offload is enabled, verify that the EC2-hosted Dagster instance can launch the configured ECS task definition and that the task can reach the warehouse before materializing an offloaded asset.
-6. For the MBTA transit monthly domain, ensure `MBTA_TRANSIT_USERNAME` and `MBTA_TRANSIT_PASSWORD` are set before running the portal-backed backfill asset.
+6. For the website content health domain, verify that Dagster exposes five partitions for `website_content_health_job` and that manual materialization can target any single bucket or all five buckets.
+7. For the Confluence wiki domain, set `CONFLUENCE_BASE_URL`, `CONFLUENCE_PAT`, and optionally `CONFLUENCE_SPACE_KEY`, then materialize `confluence_wiki_snapshot_job` to populate `raw.confluence_mitos_pages`.
 
 ## Verify Tests
 

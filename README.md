@@ -8,6 +8,10 @@ A river basin consists of many streams...
 - `orchestrator` -> Dagster Assets/Schedules/Dockerfile
 - `orchestrator/pipes` -> Thin ECS Dagster Pipes entrypoints for assets that support remote execution; see [orchestrator/pipes/README.md](./orchestrator/pipes/README.md)
 
+## Repository Highlights
+- `orchestrator/assets/website_content_health.py` crawls `https://sustainability.mit.edu` into raw page snapshot and hyperlink health tables for scheduled monitoring.
+- `orchestrator/assets/confluence_wiki.py` snapshots the MITOS Confluence space into `raw.confluence_mitos_pages`, preserving storage XHTML plus normalized markdown for downstream RAG ingestion.
+
 ## Environment Setup
 1. On Apple Silicon, install Rosetta because the Oracle-backed local runtime needs an Intel (`x86_64`) Python process:
    1. `softwareupdate --install-rosetta --agree-to-license`

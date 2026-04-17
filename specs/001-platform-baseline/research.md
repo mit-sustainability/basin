@@ -20,6 +20,7 @@
   - MIT warehouse resource
   - AWS S3 resource
   - AWS Lambda Pipes client
+  - Confluence REST resource for MITOS wiki snapshot ingestion
 
 ### Warehouse runtime
 
@@ -70,6 +71,7 @@
   - MIT warehouse credentials
   - energy management warehouse credentials
   - food categorization API endpoint
+  - Confluence base URL, PAT, and space key for wiki extraction
 - The website content health scan also depends on Playwright browser binaries and outbound HTTPS access to `https://sustainability.mit.edu`.
 - `orchestrator/constants.py` can parse the dbt project on load when `DAGSTER_DBT_PARSE_PROJECT_ON_LOAD` is set.
 - PostgreSQL writes are managed through an IO manager that treats asset keys as schema and table names and supports `replace` or `append` semantics.

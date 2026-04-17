@@ -1,18 +1,20 @@
 import os
 
 import boto3
-from dagster import Definitions, resource, load_assets_from_modules
+from dagster import Definitions, load_assets_from_modules, resource
 from dagster_dbt import DbtCliResource
+from dagster_aws.pipes import PipesECSClient, PipesLambdaClient
+from dagster_aws.s3 import S3Resource
+
 from orchestrator.resources.postgres_io_manager import (
     PostgreSQLPandasIOManager,
     PostgreConnResources,
 )
-from dagster_aws.pipes import PipesECSClient, PipesLambdaClient
-from dagster_aws.s3 import S3Resource
 
 from orchestrator.assets.postgres import mitos_dbt_assets
 from orchestrator.assets import (
     business_travel,
+    confluence_wiki,
     website_content_health,
     commuting,
     transit,
@@ -27,8 +29,8 @@ from orchestrator.assets import (
     engagement,
     campus_utility,
 )
-
 from orchestrator.jobs.business_travel_job import business_asset_job
+from orchestrator.jobs.confluence_wiki_snapshot import confluence_wiki_snapshot_job
 from orchestrator.jobs.website_content_health import (
     website_content_health_job,
     website_content_health_link_check_job,
@@ -51,6 +53,7 @@ from orchestrator.constants import (
     dh_api_key,
 )
 from orchestrator.resources.datahub import DataHubResource
+from orchestrator.resources.confluence import ConfluenceResource
 from orchestrator.resources.mit_warehouse import MITWHRSResource
 from orchestrator.resources.playwright import PlaywrightBrowserResource
 from orchestrator.schedules.mitos_warehouse import schedules
@@ -61,6 +64,7 @@ from orchestrator.sensors.s3_bucket import sensor_ghg_manual
 
 construction_assets = load_assets_from_modules([construction])
 business_travel_assets = load_assets_from_modules([business_travel])
+confluence_wiki_assets = load_assets_from_modules([confluence_wiki])
 waste_assets = load_assets_from_modules([waste])
 commuting_assets = load_assets_from_modules([commuting])
 parking_assets = load_assets_from_modules([parking])
@@ -89,6 +93,7 @@ defs = Definitions(
     assets=[mitos_dbt_assets]
     + construction_assets
     + business_travel_assets
+    + confluence_wiki_assets
     + waste_assets
     + commuting_assets
     + parking_assets
@@ -104,6 +109,7 @@ defs = Definitions(
     schedules=schedules,
     jobs=[
         business_asset_job,
+        confluence_wiki_snapshot_job,
         construction_asset_job,
         waste_asset_job,
         commuting_asset_job,
