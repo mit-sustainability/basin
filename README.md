@@ -16,8 +16,8 @@ A river basin consists of many streams...
    2. `pyenv install 3.11.5`
    3. `pyenv virtualenv 3.11.5 oracle_client`
 3. Open the repository root in VS Code.
-   1. [`.vscode/settings.json`](/Users/yucheng/Documents/Projects/basin/.vscode/settings.json) starts the integrated terminal under Rosetta and points the Python extension at `~/.pyenv/versions/oracle_client/bin/python`.
-   2. [`.python-version`](/Users/yucheng/Documents/Projects/basin/.python-version) keeps `pyenv` on `oracle_client` in shells that load `pyenv init`.
+   1. [`.vscode/settings.json`](./.vscode/settings.json) starts the integrated terminal under Rosetta and points the Python extension at `~/.pyenv/versions/oracle_client/bin/python`.
+   2. [`.python-version`](./.python-version) keeps `pyenv` on `oracle_client` in shells that load `pyenv init`.
 4. Inside that environment, run `python -m pip install --upgrade pip`.
 5. Run `make setup-dev` from the repository root to install dbt, Dagster, the editable orchestrator package, and Playwright Chromium.
 
