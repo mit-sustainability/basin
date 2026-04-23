@@ -132,6 +132,11 @@ defs = Definitions(
         "em_connect": PostgreConnResources(**EM_CREDENTIALS),
         "dhub": DataHubResource(auth_token=dh_api_key),
         "dwrhs": MITWHRSResource(**DWRHS_CREDENTIALS),
+        "confluence": ConfluenceResource(
+            auth_token=os.getenv("CONFLUENCE_PAT", ""),
+            base_url=os.getenv("CONFLUENCE_BASE_URL", "https://wikis.mit.edu/confluence"),
+            space_key=os.getenv("CONFLUENCE_SPACE_KEY", "MITOS"),
+        ),
         "s3": S3Resource(region_name="us-east-1"),
         "lambda_pipes_client": lambda_pipes_client_resource,
         "ecs_pipes_client": ecs_pipes_client_resource,
