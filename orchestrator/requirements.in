@@ -9,7 +9,9 @@ dagster-dbt==0.28.22
 dagster-pandas==0.28.22
 dagster-pandera==0.28.22
 distributed
-pandas
+pandas==2.2.3
+numpy==1.26.4
+prophet==1.2.2
 pandera
 pyarrow
 requests
