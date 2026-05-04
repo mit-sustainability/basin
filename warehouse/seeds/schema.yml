@@ -3,10 +3,6 @@ version: 2
 seeds:
   - name: parking_tracked_lots
     description: "Approved parking lot IDs published by the parking staging model."
-    config:
-      meta:
-        dagster:
-          group: raw
     columns:
       - name: parking_lot
         description: "Parking lot ID included in the published parking contract. 1042 available after 2021-06-23, 1046 available after 2024-12-02."
