@@ -136,7 +136,7 @@ models:
       - name: mtco2
         description: "Anual equivalent CO2 emission in metric tons"
   - name: stg_parking_daily
-    description: "Merged parking data from selected lots"
+    description: "Merged parking data from the seed-backed published lot contract"
     meta:
       owner: yu_cheng@mit.edu
     columns:
@@ -160,8 +160,12 @@ models:
         description: "Daily unique parker for lot 1037"
       - name: "unique_1038"
         description: "Daily unique parker for lot 1038"
+      - name: "unique_1042"
+        description: "Daily unique parker for lot 1042"
+      - name: "unique_1046"
+        description: "Daily unique parker for lot 1046"
       - name: "total_unique"
-        description: "Daily unique parker for all lots"
+        description: "Daily unique parker for all published tracked lots"
   - name: stg_transit_monthly
     description: "Historical MBTA monthly usage adjusted by portal-backed monthly correction rows"
     meta:

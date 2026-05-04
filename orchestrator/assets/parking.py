@@ -39,6 +39,8 @@ sel_columns = [
     "unique_1038",
     "total_unique",
 ]
+# TODO: When historical parking backfill confirms first-available dates for lots 1042/1046,
+# extend sel_columns and historical_parking_daily to carry those columns end-to-end.
 
 
 class ParkingNewbatchData(pa.DataFrameModel):

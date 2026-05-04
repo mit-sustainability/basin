@@ -288,7 +288,7 @@ sources:
           - name: "year"
             description: "Year of the survey"
       - name: historical_parking_daily
-        description: "Parking data till June 25 2021"
+        description: "Historical wide parking data from Data Hub used as the legacy backfill source"
         meta:
           dagster:
             asset_key: ["historical_parking_daily"]
@@ -316,7 +316,7 @@ sources:
           - name: "total_unique"
             description: "Daily unique parker for all lots"
       - name: newbatch_parking_daily
-        description: "New daily parking activity since 2023 June 25"
+        description: "Daily parking activity queried from MIT Warehouse before staging-model lot filtering"
         meta:
           dagster:
             asset_key: ["newbatch_parking_daily"]
