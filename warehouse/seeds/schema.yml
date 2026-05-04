@@ -1,0 +1,15 @@
+version: 2
+
+seeds:
+  - name: parking_tracked_lots
+    description: "Approved parking lot IDs published by the parking staging model."
+    config:
+      meta:
+        dagster:
+          group: raw
+    columns:
+      - name: parking_lot
+        description: "Parking lot ID included in the published parking contract."
+        data_tests:
+          - unique
+          - not_null
