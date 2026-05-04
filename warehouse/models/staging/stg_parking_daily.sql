@@ -21,7 +21,7 @@ lot_total AS (
         SUM(CASE WHEN t.parking_lot = '1046' THEN source."unique" ELSE 0 END) AS unique_1046,
         SUM(source."unique") AS total_unique
     FROM {{ source('raw', 'newbatch_parking_daily') }} AS source
-    INNER JOIN tracked_lots AS t ON source.parking_lot = t.parking_lot
+    INNER JOIN tracked_lots AS t ON CAST(source.parking_lot AS TEXT) = t.parking_lot
     GROUP BY CAST(source.date AS DATE)
 ),
 

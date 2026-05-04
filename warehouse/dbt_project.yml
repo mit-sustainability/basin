@@ -67,7 +67,7 @@ seeds:
   mitos:
     +meta:
       dagster:
-        group: landing
+        group: raw
     +schema: raw
     +persist_docs:
       relation: true
