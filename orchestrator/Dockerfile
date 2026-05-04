@@ -54,6 +54,9 @@ RUN dbt \
 # Install orchestrator dependencies
 COPY orchestrator/requirements.txt requirements.txt
 RUN pip install -r requirements.txt
+ENV CMDSTAN=/opt/cmdstan
+RUN python -c "from cmdstanpy import install_cmdstan; install_cmdstan(dir='/opt')" \
+    && ln -s "$(find /opt -maxdepth 1 -type d -name 'cmdstan-*' | head -n 1)" /opt/cmdstan
 RUN playwright install --with-deps chromium
 
 # # Copy libs in and install w3b_dp package
