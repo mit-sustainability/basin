@@ -9,14 +9,15 @@ build-dagster-docker:
 	docker tag ${IMAGE_TAG} ${DAGSTER_IMAGE_ECR} && \
 	docker push ${DAGSTER_IMAGE_ECR}
 
-setup-dagster:
-	cd orchestrator && python -m pip install -r requirements.txt && python -m pip install -e .
+setup-python:
+	uv sync --group dev
 
 setup-playwright:
-	cd orchestrator && python -m playwright install chromium
+	uv run playwright install chromium
 
 setup-dbt:
-	cd warehouse && bash setup.sh
+	dbt deps --project-dir warehouse --profiles-dir warehouse
+	mkdir -p ~/.dbt && cp warehouse/profiles.yml ~/.dbt/profiles.yml
 
 # Regenerate the dbt manifest.json
 dbt_manifest:
@@ -27,8 +28,8 @@ dbt_manifest:
 serve-dbt-catalog:
 	cd warehouse && dbt docs generate && dbt docs serve
 
-setup-dev:  setup-dbt  setup-dagster  setup-playwright  # setup-libs setup-pants
-	@echo "Done, enjoy building! 🎉"
+setup-dev: setup-python setup-dbt setup-playwright
+	@echo "Done, enjoy building!"
 
 run-tests:
 	cd orchestrator && ./execute_unit_tests.sh
