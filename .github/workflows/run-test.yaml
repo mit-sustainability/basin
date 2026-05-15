@@ -10,16 +10,14 @@ permissions:
 jobs:
     Run-Unit-Tests:
         runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                python-version: ["3.11"]
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v5
+            - name: Install uv
+              uses: astral-sh/setup-uv@v5
               with:
-                python-version: ${{ matrix.python-version }}
+                python-version: "3.13"
+                enable-cache: true
             - name: Configure AWS Authentication
               uses: aws-actions/configure-aws-credentials@v4
               with:
