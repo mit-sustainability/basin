@@ -10,7 +10,7 @@ build-dagster-docker:
 	docker push ${DAGSTER_IMAGE_ECR}
 
 setup-python:
-	uv sync --group dev
+	uv sync --all-groups
 
 setup-playwright:
 	uv run playwright install chromium
