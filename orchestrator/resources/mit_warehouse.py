@@ -15,11 +15,11 @@ logger = get_dagster_logger()
 
 @contextmanager
 def connect_oracledb(config):
-    # init connection, required for Apple Silicon Mac
+    # thick mode required — MIT Warehouse enforces Oracle Native Network Encryption
+    # ARM64 Instant Client lives at /opt/oracle/instantclient_23_26 on this machine
     if PLATFORM_ENV == "local":
-        oracledb.init_oracle_client(lib_dir="/usr/local/opt/instantclient-basiclite/lib")
+        oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_23_26")
     else:
-        # init connection, works for Linux/Docker container
         oracledb.init_oracle_client()
     pool = oracledb.create_pool(
         user=config.get("user"),
