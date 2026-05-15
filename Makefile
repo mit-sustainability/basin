@@ -16,17 +16,17 @@ setup-playwright:
 	uv run playwright install chromium
 
 setup-dbt:
-	dbt deps --project-dir warehouse --profiles-dir warehouse
+	uv run dbt deps --project-dir warehouse --profiles-dir warehouse
 	mkdir -p ~/.dbt && cp warehouse/profiles.yml ~/.dbt/profiles.yml
 
 # Regenerate the dbt manifest.json
 dbt_manifest:
-	dbt parse \
+	uv run dbt parse \
 		--project-dir warehouse \
 		--profiles-dir warehouse
 
 serve-dbt-catalog:
-	cd warehouse && dbt docs generate && dbt docs serve
+	uv run dbt docs generate --project-dir warehouse && uv run dbt docs serve --project-dir warehouse
 
 setup-dev: setup-python setup-dbt setup-playwright
 	@echo "Done, enjoy building!"

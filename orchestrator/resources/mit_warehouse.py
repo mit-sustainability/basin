@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 from typing import Optional
 
@@ -16,9 +17,10 @@ logger = get_dagster_logger()
 @contextmanager
 def connect_oracledb(config):
     # thick mode required — MIT Warehouse enforces Oracle Native Network Encryption
-    # ARM64 Instant Client lives at /opt/oracle/instantclient_23_26 on this machine
+    # override path via ORACLE_CLIENT_LIB_DIR; default is the ARM64 Instant Client location
     if PLATFORM_ENV == "local":
-        oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_23_26")
+        lib_dir = os.environ.get("ORACLE_CLIENT_LIB_DIR", "/opt/oracle/instantclient_23_26")
+        oracledb.init_oracle_client(lib_dir=lib_dir)
     else:
         oracledb.init_oracle_client()
     pool = oracledb.create_pool(
