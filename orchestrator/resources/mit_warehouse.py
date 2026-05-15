@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 from typing import Optional
 
@@ -15,11 +16,12 @@ logger = get_dagster_logger()
 
 @contextmanager
 def connect_oracledb(config):
-    # init connection, required for Apple Silicon Mac
+    # thick mode required — MIT Warehouse enforces Oracle Native Network Encryption
+    # override path via ORACLE_CLIENT_LIB_DIR; default is the ARM64 Instant Client location
     if PLATFORM_ENV == "local":
-        oracledb.init_oracle_client(lib_dir="/usr/local/opt/instantclient-basiclite/lib")
+        lib_dir = os.environ.get("ORACLE_CLIENT_LIB_DIR", "/opt/oracle/instantclient_23_26")
+        oracledb.init_oracle_client(lib_dir=lib_dir)
     else:
-        # init connection, works for Linux/Docker container
         oracledb.init_oracle_client()
     pool = oracledb.create_pool(
         user=config.get("user"),
@@ -31,12 +33,14 @@ def connect_oracledb(config):
         increment=1,
     )
 
+    conn = None
     try:
         conn = pool.acquire()
         yield conn
     finally:
         if conn:
             conn.close()
+        pool.close()
 
 
 class MITWHRSResource(ConfigurableResource):

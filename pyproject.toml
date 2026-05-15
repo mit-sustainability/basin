@@ -1,0 +1,63 @@
+[project]
+name = "basin"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    # orchestrator package installed as editable
+    "orchestrator",
+    # Dagster
+    "dagster==1.12.22",
+    "dagster-webserver==1.12.22",
+    "dagster-graphql==1.12.22",
+    "dagster-docker==0.28.22",
+    "dagster-aws==0.28.22",
+    "dagster-dbt==0.28.22",
+    "dagster-pipes==1.12.22",
+    "dagster-pandas==0.28.22",
+    "dagster-pandera==0.28.22",
+    "dagster-postgres==0.28.22",
+    # dbt
+    "dbt-postgres==1.10.0",
+    # Data / analytics
+    "pandera==0.26.1",
+    "dask==2024.4.1",
+    "dask-expr==1.0.11",
+    "distributed",
+    "oracledb>=2.4,<5",
+    "numpy==1.26.4",
+    "pandas==2.2.3",
+    "pyarrow",
+    "requests",
+    "cpi==2.0.5",
+    "datasets==2.15.0",
+    "python-dateutil",
+    "matplotlib",
+    "sqlalchemy>=2.0.36",
+    "plotly==5.22.0",
+    "prophet==1.2.2",
+    "pydantic==2.11.1",
+    "psycopg2-binary==2.9.10",
+    "pytz==2023.4",
+    "openpyxl==3.1.2",
+    "xlrd==2.0.1",
+    "urllib3==2.2.1",
+    "certifi==2024.6.2",
+    "tenacity==8.3.0",
+    "playwright",
+    # dbt / warehouse
+    "dbt-core==1.11.7",
+    "dbt-extractor==0.5.1",
+    "protobuf==6.33.6",
+    "dbt-duckdb==1.9.2",
+    "sqlfluff==3.3.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-mock==3.12.0",
+    "requests-mock==1.11.0",
+]
+
+[tool.uv.sources]
+orchestrator = { path = "orchestrator", editable = true }
