@@ -33,12 +33,14 @@ def connect_oracledb(config):
         increment=1,
     )
 
+    conn = None
     try:
         conn = pool.acquire()
         yield conn
     finally:
         if conn:
             conn.close()
+        pool.close()
 
 
 class MITWHRSResource(ConfigurableResource):
