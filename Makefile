@@ -17,8 +17,7 @@ setup-playwright:
 
 setup-dbt:
 	uv run dbt deps --project-dir warehouse --profiles-dir warehouse
-	mkdir -p ~/.dbt && cp warehouse/profiles.yml ~/.dbt/profiles.yml
-
+	mkdir -p ~/.dbt && if [ ! -f ~/.dbt/profiles.yml ]; then cp warehouse/profiles.yml ~/.dbt/profiles.yml; fi
 # Regenerate the dbt manifest.json
 dbt_manifest:
 	uv run dbt parse \
