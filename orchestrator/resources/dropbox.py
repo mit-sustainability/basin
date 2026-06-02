@@ -35,4 +35,7 @@ class DropboxResource(ConfigurableResource):
         """Download a file from Dropbox and return it as a BytesIO buffer."""
         dbx = dropbox.Dropbox(oauth2_access_token=self.access_token)
         _, response = dbx.files_download(path)
-        return BytesIO(response.content)
+        try:
+            return BytesIO(response.content)
+        finally:
+            response.close()
