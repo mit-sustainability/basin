@@ -4,6 +4,7 @@ from io import BytesIO
 
 import pandas as pd
 import pandera as pa
+import sqlalchemy.exc
 from dagster import Config, Failure, Output, ResourceParam, asset, get_dagster_logger
 from dagster_pandera import pandera_schema_to_dagster_type
 from pandera.typing import DateTime, Series
@@ -106,15 +107,26 @@ def raw_indoor_heat_sensor(
                 "SELECT DISTINCT source_file FROM raw.indoor_heat_sensor", engine
             )["source_file"].tolist()
         )
-    except Exception:
+    except sqlalchemy.exc.ProgrammingError:
         processed = set()
 
     new_files = [(name, path) for name, path in all_files if name not in processed]
     logger.info(f"{len(new_files)} new files to process (skipping {len(processed)} already ingested)")
 
     if not new_files:
+        empty_df = pd.DataFrame({
+            "row_num": pd.array([], dtype="int64"),
+            "datetime_edt": pd.array([], dtype="datetime64[ns]"),
+            "temperature_c": pd.array([], dtype="float64"),
+            "relative_humidity_pct": pd.array([], dtype="float64"),
+            "dew_point_c": pd.array([], dtype="float64"),
+            "sensor_id": pd.array([], dtype="object"),
+            "location": pd.array([], dtype="object"),
+            "source_file": pd.array([], dtype="object"),
+            "last_update": pd.array([], dtype="datetime64[ns]"),
+        })
         return Output(
-            value=pd.DataFrame(columns=list(IndoorHeatSensorRawSchema.__annotations__)),
+            value=empty_df,
             metadata={"new_files": 0, "total_files_in_dropbox": len(all_files)},
         )
 

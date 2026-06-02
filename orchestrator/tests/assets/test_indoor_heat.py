@@ -73,11 +73,8 @@ def test_raw_indoor_heat_sensor_skips_already_processed_files():
     already_processed_df = pd.DataFrame(
         {"source_file": ["MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx"]}
     )
-    # Call the underlying function directly to bypass Dagster's pandera type-check,
-    # which would fail on the empty DataFrame returned when all files are already processed.
-    underlying_fn = raw_indoor_heat_sensor.op.__wrapped__
     with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=already_processed_df):
-        result = underlying_fn(
+        result = raw_indoor_heat_sensor(
             config=IndoorHeatConfig(dropbox_folder="/folder"),
             dropbox=mock_dropbox,
             pg_engine=mock_engine_resource,
