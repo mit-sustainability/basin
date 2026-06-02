@@ -763,6 +763,10 @@ sources:
             description: "Total swipes count including all meals and periods"
       - name: indoor_heat_sensor
         description: "Raw heat sensor readings ingested from Dropbox Excel files"
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["indoor_heat_sensor"]
         columns:
           - name: sensor_id
             description: "Sensor identifier extracted from filename"
@@ -868,6 +872,9 @@ sources:
             description: "Timestamp when the record was processed"
       - name: stg_indoor_heat
         description: "Deduplicated heat sensor readings written by the stg_indoor_heat Dagster asset"
+        meta:
+          owner: yu_cheng@mit.edu
+          group: staging
         columns:
           - name: sensor_id
             description: "Sensor identifier"
@@ -881,5 +888,7 @@ sources:
             description: "Relative humidity percentage"
           - name: dew_point_c
             description: "Dew point in degrees Celsius"
+          - name: source_file
+            description: "Original Dropbox filename for traceability"
           - name: last_update
             description: "Ingestion timestamp"
