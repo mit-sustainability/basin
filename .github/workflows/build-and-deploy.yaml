@@ -10,9 +10,6 @@ permissions:
 jobs:
   Build-And-Push-Dagster-Image:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
     timeout-minutes: 15
     steps:
       - name: Checkout

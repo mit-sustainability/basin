@@ -28,21 +28,37 @@ class BuildingMappingSchema(pa.DataFrameModel):
 
     cost_collector_id: Series[int] = pa.Field(description="Cost Collector Id")
     cost_collector_name: Series[str] = pa.Field(description="Cost Collector Name")
-    profit_center_id: Series[str] = pa.Field(description="Profit Center Id", nullable=True)
-    profit_center_name: Series[str] = pa.Field(description="Profit Center Name", nullable=True)
-    building_identifier: Series[str] = pa.Field(description="Building Identifier", nullable=True)
+    profit_center_id: Series[str] = pa.Field(
+        description="Profit Center Id", nullable=True
+    )
+    profit_center_name: Series[str] = pa.Field(
+        description="Profit Center Name", nullable=True
+    )
+    building_identifier: Series[str] = pa.Field(
+        description="Building Identifier", nullable=True
+    )
 
     # District Utility Columns
     district_steam: Series[bool] = pa.Field(description="District Steam connection")
-    district_chilledwater: Series[bool] = pa.Field(description="District Chilled Water connection")
-    district_electricity: Series[bool] = pa.Field(description="District Electricity connection")
-    district_hotwater: Series[bool] = pa.Field(description="District Hot Water connection")
+    district_chilledwater: Series[bool] = pa.Field(
+        description="District Chilled Water connection"
+    )
+    district_electricity: Series[bool] = pa.Field(
+        description="District Electricity connection"
+    )
+    district_hotwater: Series[bool] = pa.Field(
+        description="District Hot Water connection"
+    )
 
     # Building Groups and metadata
     building_group: Series[str] = pa.Field(description="Building Group")
-    combined_building_number: Series[str] = pa.Field(description="Combined Building Number", nullable=True)
+    combined_building_number: Series[str] = pa.Field(
+        description="Combined Building Number", nullable=True
+    )
     agg_bldg: Series[str] = pa.Field(description="Aggregate Building", nullable=True)
-    ext_gross_area: Series[float] = pa.Field(description="External Gross Area", nullable=True)
+    ext_gross_area: Series[float] = pa.Field(
+        description="External Gross Area", nullable=True
+    )
     last_update: Series[DateTime] = pa.Field(description="Date of last update")
 
 
@@ -56,7 +72,9 @@ def campus_building_mapping(dhub: ResourceParam[DataHubResource]):
     """This asset ingests Cost Collector to Building Mapping from Data Hub"""
     project_id = dhub.get_project_id("Energize-MIT")
     logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "cost_collector_building_groups")
+    download_links = dhub.search_files_from_project(
+        project_id, "cost_collector_building_groups"
+    )
     if len(download_links) == 0:
         raise Failure("No download links found!")
     df = pd.read_csv(download_links[0])
@@ -117,7 +135,7 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
                     WHEN gl.GL_ACCOUNT_ID IN ('421113') THEN '#6 Oil'
                     WHEN gl.GL_ACCOUNT_ID IN ('421108', '421120', '421139', '421148', '421162', '421118') THEN 'Gas'
                     WHEN gl.GL_ACCOUNT_ID IN ('421111', '421110') THEN 'Electricity'
-                    WHEN gl.GL_ACCOUNT_ID = '421109' THEN 'Water'x
+                    WHEN gl.GL_ACCOUNT_ID = '421109' THEN 'Water'
                     WHEN gl.GL_ACCOUNT_ID = '421107' THEN 'Sewer'
                     WHEN gl.GL_ACCOUNT_ID = '600751' THEN 'Chilled Water'
                     WHEN gl.GL_ACCOUNT_ID = '600752' THEN 'Produced Electricity'
@@ -188,7 +206,9 @@ def utility_usage_cost(dwrhs: MITWHRSResource) -> Output[pd.DataFrame]:
     )
     rows = dwrhs.execute_query(query, chunksize=100000)
     if len(rows) == 0:
-        raise Failure(description="Failed to load any data", metadata={"num_rows": len(rows)})
+        raise Failure(
+            description="Failed to load any data", metadata={"num_rows": len(rows)}
+        )
     columns = [
         "FISCAL_YEAR",
         "CALENDAR_MONTH",
@@ -254,7 +274,11 @@ def stg_utility_history(pg_engine: PostgreConnResources):
     )
 
     # Adjust 2021 June gas usage (ensure matching column dtypes)
-    mask = (mdf["fiscal_year"] == 2021) & (mdf["calendar_month"] == 6) & (mdf["cost_collector_id"] == "1814201")
+    mask = (
+        (mdf["fiscal_year"] == 2021)
+        & (mdf["calendar_month"] == 6)
+        & (mdf["cost_collector_id"] == "1814201")
+    )
     mdf.loc[mask, ["calendar_month", "utility_cost", "total_btu", "utility_usage"]] = [
         6,  # move record to June
         707448.70,  # replacement cost
