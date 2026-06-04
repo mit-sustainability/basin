@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from io import BytesIO
 
+import numpy as np
 import pandas as pd
 import pandera as pa
 import sqlalchemy.exc
@@ -22,7 +23,7 @@ def _parse_sensor_filename(filename: str) -> dict:
 
     Pattern: <location tokens> <sensor_id (int)> <YYYY-MM-DD> <time> <tz>.<ext>
     """
-    stem = re.sub(r"\.(xlsx|xls)$", "", filename, flags=re.IGNORECASE)
+    stem = re.sub(r"\.(xlsx|xls|csv)$", "", filename, flags=re.IGNORECASE)
     tokens = stem.split()
 
     date_idx = next(
@@ -40,23 +41,65 @@ def _parse_sensor_filename(filename: str) -> dict:
     return {"location": location, "sensor_id": sensor_id}
 
 
-_COLUMN_MAP = {
+_DIRECT_RENAMES = {
     "#": "row_num",
     "Date-Time (EDT)": "datetime_edt",
+    "Date-Time (EST)": "datetime_edt",
+    "Date-Time (EDT/EST)": "datetime_edt",
+    "Temperature , °C": "temperature_c",
     "Temperature, °C": "temperature_c",
+    "temp , °C": "temperature_c",
+    "1 , °C": "temperature_c",
+    "RH , %": "relative_humidity_pct",
     "RH, %": "relative_humidity_pct",
+    "rh , %": "relative_humidity_pct",
+    "1 , %": "relative_humidity_pct",
+    "Dew Point , °C": "dew_point_c",
     "Dew Point, °C": "dew_point_c",
 }
 
+_FAHRENHEIT_RENAMES = {
+    "Temperature , °F": "temp_f_raw",
+    "Temperature  , °F": "temp_f_raw",
+    "Temperature, °F": "temp_f_raw",
+    "Dew Point , °F": "dew_point_f_raw",
+    "Dew Point  , °F": "dew_point_f_raw",
+    "Dew Point, °F": "dew_point_f_raw",
+}
 
-def _read_sensor_excel(file_bytes: BytesIO, meta: dict) -> pd.DataFrame:
-    """Read a sensor Excel file and return a standardized DataFrame."""
-    df = pd.read_excel(file_bytes, engine="openpyxl")
-    df = df.rename(columns=_COLUMN_MAP)
+
+def _f_to_c(series: pd.Series) -> pd.Series:
+    return (series - 32) * 5 / 9
+
+
+def _read_sensor_file(file_bytes: BytesIO, meta: dict) -> pd.DataFrame:
+    """Load a sensor file (.xlsx/.xls/.csv), normalize all column variants to °C."""
+    ext = meta["source_file"].rsplit(".", 1)[-1].lower()
+    df = pd.read_csv(file_bytes) if ext == "csv" else pd.read_excel(file_bytes, engine="openpyxl")
+
+    df = df.rename(columns=_DIRECT_RENAMES | _FAHRENHEIT_RENAMES)
+
+    for f_col, c_col in [("temp_f_raw", "temperature_c"), ("dew_point_f_raw", "dew_point_c")]:
+        if f_col in df.columns:
+            df[c_col] = _f_to_c(df[f_col])
+            df = df.drop(columns=f_col)
+
+    if "row_num" not in df.columns:
+        df["row_num"] = range(len(df))
+
+    if "dew_point_c" not in df.columns:
+        df["dew_point_c"] = float("nan")
+
+    required = {"datetime_edt", "temperature_c", "relative_humidity_pct"}
+    missing = required - set(df.columns)
+    if missing:
+        raise Failure(f"{meta['source_file']}: missing columns {missing} after normalization")
+
     df["datetime_edt"] = pd.to_datetime(df["datetime_edt"])
     df["sensor_id"] = meta["sensor_id"]
     df["location"] = meta["location"]
     df["source_file"] = meta["source_file"]
+
     return df[[
         "row_num", "datetime_edt", "temperature_c",
         "relative_humidity_pct", "dew_point_c",
@@ -71,7 +114,7 @@ class IndoorHeatSensorRawSchema(pa.DataFrameModel):
     relative_humidity_pct: Series[float] = pa.Field(
         description="Relative Humidity (%)", ge=0, le=100
     )
-    dew_point_c: Series[float] = pa.Field(description="Dew Point in Celsius")
+    dew_point_c: Series[float] = pa.Field(description="Dew Point in Celsius", nullable=True)
     sensor_id: Series[str] = pa.Field(description="Sensor identifier from filename")
     location: Series[str] = pa.Field(description="Location from filename")
     source_file: Series[str] = pa.Field(description="Original filename")
@@ -93,11 +136,11 @@ def raw_indoor_heat_sensor(
     dropbox: DropboxResource,
     pg_engine: ResourceParam[PostgreConnResources],
 ) -> Output[pd.DataFrame]:
-    """Poll Dropbox for new heat sensor Excel files and append to raw table (incremental by filename)."""
-    all_files = dropbox.list_excel_files(config.dropbox_folder)
+    """Poll Dropbox for new heat sensor files and append to raw table (incremental by filename)."""
+    all_files = dropbox.list_sensor_files(config.dropbox_folder)
     if not all_files:
         raise Failure(
-            f"No Excel files found in Dropbox folder: {config.dropbox_folder!r}"
+            f"No sensor files found in Dropbox folder: {config.dropbox_folder!r}"
         )
 
     engine = pg_engine.create_engine()
@@ -136,7 +179,7 @@ def raw_indoor_heat_sensor(
             meta = _parse_sensor_filename(name)
             meta["source_file"] = name
             file_bytes = dropbox.download_file(path)
-            df = _read_sensor_excel(file_bytes, meta)
+            df = _read_sensor_file(file_bytes, meta)
             frames.append(df)
             logger.info(f"Processed {name}: {len(df)} rows")
         except Exception as exc:

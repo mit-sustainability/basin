@@ -1,6 +1,7 @@
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pandas as pd
 import pytest
 from dagster import Failure
@@ -8,7 +9,7 @@ from dagster import Failure
 from orchestrator.assets.indoor_heat import (
     IndoorHeatConfig,
     _parse_sensor_filename,
-    _read_sensor_excel,
+    _read_sensor_file,          # renamed from _read_sensor_excel
     raw_indoor_heat_sensor,
 )
 
@@ -48,9 +49,9 @@ def _make_sensor_excel() -> BytesIO:
     return buf
 
 
-def test_read_sensor_excel_standardizes_columns():
+def test_read_sensor_file_standardizes_columns():
     meta = {"location": "MIT+Camb", "sensor_id": "3", "source_file": "test.xlsx"}
-    result = _read_sensor_excel(_make_sensor_excel(), meta)
+    result = _read_sensor_file(_make_sensor_excel(), meta)
     assert list(result.columns) == [
         "row_num", "datetime_edt", "temperature_c",
         "relative_humidity_pct", "dew_point_c",
@@ -65,7 +66,7 @@ def test_read_sensor_excel_standardizes_columns():
 
 def test_raw_indoor_heat_sensor_skips_already_processed_files():
     mock_dropbox = MagicMock()
-    mock_dropbox.list_excel_files.return_value = [
+    mock_dropbox.list_sensor_files.return_value = [
         ("MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx", "/folder/MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx"),
     ]
     mock_engine_resource = MagicMock()
@@ -86,15 +87,102 @@ def test_raw_indoor_heat_sensor_skips_already_processed_files():
 
 def test_raw_indoor_heat_sensor_raises_if_no_files_in_dropbox():
     mock_dropbox = MagicMock()
-    mock_dropbox.list_excel_files.return_value = []
+    mock_dropbox.list_sensor_files.return_value = []
     mock_engine_resource = MagicMock()
 
-    with pytest.raises(Failure, match="No Excel files found"):
+    with pytest.raises(Failure, match="No sensor files found"):
         raw_indoor_heat_sensor(
             config=IndoorHeatConfig(dropbox_folder="/empty"),
             dropbox=mock_dropbox,
             pg_engine=mock_engine_resource,
         )
+
+
+def _make_celsius_space_variant_excel() -> BytesIO:
+    """Simulates HOBO export with space-before-comma column names."""
+    df = pd.DataFrame({
+        "#": [1, 2],
+        "Date-Time (EDT)": ["05/15/2026 12:00:00", "05/15/2026 12:20:00"],
+        "Temperature , °C": [21.96, 21.80],
+        "RH , %": [41.92, 42.12],
+        "Dew Point , °C": [8.45, 8.38],
+    })
+    buf = BytesIO()
+    df.to_excel(buf, index=False, engine="openpyxl")
+    buf.seek(0)
+    return buf
+
+
+def _make_fahrenheit_excel() -> BytesIO:
+    """Simulates HOBO export with °F columns."""
+    df = pd.DataFrame({
+        "#": [1, 2],
+        "Date-Time (EDT)": ["05/15/2026 12:00:00", "05/15/2026 12:20:00"],
+        "Temperature , °F": [71.528, 71.24],
+        "RH , %": [41.92, 42.12],
+        "Dew Point , °F": [47.21, 47.08],
+    })
+    buf = BytesIO()
+    df.to_excel(buf, index=False, engine="openpyxl")
+    buf.seek(0)
+    return buf
+
+
+def _make_sensor_csv() -> BytesIO:
+    content = (
+        'Date-Time (EST),"temp , °C","rh , %"\n'
+        "05/15/2026 12:00:00,21.96,41.92\n"
+        "05/15/2026 12:20:00,21.80,42.12\n"
+    )
+    return BytesIO(content.encode())
+
+
+def _make_no_dew_point_excel() -> BytesIO:
+    df = pd.DataFrame({
+        "Date-Time (EDT)": ["05/15/2026 12:00:00"],
+        "Temperature, °C": [21.96],
+        "RH, %": [41.92],
+    })
+    buf = BytesIO()
+    df.to_excel(buf, index=False, engine="openpyxl")
+    buf.seek(0)
+    return buf
+
+
+def test_read_sensor_file_handles_celsius_space_variants():
+    meta = {"location": "MIT+Camb", "sensor_id": "3", "source_file": "test.xlsx"}
+    result = _read_sensor_file(_make_celsius_space_variant_excel(), meta)
+    assert "temperature_c" in result.columns
+    assert result["temperature_c"].iloc[0] == pytest.approx(21.96, abs=0.01)
+
+
+def test_read_sensor_file_converts_fahrenheit_to_celsius():
+    meta = {"location": "MIT+Camb", "sensor_id": "3", "source_file": "test.xlsx"}
+    result = _read_sensor_file(_make_fahrenheit_excel(), meta)
+    assert "temperature_c" in result.columns
+    assert "temp_f_raw" not in result.columns
+    assert result["temperature_c"].iloc[0] == pytest.approx(21.96, abs=0.05)
+
+
+def test_read_sensor_file_handles_csv():
+    meta = {"location": "MIT+Camb", "sensor_id": "5", "source_file": "test.csv"}
+    result = _read_sensor_file(_make_sensor_csv(), meta)
+    assert len(result) == 2
+    assert result["temperature_c"].iloc[0] == pytest.approx(21.96, abs=0.01)
+
+
+def test_read_sensor_file_fills_missing_dew_point_with_nan():
+    meta = {"location": "MIT", "sensor_id": "1", "source_file": "nodew.xlsx"}
+    result = _read_sensor_file(_make_no_dew_point_excel(), meta)
+    assert "dew_point_c" in result.columns
+    assert pd.isna(result["dew_point_c"].iloc[0])
+
+
+def test_read_sensor_file_generates_row_num_when_hash_absent():
+    meta = {"location": "MIT", "sensor_id": "1", "source_file": "nodew.xlsx"}
+    result = _read_sensor_file(_make_no_dew_point_excel(), meta)
+    assert "row_num" in result.columns
+    assert result["row_num"].iloc[0] == 0
 
 
 from orchestrator.resources.dropbox import DropboxResource
