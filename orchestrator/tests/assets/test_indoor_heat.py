@@ -12,6 +12,7 @@ from orchestrator.assets.indoor_heat import (
     _read_sensor_file,          # renamed from _read_sensor_excel
     raw_indoor_heat_sensor,
 )
+from orchestrator.resources.dropbox import DropboxResource
 
 
 # ── filename parser ──────────────────────────────────────────────────────────
@@ -189,9 +190,6 @@ def test_read_sensor_file_generates_row_num_when_hash_absent():
     result = _read_sensor_file(_make_no_dew_point_excel(), meta)
     assert "row_num" in result.columns
     assert result["row_num"].iloc[0] == 0
-
-
-from orchestrator.resources.dropbox import DropboxResource
 
 
 def _make_dropbox_entries(names: list[str]) -> list:

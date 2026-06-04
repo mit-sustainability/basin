@@ -76,13 +76,20 @@ def _f_to_c(series: pd.Series) -> pd.Series:
 def _read_sensor_file(file_bytes: BytesIO, meta: dict) -> pd.DataFrame:
     """Load a sensor file (.xlsx/.xls/.csv), normalize all column variants to °C."""
     ext = meta["source_file"].rsplit(".", 1)[-1].lower()
-    df = pd.read_csv(file_bytes) if ext == "csv" else pd.read_excel(file_bytes, engine="openpyxl")
+    if ext == "csv":
+        df = pd.read_csv(file_bytes)
+    elif ext == "xls":
+        df = pd.read_excel(file_bytes, engine="xlrd")
+    else:
+        df = pd.read_excel(file_bytes, engine="openpyxl")
 
     df = df.rename(columns=_DIRECT_RENAMES | _FAHRENHEIT_RENAMES)
+    df = df.loc[:, ~df.columns.duplicated(keep="first")]
 
     for f_col, c_col in [("temp_f_raw", "temperature_c"), ("dew_point_f_raw", "dew_point_c")]:
         if f_col in df.columns:
-            df[c_col] = _f_to_c(df[f_col])
+            if c_col not in df.columns:
+                df[c_col] = _f_to_c(df[f_col])
             df = df.drop(columns=f_col)
 
     if "row_num" not in df.columns:
