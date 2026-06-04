@@ -8,9 +8,11 @@ from dagster import Failure
 
 from orchestrator.assets.indoor_heat import (
     IndoorHeatConfig,
+    _calculate_heat_index_f,
     _parse_sensor_filename,
     _read_sensor_file,          # renamed from _read_sensor_excel
     raw_indoor_heat_sensor,
+    stg_indoor_heat,
 )
 from orchestrator.resources.dropbox import DropboxResource
 
@@ -242,3 +244,59 @@ def test_list_sensor_files_paginates():
         files = resource.list_sensor_files("/folder")
 
     assert {f[0] for f in files} == {"a.xlsx", "b.csv"}
+
+
+# ── heat index helper ────────────────────────────────────────────────────────
+
+def test_calculate_heat_index_f_uses_simple_estimate_below_80():
+    # At 70°F / 50% RH: hi_simple = 0.5*(70+61+(70-68)*1.2+50*0.094) = 69.05; avg with 70 = 69.525
+    result = _calculate_heat_index_f(pd.Series([70.0]), pd.Series([50.0]))
+    assert result.iloc[0] == pytest.approx(69.525, abs=0.1)
+
+
+def test_calculate_heat_index_f_uses_rothfusz_above_80():
+    # At 90°F / 50% RH: NOAA reference ≈ 95°F
+    result = _calculate_heat_index_f(pd.Series([90.0]), pd.Series([50.0]))
+    assert result.iloc[0] == pytest.approx(95.0, abs=1.0)
+
+
+# ── stg_indoor_heat asset ────────────────────────────────────────────────────
+
+def _make_raw_sql_df() -> pd.DataFrame:
+    return pd.DataFrame({
+        "sensor_id": ["3", "3"],
+        "location": ["MIT+Camb", "MIT+Camb"],
+        "datetime_edt": pd.to_datetime(["2026-05-15 12:00:00", "2026-05-15 12:20:00"]),
+        "temperature_c": [21.96, 21.80],
+        "relative_humidity_pct": [41.92, 42.12],
+        "dew_point_c": [8.45, 8.38],
+        "source_file": ["test.xlsx", "test.xlsx"],
+        "last_update": pd.to_datetime(["2026-05-15", "2026-05-15"]),
+        "row_num": [1, 2],
+    })
+
+
+def test_stg_indoor_heat_outputs_fahrenheit_columns():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
+        result = stg_indoor_heat(pg_engine=MagicMock())
+    df = result.value
+    assert "temperature_f" in df.columns
+    assert "dew_point_f" in df.columns
+    assert "heat_index_f" in df.columns
+    assert "temperature_c" not in df.columns
+    assert "dew_point_c" not in df.columns
+
+
+def test_stg_indoor_heat_temperature_f_conversion():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
+        result = stg_indoor_heat(pg_engine=MagicMock())
+    df = result.value
+    expected_f = 21.96 * 9 / 5 + 32  # 71.528°F
+    assert df["temperature_f"].iloc[0] == pytest.approx(expected_f, abs=0.01)
+
+
+def test_stg_indoor_heat_deduplicates():
+    duplicate = pd.concat([_make_raw_sql_df(), _make_raw_sql_df()], ignore_index=True)
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=duplicate):
+        result = stg_indoor_heat(pg_engine=MagicMock())
+    assert len(result.value) == 2

@@ -73,6 +73,27 @@ def _f_to_c(series: pd.Series) -> pd.Series:
     return (series - 32) * 5 / 9
 
 
+def _calculate_heat_index_f(temp_f: pd.Series, rh: pd.Series) -> pd.Series:
+    """NOAA/Rothfusz heat index. Inputs and output in °F."""
+    hi_simple = 0.5 * (temp_f + 61.0 + ((temp_f - 68.0) * 1.2) + (rh * 0.094))
+    hi_simple = (hi_simple + temp_f) / 2
+
+    c1, c2, c3, c4 = -42.379, 2.04901523, 10.14333127, -0.22475541
+    c5, c6, c7, c8, c9 = -0.00683783, -0.05481717, 0.00122874, 0.00085282, -0.00000199
+    hi_full = (c1 + c2 * temp_f + c3 * rh + c4 * temp_f * rh
+               + c5 * temp_f**2 + c6 * rh**2
+               + c7 * temp_f**2 * rh + c8 * temp_f * rh**2
+               + c9 * temp_f**2 * rh**2)
+
+    adj_low = ((13 - rh) / 4) * np.sqrt(np.maximum(0, (17 - np.abs(temp_f - 95)) / 17))
+    hi_full = np.where((rh < 13) & (temp_f >= 80) & (temp_f <= 112), hi_full - adj_low, hi_full)
+
+    adj_high = ((rh - 85) / 10) * ((87 - temp_f) / 5)
+    hi_full = np.where((rh > 85) & (temp_f >= 80) & (temp_f <= 87), hi_full + adj_high, hi_full)
+
+    return pd.Series(np.where(hi_simple < 80, hi_simple, hi_full), index=temp_f.index)
+
+
 def _read_sensor_file(file_bytes: BytesIO, meta: dict) -> pd.DataFrame:
     """Load a sensor file (.xlsx/.xls/.csv), normalize all column variants to °C."""
     ext = meta["source_file"].rsplit(".", 1)[-1].lower()
@@ -219,7 +240,7 @@ def raw_indoor_heat_sensor(
     group_name="staging",
 )
 def stg_indoor_heat(pg_engine: ResourceParam[PostgreConnResources]) -> Output[pd.DataFrame]:
-    """Deduplicate raw heat sensor readings on (sensor_id, datetime_edt)."""
+    """Deduplicate raw readings and normalize to °F with heat index."""
     engine = pg_engine.create_engine()
     df = pd.read_sql_query("SELECT * FROM raw.indoor_heat_sensor", engine)
 
@@ -234,9 +255,13 @@ def stg_indoor_heat(pg_engine: ResourceParam[PostgreConnResources]) -> Output[pd
     )
     logger.info(f"Deduplicated {before} -> {len(df)} rows")
 
+    df["temperature_f"] = df["temperature_c"] * 9 / 5 + 32
+    df["dew_point_f"] = df["dew_point_c"] * 9 / 5 + 32
+    df["heat_index_f"] = _calculate_heat_index_f(df["temperature_f"], df["relative_humidity_pct"])
+
     out_cols = [
         "sensor_id", "location", "datetime_edt",
-        "temperature_c", "relative_humidity_pct", "dew_point_c",
+        "temperature_f", "relative_humidity_pct", "dew_point_f", "heat_index_f",
         "source_file", "last_update",
     ]
     return Output(
