@@ -375,6 +375,7 @@ def _compute_calibration_stats(
 
 
 @asset(
+    deps=[stg_indoor_heat_aligned],
     compute_kind="python",
     group_name="calibration",
 )

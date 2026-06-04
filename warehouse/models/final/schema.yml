@@ -414,29 +414,31 @@ models:
       - name: location
         description: "Location identifier"
       - name: reading_date
-        description: "Date of the aggregated sensor readings"
-      - name: avg_temperature_c
-        description: "Daily average temperature in degrees Celsius"
-      - name: max_temperature_c
-        description: "Daily maximum temperature in degrees Celsius"
-      - name: min_temperature_c
-        description: "Daily minimum temperature in degrees Celsius"
+        description: "Date of readings"
+      - name: avg_temperature_f
+        description: "Average temperature in degrees Fahrenheit"
+      - name: max_temperature_f
+        description: "Maximum temperature in degrees Fahrenheit"
+      - name: min_temperature_f
+        description: "Minimum temperature in degrees Fahrenheit"
       - name: avg_relative_humidity_pct
-        description: "Daily average relative humidity percentage"
+        description: "Average relative humidity percentage"
       - name: max_relative_humidity_pct
-        description: "Daily maximum relative humidity percentage"
+        description: "Maximum relative humidity percentage"
       - name: min_relative_humidity_pct
-        description: "Daily minimum relative humidity percentage"
-      - name: avg_dew_point_c
-        description: "Daily average dew point in degrees Celsius"
-      - name: min_dew_point_c
-        description: "Daily minimum dew point in degrees Celsius"
-      - name: max_dew_point_c
-        description: "Daily maximum dew point in degrees Celsius"
+        description: "Minimum relative humidity percentage"
+      - name: avg_dew_point_f
+        description: "Average dew point in degrees Fahrenheit"
+      - name: min_dew_point_f
+        description: "Minimum dew point in degrees Fahrenheit"
+      - name: max_dew_point_f
+        description: "Maximum dew point in degrees Fahrenheit"
+      - name: avg_heat_index_f
+        description: "Average NOAA/Rothfusz heat index in degrees Fahrenheit"
+      - name: max_heat_index_f
+        description: "Maximum NOAA/Rothfusz heat index in degrees Fahrenheit"
       - name: num_readings
-        description: "Number of sensor readings aggregated for the day"
-      - name: last_update
-        description: "The timestamp of last materialization"
+        description: "Number of 20-minute aligned readings in the day"
 
   - name: dining_food_summary
     description: "Summary of food-related spend and carbon emissions (CO2eq) by fiscal year and customer."

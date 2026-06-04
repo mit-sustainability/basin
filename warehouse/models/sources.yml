@@ -766,7 +766,7 @@ sources:
         meta:
           owner: yu_cheng@mit.edu
           dagster:
-            asset_key: ["indoor_heat_sensor"]
+            asset_key: ["raw_indoor_heat_sensor"]
         columns:
           - name: sensor_id
             description: "Sensor identifier extracted from filename"
