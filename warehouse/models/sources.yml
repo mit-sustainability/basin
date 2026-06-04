@@ -871,7 +871,7 @@ sources:
           - name: last_update
             description: "Timestamp when the record was processed"
       - name: stg_indoor_heat
-        description: "Deduplicated heat sensor readings written by the stg_indoor_heat Dagster asset"
+        description: "Deduplicated heat sensor readings, normalized to °F with heat index"
         meta:
           owner: yu_cheng@mit.edu
           group: staging
@@ -882,13 +882,35 @@ sources:
             description: "Location identifier"
           - name: datetime_edt
             description: "Deduplicated timestamp of the sensor reading"
-          - name: temperature_c
-            description: "Temperature in degrees Celsius"
+          - name: temperature_f
+            description: "Temperature in degrees Fahrenheit"
           - name: relative_humidity_pct
             description: "Relative humidity percentage"
-          - name: dew_point_c
-            description: "Dew point in degrees Celsius"
+          - name: dew_point_f
+            description: "Dew point in degrees Fahrenheit"
+          - name: heat_index_f
+            description: "NOAA/Rothfusz heat index in degrees Fahrenheit"
           - name: source_file
             description: "Original Dropbox filename for traceability"
           - name: last_update
             description: "Ingestion timestamp"
+      - name: stg_indoor_heat_aligned
+        description: "20-minute binned and averaged heat sensor readings, one row per sensor per bin"
+        meta:
+          owner: yu_cheng@mit.edu
+          group: staging
+        columns:
+          - name: sensor_id
+            description: "Sensor identifier"
+          - name: location
+            description: "Location identifier"
+          - name: datetime_edt
+            description: "20-minute bin timestamp"
+          - name: temperature_f
+            description: "Average temperature in degrees Fahrenheit within the bin"
+          - name: relative_humidity_pct
+            description: "Average relative humidity percentage within the bin"
+          - name: dew_point_f
+            description: "Average dew point in degrees Fahrenheit within the bin"
+          - name: heat_index_f
+            description: "Average NOAA/Rothfusz heat index in degrees Fahrenheit within the bin"

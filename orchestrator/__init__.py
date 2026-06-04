@@ -47,6 +47,7 @@ from orchestrator.jobs.dlc_footprint import footprint_job
 from orchestrator.jobs.engagement import attendance_job
 from orchestrator.jobs.campus_utility import campus_utility_job
 from orchestrator.jobs.indoor_heat_job import indoor_heat_job
+from orchestrator.jobs.indoor_heat_calibration_job import indoor_heat_calibration_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
@@ -128,6 +129,7 @@ defs = Definitions(
         website_content_health_job,
         website_content_health_link_check_job,
         indoor_heat_job,
+        indoor_heat_calibration_job,
     ],
     sensors=[sensor_ghg_manual],
     resources={
