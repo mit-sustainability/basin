@@ -46,6 +46,7 @@ _DIRECT_RENAMES = {
     "Date-Time (EDT)": "datetime_edt",
     "Date-Time (EST)": "datetime_edt",
     "Date-Time (EDT/EST)": "datetime_edt",
+    "Date-Time (EST/EDT)": "datetime_edt",
     "Temperature , °C": "temperature_c",
     "Temperature, °C": "temperature_c",
     "temp , °C": "temperature_c",

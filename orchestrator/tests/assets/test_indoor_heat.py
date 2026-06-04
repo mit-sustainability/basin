@@ -33,6 +33,12 @@ def test_parse_sensor_filename_raises_on_invalid_format():
         _parse_sensor_filename("nodate_nodatetime.xlsx")
 
 
+def test_parse_sensor_filename_handles_csv_extension():
+    result = _parse_sensor_filename("MIT+Camb 3 2026-05-15 14_04_50 EDT.csv")
+    assert result["location"] == "MIT+Camb"
+    assert result["sensor_id"] == "3"
+
+
 # ── Excel reader ─────────────────────────────────────────────────────────────
 
 def _make_sensor_excel() -> BytesIO:
