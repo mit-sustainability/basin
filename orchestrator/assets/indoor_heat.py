@@ -268,3 +268,40 @@ def stg_indoor_heat(pg_engine: ResourceParam[PostgreConnResources]) -> Output[pd
         value=df[out_cols],
         metadata={"total_rows": len(df), "unique_sensors": df["sensor_id"].nunique()},
     )
+
+
+@asset(
+    deps=[stg_indoor_heat],
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    key_prefix="staging",
+    group_name="staging",
+)
+def stg_indoor_heat_aligned(pg_engine: ResourceParam[PostgreConnResources]) -> Output[pd.DataFrame]:
+    """Bin sensor readings to 20-min intervals and average per sensor per bin."""
+    engine = pg_engine.create_engine()
+    df = pd.read_sql_query("SELECT * FROM staging.stg_indoor_heat", engine)
+    df["datetime_edt"] = pd.to_datetime(df["datetime_edt"])
+
+    df["datetime_bin"] = df["datetime_edt"].dt.round("20min")
+    aligned = (
+        df.groupby(["sensor_id", "location", "datetime_bin"])
+        .agg(
+            temperature_f=("temperature_f", "mean"),
+            relative_humidity_pct=("relative_humidity_pct", "mean"),
+            dew_point_f=("dew_point_f", "mean"),
+            heat_index_f=("heat_index_f", "mean"),
+        )
+        .reset_index()
+        .rename(columns={"datetime_bin": "datetime_edt"})
+    )
+
+    return Output(
+        value=aligned,
+        metadata={
+            "total_rows": len(aligned),
+            "unique_sensors": aligned["sensor_id"].nunique(),
+            "date_range_start": str(aligned["datetime_edt"].min()),
+            "date_range_end": str(aligned["datetime_edt"].max()),
+        },
+    )

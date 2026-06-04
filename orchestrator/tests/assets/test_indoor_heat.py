@@ -13,6 +13,7 @@ from orchestrator.assets.indoor_heat import (
     _read_sensor_file,          # renamed from _read_sensor_excel
     raw_indoor_heat_sensor,
     stg_indoor_heat,
+    stg_indoor_heat_aligned,
 )
 from orchestrator.resources.dropbox import DropboxResource
 
@@ -300,3 +301,54 @@ def test_stg_indoor_heat_deduplicates():
     with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=duplicate):
         result = stg_indoor_heat(pg_engine=MagicMock())
     assert len(result.value) == 2
+
+
+# ── stg_indoor_heat_aligned asset ────────────────────────────────────────────
+
+def _make_stg_df() -> pd.DataFrame:
+    # Sensor A: two readings in same 20-min bin (12:00 and 12:05 both → 12:00)
+    # Sensor B: one reading per bin
+    return pd.DataFrame({
+        "sensor_id": ["A", "A", "B", "B"],
+        "location": ["MIT"] * 4,
+        "datetime_edt": pd.to_datetime([
+            "2026-05-15 12:00:00",
+            "2026-05-15 12:05:00",
+            "2026-05-15 12:00:00",
+            "2026-05-15 12:20:00",
+        ]),
+        "temperature_f": [71.0, 73.0, 70.0, 72.0],
+        "relative_humidity_pct": [40.0, 42.0, 41.0, 43.0],
+        "dew_point_f": [47.0, 49.0, 46.0, 48.0],
+        "heat_index_f": [71.0, 73.0, 70.0, 72.0],
+        "source_file": ["a.xlsx"] * 4,
+        "last_update": pd.to_datetime(["2026-05-15"] * 4),
+    })
+
+
+def test_stg_indoor_heat_aligned_collapses_readings_into_20min_bins():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_stg_df()):
+        result = stg_indoor_heat_aligned(pg_engine=MagicMock())
+    df = result.value
+    # Sensor A: 12:00 and 12:05 collapse to one bin (12:00)
+    # Sensor B: 12:00 and 12:20 are separate bins
+    # Total: 3 rows
+    assert len(df) == 3
+
+
+def test_stg_indoor_heat_aligned_averages_readings_in_bin():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_stg_df()):
+        result = stg_indoor_heat_aligned(pg_engine=MagicMock())
+    df = result.value
+    sensor_a = df[df["sensor_id"] == "A"].iloc[0]
+    assert sensor_a["temperature_f"] == pytest.approx(72.0, abs=0.01)   # avg(71, 73)
+    assert sensor_a["relative_humidity_pct"] == pytest.approx(41.0, abs=0.01)  # avg(40, 42)
+
+
+def test_stg_indoor_heat_aligned_output_columns():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_stg_df()):
+        result = stg_indoor_heat_aligned(pg_engine=MagicMock())
+    assert set(result.value.columns) == {
+        "sensor_id", "location", "datetime_edt",
+        "temperature_f", "relative_humidity_pct", "dew_point_f", "heat_index_f",
+    }
