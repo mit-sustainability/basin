@@ -9,6 +9,7 @@ from dagster import Failure
 from orchestrator.assets.indoor_heat import (
     IndoorHeatConfig,
     _calculate_heat_index_f,
+    _compute_calibration_stats,
     _parse_sensor_filename,
     _read_sensor_file,          # renamed from _read_sensor_excel
     raw_indoor_heat_sensor,
@@ -352,3 +353,88 @@ def test_stg_indoor_heat_aligned_output_columns():
         "sensor_id", "location", "datetime_edt",
         "temperature_f", "relative_humidity_pct", "dew_point_f", "heat_index_f",
     }
+
+
+# ── _compute_calibration_stats ───────────────────────────────────────────────
+
+_CALIB_VARS = ["temperature_f", "relative_humidity_pct", "heat_index_f"]
+
+
+def _make_aligned_df_6_sensors() -> pd.DataFrame:
+    """5 normal sensors at 70°F + 1 outlier at 90°F.
+    With 6 sensors: n_sigma for outlier = 5/sqrt(6) ≈ 2.04 → marginal outlier.
+    """
+    times = pd.date_range("2026-05-15", periods=5, freq="20min")
+    dfs = []
+    for sid in ["A", "B", "C", "D", "E"]:
+        dfs.append(pd.DataFrame({
+            "sensor_id": sid,
+            "datetime_edt": times,
+            "temperature_f": 70.0,
+            "relative_humidity_pct": 50.0,
+            "heat_index_f": 70.0,
+        }))
+    dfs.append(pd.DataFrame({
+        "sensor_id": "F",
+        "datetime_edt": times,
+        "temperature_f": 90.0,
+        "relative_humidity_pct": 50.0,
+        "heat_index_f": 90.0,
+    }))
+    return pd.concat(dfs, ignore_index=True)
+
+
+def _make_aligned_df_12_sensors() -> pd.DataFrame:
+    """11 normal sensors at 70°F + 1 outlier at 90°F.
+    With 12 sensors: n_sigma for outlier = 11/sqrt(12) ≈ 3.18 → excluded.
+    """
+    times = pd.date_range("2026-05-15", periods=5, freq="20min")
+    dfs = []
+    for i in range(11):
+        dfs.append(pd.DataFrame({
+            "sensor_id": f"S{i:02d}",
+            "datetime_edt": times,
+            "temperature_f": 70.0,
+            "relative_humidity_pct": 50.0,
+            "heat_index_f": 70.0,
+        }))
+    dfs.append(pd.DataFrame({
+        "sensor_id": "OUTLIER",
+        "datetime_edt": times,
+        "temperature_f": 90.0,
+        "relative_humidity_pct": 50.0,
+        "heat_index_f": 90.0,
+    }))
+    return pd.concat(dfs, ignore_index=True)
+
+
+def test_compute_calibration_stats_returns_two_dataframes():
+    df = _make_aligned_df_6_sensors()
+    precision_df, sensor_stats = _compute_calibration_stats(df)
+    assert len(precision_df) == len(_CALIB_VARS)
+    assert len(sensor_stats) == 6
+
+
+def test_compute_calibration_stats_precision_has_expected_columns():
+    precision_df, _ = _compute_calibration_stats(_make_aligned_df_6_sensors())
+    assert set(precision_df.columns) >= {"variable", "mean_sigma", "median_sigma", "max_sigma"}
+
+
+def test_compute_calibration_stats_detects_marginal_outlier():
+    _, sensor_stats = _compute_calibration_stats(_make_aligned_df_6_sensors())
+    sensor_f = sensor_stats[sensor_stats["sensor_id"] == "F"].iloc[0]
+    assert sensor_f["is_outlier"] is True or sensor_f["is_outlier"] == True
+    assert sensor_f["severity"] == "marginal"
+
+
+def test_compute_calibration_stats_passing_sensors_not_flagged():
+    _, sensor_stats = _compute_calibration_stats(_make_aligned_df_6_sensors())
+    passing = sensor_stats[sensor_stats["sensor_id"].isin(["A", "B", "C", "D", "E"])]
+    assert (passing["severity"] == "pass").all()
+    assert (~passing["is_outlier"]).all()
+
+
+def test_compute_calibration_stats_detects_excluded_outlier():
+    _, sensor_stats = _compute_calibration_stats(_make_aligned_df_12_sensors())
+    outlier = sensor_stats[sensor_stats["sensor_id"] == "OUTLIER"].iloc[0]
+    assert outlier["severity"] == "excluded"
