@@ -14,21 +14,29 @@ class DropboxResource(ConfigurableResource):
 
     access_token: str
 
-    def list_excel_files(self, folder_path: str) -> list[tuple[str, str]]:
-        """Return list of (filename, path) for all .xlsx/.xls files in folder_path."""
+    def _list_files(self, folder_path: str, extensions: tuple[str, ...]) -> list[tuple[str, str]]:
         dbx = dropbox.Dropbox(oauth2_access_token=self.access_token)
         result = dbx.files_list_folder(folder_path)
         entries = list(result.entries)
         while result.has_more:
             result = dbx.files_list_folder_continue(result.cursor)
             entries.extend(result.entries)
-
-        files = [
+        return [
             (e.name, e.path_lower)
             for e in entries
-            if hasattr(e, "name") and e.name.lower().endswith((".xlsx", ".xls"))
+            if hasattr(e, "name") and e.name.lower().endswith(extensions)
         ]
+
+    def list_excel_files(self, folder_path: str) -> list[tuple[str, str]]:
+        """Return (filename, path) for all .xlsx/.xls files in folder_path."""
+        files = self._list_files(folder_path, (".xlsx", ".xls"))
         logger.info(f"Found {len(files)} Excel files in {folder_path}")
+        return files
+
+    def list_sensor_files(self, folder_path: str) -> list[tuple[str, str]]:
+        """Return (filename, path) for all .xlsx/.xls/.csv files in folder_path."""
+        files = self._list_files(folder_path, (".xlsx", ".xls", ".csv"))
+        logger.info(f"Found {len(files)} sensor files in {folder_path}")
         return files
 
     def download_file(self, path: str) -> BytesIO:

@@ -95,3 +95,58 @@ def test_raw_indoor_heat_sensor_raises_if_no_files_in_dropbox():
             dropbox=mock_dropbox,
             pg_engine=mock_engine_resource,
         )
+
+
+from orchestrator.resources.dropbox import DropboxResource
+
+
+def _make_dropbox_entries(names: list[str]) -> list:
+    entries = []
+    for name in names:
+        e = MagicMock()
+        e.name = name
+        e.path_lower = f"/folder/{name}"
+        entries.append(e)
+    return entries
+
+
+def test_list_sensor_files_includes_xlsx_xls_and_csv():
+    names = ["sensor.xlsx", "sensor.xls", "sensor.csv", "notes.txt", "~$sensor.xlsx"]
+    mock_result = MagicMock()
+    mock_result.entries = _make_dropbox_entries(names)
+    mock_result.has_more = False
+
+    mock_dbx = MagicMock()
+    mock_dbx.files_list_folder.return_value = mock_result
+
+    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx):
+        resource = DropboxResource(access_token="test")
+        files = resource.list_sensor_files("/folder")
+
+    returned_names = [f[0] for f in files]
+    assert "sensor.xlsx" in returned_names
+    assert "sensor.xls" in returned_names
+    assert "sensor.csv" in returned_names
+    assert "notes.txt" not in returned_names
+    assert "~$sensor.xlsx" in returned_names  # lock files are not filtered; caller is responsible
+
+
+def test_list_sensor_files_paginates():
+    result1 = MagicMock()
+    result1.entries = _make_dropbox_entries(["a.xlsx"])
+    result1.has_more = True
+    result1.cursor = "cursor1"
+
+    result2 = MagicMock()
+    result2.entries = _make_dropbox_entries(["b.csv"])
+    result2.has_more = False
+
+    mock_dbx = MagicMock()
+    mock_dbx.files_list_folder.return_value = result1
+    mock_dbx.files_list_folder_continue.return_value = result2
+
+    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx):
+        resource = DropboxResource(access_token="test")
+        files = resource.list_sensor_files("/folder")
+
+    assert {f[0] for f in files} == {"a.xlsx", "b.csv"}
