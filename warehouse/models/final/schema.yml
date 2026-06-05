@@ -411,8 +411,16 @@ models:
     columns:
       - name: sensor_id
         description: "Sensor identifier"
-      - name: location
-        description: "Location identifier"
+      - name: sensor_name
+        description: "Human-readable site name from config_hobo.json"
+      - name: lat
+        description: "Latitude of sensor deployment location"
+      - name: lon
+        description: "Longitude of sensor deployment location"
+      - name: deployment
+        description: "Deployment phase (e.g. Phase 1, Phase 2)"
+      - name: radiation_shield
+        description: "Whether the sensor has a radiation shield fitted"
       - name: reading_date
         description: "Date of readings"
       - name: avg_temperature_f

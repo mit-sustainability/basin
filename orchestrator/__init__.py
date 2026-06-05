@@ -153,6 +153,6 @@ defs = Definitions(
             base_url="https://passprogram.mbta.com",
             accept_downloads=True,
         ),
-        "dropbox": DropboxResource(access_token=EnvVar("DROPBOX_ACCESS_TOKEN")),
+        "dropbox": DropboxResource(),
     },
 )

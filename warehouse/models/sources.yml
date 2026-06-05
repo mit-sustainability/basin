@@ -762,16 +762,14 @@ sources:
           - name: swipe_count
             description: "Total swipes count including all meals and periods"
       - name: indoor_heat_sensor
-        description: "Raw heat sensor readings ingested from Dropbox Excel files"
+        description: "Raw heat sensor readings ingested from Dropbox (xlsx/xls/csv)"
         meta:
           owner: yu_cheng@mit.edu
           dagster:
-            asset_key: ["raw_indoor_heat_sensor"]
+            asset_key: ["indoor_heat_sensor"]
         columns:
           - name: sensor_id
             description: "Sensor identifier extracted from filename"
-          - name: location
-            description: "Location identifier extracted from filename"
           - name: datetime_edt
             description: "Timestamp of the sensor reading (EDT timezone)"
           - name: temperature_c
@@ -784,6 +782,25 @@ sources:
             description: "Original Dropbox filename for traceability"
           - name: last_update
             description: "Timestamp of ingestion into the warehouse"
+      - name: indoor_heat_sensor_config
+        description: "Sensor site metadata from config_hobo.json (name, coords, deployment, radiation shield)"
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["indoor_heat_sensor_config"]
+        columns:
+          - name: sensor_id
+            description: "Sensor identifier (matches indoor_heat_sensor.sensor_id)"
+          - name: sensor_name
+            description: "Human-readable site name"
+          - name: lat
+            description: "Latitude of deployment location"
+          - name: lon
+            description: "Longitude of deployment location"
+          - name: deployment
+            description: "Deployment phase (e.g. Phase 1, Phase 2)"
+          - name: radiation_shield
+            description: "Whether the sensor has a radiation shield fitted"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging
@@ -870,40 +887,16 @@ sources:
             description: "The external gross square footage of the building from the facilities database"
           - name: last_update
             description: "Timestamp when the record was processed"
-      - name: stg_indoor_heat
-        description: "Deduplicated heat sensor readings, normalized to °F with heat index"
-        meta:
-          owner: yu_cheng@mit.edu
-          group: staging
-        columns:
-          - name: sensor_id
-            description: "Sensor identifier"
-          - name: location
-            description: "Location identifier"
-          - name: datetime_edt
-            description: "Deduplicated timestamp of the sensor reading"
-          - name: temperature_f
-            description: "Temperature in degrees Fahrenheit"
-          - name: relative_humidity_pct
-            description: "Relative humidity percentage"
-          - name: dew_point_f
-            description: "Dew point in degrees Fahrenheit"
-          - name: heat_index_f
-            description: "NOAA/Rothfusz heat index in degrees Fahrenheit"
-          - name: source_file
-            description: "Original Dropbox filename for traceability"
-          - name: last_update
-            description: "Ingestion timestamp"
       - name: stg_indoor_heat_aligned
         description: "20-minute binned and averaged heat sensor readings, one row per sensor per bin"
         meta:
           owner: yu_cheng@mit.edu
           group: staging
+          dagster:
+            asset_key: ["staging", "stg_indoor_heat_aligned"]
         columns:
           - name: sensor_id
             description: "Sensor identifier"
-          - name: location
-            description: "Location identifier"
           - name: datetime_edt
             description: "20-minute bin timestamp"
           - name: temperature_f

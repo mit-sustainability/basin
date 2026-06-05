@@ -1,6 +1,9 @@
-from dagster import define_asset_job
+from dagster import AssetSelection, define_asset_job
 
 indoor_heat_job = define_asset_job(
     name="indoor_heat_job",
-    selection='+key:"staging/stg_indoor_heat_aligned"+',
+    selection=(
+        AssetSelection.from_string('key:"indoor_heat_sensor_config"')
+        | AssetSelection.from_string('+key:"staging/stg_indoor_heat_aligned"+')
+    ),
 )

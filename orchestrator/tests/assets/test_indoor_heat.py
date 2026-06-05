@@ -8,12 +8,14 @@ from dagster import Failure
 
 from orchestrator.assets.indoor_heat import (
     IndoorHeatConfig,
+    SensorConfigPath,
     _calculate_heat_index_f,
     _compute_calibration_stats,
+    _load_sensor_metadata,
     _parse_sensor_filename,
-    _read_sensor_file,          # renamed from _read_sensor_excel
-    raw_indoor_heat_sensor,
-    stg_indoor_heat,
+    _read_sensor_file,
+    indoor_heat_sensor,
+    indoor_heat_sensor_config,
     stg_indoor_heat_aligned,
 )
 from orchestrator.resources.dropbox import DropboxResource
@@ -21,15 +23,13 @@ from orchestrator.resources.dropbox import DropboxResource
 
 # ── filename parser ──────────────────────────────────────────────────────────
 
-def test_parse_sensor_filename_extracts_location_and_sensor_id():
+def test_parse_sensor_filename_extracts_sensor_id():
     result = _parse_sensor_filename("MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx")
-    assert result["location"] == "MIT+Camb"
     assert result["sensor_id"] == "3"
 
 
-def test_parse_sensor_filename_handles_multi_word_location():
+def test_parse_sensor_filename_handles_multi_token_prefix():
     result = _parse_sensor_filename("MIT Main Campus 7 2026-05-15 14_04_50 EDT.xlsx")
-    assert result["location"] == "MIT Main Campus"
     assert result["sensor_id"] == "7"
 
 
@@ -40,8 +40,12 @@ def test_parse_sensor_filename_raises_on_invalid_format():
 
 def test_parse_sensor_filename_handles_csv_extension():
     result = _parse_sensor_filename("MIT+Camb 3 2026-05-15 14_04_50 EDT.csv")
-    assert result["location"] == "MIT+Camb"
     assert result["sensor_id"] == "3"
+
+
+def test_parse_sensor_filename_handles_no_location_prefix():
+    result = _parse_sensor_filename("22086523 2025-11-24 13_46_22 EST (Data EST).xlsx")
+    assert result["sensor_id"] == "22086523"
 
 
 # ── Excel reader ─────────────────────────────────────────────────────────────
@@ -61,51 +65,43 @@ def _make_sensor_excel() -> BytesIO:
 
 
 def test_read_sensor_file_standardizes_columns():
-    meta = {"location": "MIT+Camb", "sensor_id": "3", "source_file": "test.xlsx"}
+    meta = {"sensor_id": "3", "source_file": "test.xlsx"}
     result = _read_sensor_file(_make_sensor_excel(), meta)
     assert list(result.columns) == [
         "row_num", "datetime_edt", "temperature_c",
         "relative_humidity_pct", "dew_point_c",
-        "sensor_id", "location", "source_file",
+        "sensor_id", "source_file",
     ]
     assert len(result) == 2
     assert result["sensor_id"].iloc[0] == "3"
-    assert result["location"].iloc[0] == "MIT+Camb"
 
 
-# ── raw_indoor_heat_sensor asset ─────────────────────────────────────────────
+# ── indoor_heat_sensor asset ─────────────────────────────────────────────────
 
-def test_raw_indoor_heat_sensor_skips_already_processed_files():
+def test_indoor_heat_sensor_processes_all_files():
     mock_dropbox = MagicMock()
     mock_dropbox.list_sensor_files.return_value = [
         ("MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx", "/folder/MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx"),
     ]
-    mock_engine_resource = MagicMock()
+    mock_dropbox.download_file.return_value = _make_sensor_excel()
 
-    already_processed_df = pd.DataFrame(
-        {"source_file": ["MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx"]}
+    result = indoor_heat_sensor(
+        config=IndoorHeatConfig(dropbox_folder="/folder"),
+        dropbox=mock_dropbox,
     )
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=already_processed_df):
-        result = raw_indoor_heat_sensor(
-            config=IndoorHeatConfig(dropbox_folder="/folder"),
-            dropbox=mock_dropbox,
-            pg_engine=mock_engine_resource,
-        )
 
-    assert result.value.empty
-    assert result.metadata["new_files"].value == 0
+    assert len(result.value) == 2
+    assert result.metadata["total_files"].value == 1
 
 
-def test_raw_indoor_heat_sensor_raises_if_no_files_in_dropbox():
+def test_indoor_heat_sensor_raises_if_no_files_in_dropbox():
     mock_dropbox = MagicMock()
     mock_dropbox.list_sensor_files.return_value = []
-    mock_engine_resource = MagicMock()
 
     with pytest.raises(Failure, match="No sensor files found"):
-        raw_indoor_heat_sensor(
+        indoor_heat_sensor(
             config=IndoorHeatConfig(dropbox_folder="/empty"),
             dropbox=mock_dropbox,
-            pg_engine=mock_engine_resource,
         )
 
 
@@ -161,14 +157,14 @@ def _make_no_dew_point_excel() -> BytesIO:
 
 
 def test_read_sensor_file_handles_celsius_space_variants():
-    meta = {"location": "MIT+Camb", "sensor_id": "3", "source_file": "test.xlsx"}
+    meta = {"sensor_id": "3", "source_file": "test.xlsx"}
     result = _read_sensor_file(_make_celsius_space_variant_excel(), meta)
     assert "temperature_c" in result.columns
     assert result["temperature_c"].iloc[0] == pytest.approx(21.96, abs=0.01)
 
 
 def test_read_sensor_file_converts_fahrenheit_to_celsius():
-    meta = {"location": "MIT+Camb", "sensor_id": "3", "source_file": "test.xlsx"}
+    meta = {"sensor_id": "3", "source_file": "test.xlsx"}
     result = _read_sensor_file(_make_fahrenheit_excel(), meta)
     assert "temperature_c" in result.columns
     assert "temp_f_raw" not in result.columns
@@ -176,21 +172,21 @@ def test_read_sensor_file_converts_fahrenheit_to_celsius():
 
 
 def test_read_sensor_file_handles_csv():
-    meta = {"location": "MIT+Camb", "sensor_id": "5", "source_file": "test.csv"}
+    meta = {"sensor_id": "5", "source_file": "test.csv"}
     result = _read_sensor_file(_make_sensor_csv(), meta)
     assert len(result) == 2
     assert result["temperature_c"].iloc[0] == pytest.approx(21.96, abs=0.01)
 
 
 def test_read_sensor_file_fills_missing_dew_point_with_nan():
-    meta = {"location": "MIT", "sensor_id": "1", "source_file": "nodew.xlsx"}
+    meta = {"sensor_id": "1", "source_file": "nodew.xlsx"}
     result = _read_sensor_file(_make_no_dew_point_excel(), meta)
     assert "dew_point_c" in result.columns
     assert pd.isna(result["dew_point_c"].iloc[0])
 
 
 def test_read_sensor_file_generates_row_num_when_hash_absent():
-    meta = {"location": "MIT", "sensor_id": "1", "source_file": "nodew.xlsx"}
+    meta = {"sensor_id": "1", "source_file": "nodew.xlsx"}
     result = _read_sensor_file(_make_no_dew_point_excel(), meta)
     assert "row_num" in result.columns
     assert result["row_num"].iloc[0] == 0
@@ -215,8 +211,9 @@ def test_list_sensor_files_includes_xlsx_xls_and_csv():
     mock_dbx = MagicMock()
     mock_dbx.files_list_folder.return_value = mock_result
 
-    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx):
-        resource = DropboxResource(access_token="test")
+    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx), \
+         patch.dict("os.environ", {"DROPBOX_REFRESH_TOKEN": "test", "DROPBOX_APP_KEY": "key", "DROPBOX_APP_SECRET": "secret"}):
+        resource = DropboxResource()
         files = resource.list_sensor_files("/folder")
 
     returned_names = [f[0] for f in files]
@@ -241,8 +238,9 @@ def test_list_sensor_files_paginates():
     mock_dbx.files_list_folder.return_value = result1
     mock_dbx.files_list_folder_continue.return_value = result2
 
-    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx):
-        resource = DropboxResource(access_token="test")
+    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx), \
+         patch.dict("os.environ", {"DROPBOX_REFRESH_TOKEN": "test", "DROPBOX_APP_KEY": "key", "DROPBOX_APP_SECRET": "secret"}):
+        resource = DropboxResource()
         files = resource.list_sensor_files("/folder")
 
     assert {f[0] for f in files} == {"a.xlsx", "b.csv"}
@@ -262,95 +260,91 @@ def test_calculate_heat_index_f_uses_rothfusz_above_80():
     assert result.iloc[0] == pytest.approx(95.0, abs=1.0)
 
 
-# ── stg_indoor_heat asset ────────────────────────────────────────────────────
+# ── indoor_heat_sensor_config asset ──────────────────────────────────────────
+
+def test_indoor_heat_sensor_config_loads_metadata():
+    import json as _json
+    config_data = {
+        "22086527": {"name": "Medical Parking Lot", "coords": [42.36, -71.09], "deployment": "Phase 1", "rediation_shield": "False"},
+        "22086522": {"name": "Eastman Court", "coords": [42.37, -71.08], "deployment": "Phase 1", "radiation_shield": "True"},
+    }
+    mock_dropbox = MagicMock()
+    mock_dropbox.download_file.return_value = BytesIO(_json.dumps(config_data).encode())
+    result = indoor_heat_sensor_config(
+        config=SensorConfigPath(config_file_path="/test/config.json"),
+        dropbox=mock_dropbox,
+    )
+    df = result.value
+    assert len(df) == 2
+    assert set(df.columns) == {"sensor_id", "sensor_name", "lat", "lon", "deployment", "radiation_shield"}
+    assert df.loc[df["sensor_id"] == "22086527", "radiation_shield"].iloc[0] == "False"
+    assert df.loc[df["sensor_id"] == "22086522", "radiation_shield"].iloc[0] == "True"
+
+
+# ── stg_indoor_heat_aligned asset (dedup + °F + 20-min bins) ─────────────────
 
 def _make_raw_sql_df() -> pd.DataFrame:
-    return pd.DataFrame({
-        "sensor_id": ["3", "3"],
-        "location": ["MIT+Camb", "MIT+Camb"],
-        "datetime_edt": pd.to_datetime(["2026-05-15 12:00:00", "2026-05-15 12:20:00"]),
-        "temperature_c": [21.96, 21.80],
-        "relative_humidity_pct": [41.92, 42.12],
-        "dew_point_c": [8.45, 8.38],
-        "source_file": ["test.xlsx", "test.xlsx"],
-        "last_update": pd.to_datetime(["2026-05-15", "2026-05-15"]),
-        "row_num": [1, 2],
-    })
-
-
-def test_stg_indoor_heat_outputs_fahrenheit_columns():
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
-        result = stg_indoor_heat(pg_engine=MagicMock())
-    df = result.value
-    assert "temperature_f" in df.columns
-    assert "dew_point_f" in df.columns
-    assert "heat_index_f" in df.columns
-    assert "temperature_c" not in df.columns
-    assert "dew_point_c" not in df.columns
-
-
-def test_stg_indoor_heat_temperature_f_conversion():
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
-        result = stg_indoor_heat(pg_engine=MagicMock())
-    df = result.value
-    expected_f = 21.96 * 9 / 5 + 32  # 71.528°F
-    assert df["temperature_f"].iloc[0] == pytest.approx(expected_f, abs=0.01)
-
-
-def test_stg_indoor_heat_deduplicates():
-    duplicate = pd.concat([_make_raw_sql_df(), _make_raw_sql_df()], ignore_index=True)
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=duplicate):
-        result = stg_indoor_heat(pg_engine=MagicMock())
-    assert len(result.value) == 2
-
-
-# ── stg_indoor_heat_aligned asset ────────────────────────────────────────────
-
-def _make_stg_df() -> pd.DataFrame:
-    # Sensor A: two readings in same 20-min bin (12:00 and 12:05 both → 12:00)
-    # Sensor B: one reading per bin
+    """Raw sensor readings with two readings per sensor, in °C."""
     return pd.DataFrame({
         "sensor_id": ["A", "A", "B", "B"],
-        "location": ["MIT"] * 4,
         "datetime_edt": pd.to_datetime([
             "2026-05-15 12:00:00",
             "2026-05-15 12:05:00",
             "2026-05-15 12:00:00",
             "2026-05-15 12:20:00",
         ]),
-        "temperature_f": [71.0, 73.0, 70.0, 72.0],
-        "relative_humidity_pct": [40.0, 42.0, 41.0, 43.0],
-        "dew_point_f": [47.0, 49.0, 46.0, 48.0],
-        "heat_index_f": [71.0, 73.0, 70.0, 72.0],
+        "temperature_c": [21.96, 21.80, 22.0, 22.5],
+        "relative_humidity_pct": [41.92, 42.12, 40.0, 41.0],
+        "dew_point_c": [8.45, 8.38, 8.0, 8.2],
         "source_file": ["a.xlsx"] * 4,
         "last_update": pd.to_datetime(["2026-05-15"] * 4),
+        "row_num": [1, 2, 3, 4],
     })
 
 
-def test_stg_indoor_heat_aligned_collapses_readings_into_20min_bins():
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_stg_df()):
+def test_stg_indoor_heat_aligned_outputs_fahrenheit_columns():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
         result = stg_indoor_heat_aligned(pg_engine=MagicMock())
     df = result.value
-    # Sensor A: 12:00 and 12:05 collapse to one bin (12:00)
-    # Sensor B: 12:00 and 12:20 are separate bins
+    assert "temperature_f" in df.columns
+    assert "heat_index_f" in df.columns
+    assert "temperature_c" not in df.columns
+    assert "sensor_name" not in df.columns
+
+
+def test_stg_indoor_heat_aligned_temperature_f_conversion():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
+        result = stg_indoor_heat_aligned(pg_engine=MagicMock())
+    df = result.value
+    sensor_b_20 = df[(df["sensor_id"] == "B") & (df["datetime_edt"] == pd.Timestamp("2026-05-15 12:20:00"))].iloc[0]
+    assert sensor_b_20["temperature_f"] == pytest.approx(22.5 * 9/5 + 32, abs=0.01)
+
+
+def test_stg_indoor_heat_aligned_collapses_readings_into_20min_bins():
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
+        result = stg_indoor_heat_aligned(pg_engine=MagicMock())
+    df = result.value
+    # Sensor A: 12:00 and 12:05 collapse to 12:00 bin → 1 row
+    # Sensor B: 12:00 and 12:20 are separate bins → 2 rows
     # Total: 3 rows
     assert len(df) == 3
 
 
 def test_stg_indoor_heat_aligned_averages_readings_in_bin():
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_stg_df()):
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
         result = stg_indoor_heat_aligned(pg_engine=MagicMock())
     df = result.value
     sensor_a = df[df["sensor_id"] == "A"].iloc[0]
-    assert sensor_a["temperature_f"] == pytest.approx(72.0, abs=0.01)   # avg(71, 73)
-    assert sensor_a["relative_humidity_pct"] == pytest.approx(41.0, abs=0.01)  # avg(40, 42)
+    # avg(21.96, 21.80)°C = 21.88°C → 71.384°F; avg RH = (41.92+42.12)/2 = 42.02
+    assert sensor_a["temperature_f"] == pytest.approx(21.88 * 9/5 + 32, abs=0.01)
+    assert sensor_a["relative_humidity_pct"] == pytest.approx(42.02, abs=0.01)
 
 
 def test_stg_indoor_heat_aligned_output_columns():
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_stg_df()):
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
         result = stg_indoor_heat_aligned(pg_engine=MagicMock())
     assert set(result.value.columns) == {
-        "sensor_id", "location", "datetime_edt",
+        "sensor_id", "datetime_edt",
         "temperature_f", "relative_humidity_pct", "dew_point_f", "heat_index_f",
     }
 
