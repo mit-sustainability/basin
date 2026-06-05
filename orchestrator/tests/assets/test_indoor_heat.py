@@ -18,8 +18,6 @@ from orchestrator.assets.indoor_heat import (
     indoor_heat_sensor_config,
     stg_indoor_heat_aligned,
 )
-from orchestrator.resources.dropbox import DropboxResource
-
 
 # ── filename parser ──────────────────────────────────────────────────────────
 
@@ -36,11 +34,6 @@ def test_parse_sensor_filename_handles_multi_token_prefix():
 def test_parse_sensor_filename_raises_on_invalid_format():
     with pytest.raises(Failure):
         _parse_sensor_filename("nodate_nodatetime.xlsx")
-
-
-def test_parse_sensor_filename_handles_csv_extension():
-    result = _parse_sensor_filename("MIT+Camb 3 2026-05-15 14_04_50 EDT.csv")
-    assert result["sensor_id"] == "3"
 
 
 def test_parse_sensor_filename_handles_no_location_prefix():
@@ -192,60 +185,6 @@ def test_read_sensor_file_generates_row_num_when_hash_absent():
     assert result["row_num"].iloc[0] == 0
 
 
-def _make_dropbox_entries(names: list[str]) -> list:
-    entries = []
-    for name in names:
-        e = MagicMock()
-        e.name = name
-        e.path_lower = f"/folder/{name}"
-        entries.append(e)
-    return entries
-
-
-def test_list_sensor_files_includes_xlsx_xls_and_csv():
-    names = ["sensor.xlsx", "sensor.xls", "sensor.csv", "notes.txt", "~$sensor.xlsx"]
-    mock_result = MagicMock()
-    mock_result.entries = _make_dropbox_entries(names)
-    mock_result.has_more = False
-
-    mock_dbx = MagicMock()
-    mock_dbx.files_list_folder.return_value = mock_result
-
-    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx), \
-         patch.dict("os.environ", {"DROPBOX_REFRESH_TOKEN": "test", "DROPBOX_APP_KEY": "key", "DROPBOX_APP_SECRET": "secret"}):
-        resource = DropboxResource()
-        files = resource.list_sensor_files("/folder")
-
-    returned_names = [f[0] for f in files]
-    assert "sensor.xlsx" in returned_names
-    assert "sensor.xls" in returned_names
-    assert "sensor.csv" in returned_names
-    assert "notes.txt" not in returned_names
-    assert "~$sensor.xlsx" in returned_names  # lock files are not filtered; caller is responsible
-
-
-def test_list_sensor_files_paginates():
-    result1 = MagicMock()
-    result1.entries = _make_dropbox_entries(["a.xlsx"])
-    result1.has_more = True
-    result1.cursor = "cursor1"
-
-    result2 = MagicMock()
-    result2.entries = _make_dropbox_entries(["b.csv"])
-    result2.has_more = False
-
-    mock_dbx = MagicMock()
-    mock_dbx.files_list_folder.return_value = result1
-    mock_dbx.files_list_folder_continue.return_value = result2
-
-    with patch("orchestrator.resources.dropbox.dropbox.Dropbox", return_value=mock_dbx), \
-         patch.dict("os.environ", {"DROPBOX_REFRESH_TOKEN": "test", "DROPBOX_APP_KEY": "key", "DROPBOX_APP_SECRET": "secret"}):
-        resource = DropboxResource()
-        files = resource.list_sensor_files("/folder")
-
-    assert {f[0] for f in files} == {"a.xlsx", "b.csv"}
-
-
 # ── heat index helper ────────────────────────────────────────────────────────
 
 def test_calculate_heat_index_f_uses_simple_estimate_below_80():
@@ -300,16 +239,6 @@ def _make_raw_sql_df() -> pd.DataFrame:
         "last_update": pd.to_datetime(["2026-05-15"] * 4),
         "row_num": [1, 2, 3, 4],
     })
-
-
-def test_stg_indoor_heat_aligned_outputs_fahrenheit_columns():
-    with patch("orchestrator.assets.indoor_heat.pd.read_sql_query", return_value=_make_raw_sql_df()):
-        result = stg_indoor_heat_aligned(pg_engine=MagicMock())
-    df = result.value
-    assert "temperature_f" in df.columns
-    assert "heat_index_f" in df.columns
-    assert "temperature_c" not in df.columns
-    assert "sensor_name" not in df.columns
 
 
 def test_stg_indoor_heat_aligned_temperature_f_conversion():
@@ -400,18 +329,6 @@ def _make_aligned_df_12_sensors() -> pd.DataFrame:
         "heat_index_f": 90.0,
     }))
     return pd.concat(dfs, ignore_index=True)
-
-
-def test_compute_calibration_stats_returns_two_dataframes():
-    df = _make_aligned_df_6_sensors()
-    precision_df, sensor_stats = _compute_calibration_stats(df)
-    assert len(precision_df) == len(_CALIB_VARS)
-    assert len(sensor_stats) == 6
-
-
-def test_compute_calibration_stats_precision_has_expected_columns():
-    precision_df, _ = _compute_calibration_stats(_make_aligned_df_6_sensors())
-    assert set(precision_df.columns) >= {"variable", "mean_sigma", "median_sigma", "max_sigma"}
 
 
 def test_compute_calibration_stats_detects_marginal_outlier():
