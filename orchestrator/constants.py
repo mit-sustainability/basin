@@ -28,6 +28,9 @@ dh_api_key = os.getenv("DATAHUB_API_KEY")
 PLATFORM_ENV = os.getenv("PLATFORM_ENV")
 food_cat_endpoint = os.getenv("FOOD_API_ENDPOINT")
 dropbox_token = os.getenv("DROPBOX_ACCESS_TOKEN")
+ARCGIS_CLIENT_ID = os.getenv("ARCGIS_CLIENT_ID", "")
+ARCGIS_CLIENT_SECRET = os.getenv("ARCGIS_CLIENT_SECRET", "")
+ARCGIS_ORG_URL = os.getenv("ARCGIS_ORG_URL", "https://www.arcgis.com")
 
 # If DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is set, a manifest will be created at run time.
 # Otherwise, we expect a manifest to be present in the project's target directory.
