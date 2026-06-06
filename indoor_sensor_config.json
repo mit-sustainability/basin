@@ -1,0 +1,112 @@
+{
+    "304": {
+      "orientation": "East",
+      "floor": 3,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "304 sensor.HEIC",
+      "window_photo": "304 windows.HEIC",
+      "hobo_id": 21777611,
+      "calibration_id": 1
+    },
+    "309": {
+      "orientation": "South",
+      "floor": 3,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "309 sensor.JPG",
+      "window_photo": "309 windows.JPG",
+      "hobo_id": 21777614,
+      "calibration_id": 2
+    },
+    "314": {
+      "orientation": "West",
+      "floor": 3,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "314 sensor.JPEG",
+      "window_photo": "314 windows.JPEG",
+      "hobo_id": 21777613,
+      "calibration_id": 3
+    },
+    "504": {
+      "orientation": "East",
+      "floor": 5,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "504 sensor.HEIC",
+      "window_photo": "504 windows.HEIC",
+      "hobo_id": 22533296,
+      "calibration_id": 11
+    },
+    "514": {
+      "orientation": "West",
+      "floor": 5,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "514 sensor.JPEG",
+      "window_photo": "514 windows.JPEG",
+      "hobo_id": 21777603,
+      "calibration_id": 5
+    },
+    "704": {
+      "orientation": "East",
+      "floor": 7,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "704 sensor.HEIC",
+      "window_photo": "704 windows.HEIC",
+      "hobo_id": 21777605,
+      "calibration_id": 6
+    },
+    "709": {
+      "orientation": "South",
+      "floor": 7,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "709 sensor.JPG",
+      "window_photo": "709 windows.JPG",
+      "hobo_id": 21777604,
+      "calibration_id": 7
+    },
+    "714": {
+      "orientation": "West",
+      "floor": 7,
+      "note": null,
+      "window_state": "Closed 24/7",
+      "blinds_state": "Open",
+      "sensor_photo": "714 sensor.JPEG",
+      "window_photo": "714 windows.JPEG",
+      "hobo_id": 21777615,
+      "calibration_id": 8
+    },
+    "courtyard": {
+      "orientation": null,
+      "floor": null,
+      "note": "outdoor temp",
+      "window_state": null,
+      "blinds_state": null,
+      "sensor_photo": "Courtyard sensor.JPG",
+      "window_photo": null,
+      "hobo_id": 22533293,
+      "calibration_id": 9
+    },
+    "penthouse": {
+      "orientation": null,
+      "floor": null,
+      "note": "outdoor temp",
+      "window_state": null,
+      "blinds_state": null,
+      "sensor_photo": "Penthouse sensor.JPG",
+      "window_photo": null,
+      "hobo_id": 22519387,
+      "calibration_id": 10
+    }
+  }

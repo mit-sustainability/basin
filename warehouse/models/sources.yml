@@ -761,6 +761,56 @@ sources:
             description: "MIT fiscal year (July to June)"
           - name: swipe_count
             description: "Total swipes count including all meals and periods"
+      - name: indoor_heat_sensor
+        description: "Raw heat sensor readings ingested from Dropbox (xlsx/xls/csv)"
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["indoor_heat_sensor"]
+        columns:
+          - name: row_num
+            description: "Row number from source file"
+          - name: sensor_id
+            description: "Sensor identifier extracted from filename"
+          - name: datetime_edt
+            description: "Timestamp of the sensor reading (EDT timezone)"
+          - name: temperature_c
+            description: "Temperature in degrees Celsius"
+          - name: relative_humidity_pct
+            description: "Relative humidity percentage (0-100)"
+          - name: dew_point_c
+            description: "Dew point in degrees Celsius"
+          - name: source_file
+            description: "Original Dropbox filename for traceability"
+          - name: last_update
+            description: "Timestamp of ingestion into the warehouse"
+      - name: indoor_heat_sensor_config
+        description: "Sensor site metadata from indoor_sensor_config.json (name, coords, deployment, radiation shield)"
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["indoor_heat_sensor_config"]
+        columns:
+          - name: sensor_id
+            description: "Sensor identifier (matches indoor_heat_sensor.sensor_id)"
+          - name: hobo_id
+            description: "HOBO logger hardware ID"
+          - name: calibration_id
+            description: "Calibration run identifier for this sensor"
+          - name: floor
+            description: "Floor number of the deployment location"
+          - name: orientation
+            description: "Cardinal orientation of the sensor (e.g. East, West)"
+          - name: window_state
+            description: "Window open/close state at the deployment site"
+          - name: blinds_state
+            description: "Blinds open/close state at the deployment site"
+          - name: note
+            description: "Free-text notes about the deployment"
+          - name: sensor_photo
+            description: "Filename of the sensor photo"
+          - name: window_photo
+            description: "Filename of the window photo"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging
@@ -847,3 +897,23 @@ sources:
             description: "The external gross square footage of the building from the facilities database"
           - name: last_update
             description: "Timestamp when the record was processed"
+      - name: stg_indoor_heat_aligned
+        description: "20-minute binned and averaged heat sensor readings, one row per sensor per bin"
+        meta:
+          owner: yu_cheng@mit.edu
+          group: staging
+          dagster:
+            asset_key: ["staging", "stg_indoor_heat_aligned"]
+        columns:
+          - name: sensor_id
+            description: "Sensor identifier"
+          - name: datetime_edt
+            description: "20-minute bin timestamp"
+          - name: temperature_f
+            description: "Average temperature in degrees Fahrenheit within the bin"
+          - name: relative_humidity_pct
+            description: "Average relative humidity percentage within the bin"
+          - name: dew_point_f
+            description: "Average dew point in degrees Fahrenheit within the bin"
+          - name: heat_index_f
+            description: "Average NOAA/Rothfusz heat index in degrees Fahrenheit within the bin"

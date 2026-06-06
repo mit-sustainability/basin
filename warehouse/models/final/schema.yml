@@ -404,6 +404,50 @@ models:
         description: "Total utility usage converted to MMBtu"
       - name: unit_cost
         description: "Unit cost defined as Total cost divided by all usage, or mmbtu for energy"
+  - name: indoor_heat_daily_summary
+    description: "Daily aggregated heat sensor metrics (temperature, humidity, dew point) per sensor and location"
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: sensor_id
+        description: "Sensor identifier"
+      - name: floor
+        description: "Floor number of the deployment location"
+      - name: orientation
+        description: "Cardinal orientation of the sensor (e.g. East, West)"
+      - name: window_state
+        description: "Window open/close state at the deployment site"
+      - name: blinds_state
+        description: "Blinds open/close state at the deployment site"
+      - name: note
+        description: "Free-text notes about the deployment"
+      - name: reading_date
+        description: "Date of readings"
+      - name: avg_temperature_f
+        description: "Average temperature in degrees Fahrenheit"
+      - name: max_temperature_f
+        description: "Maximum temperature in degrees Fahrenheit"
+      - name: min_temperature_f
+        description: "Minimum temperature in degrees Fahrenheit"
+      - name: avg_relative_humidity_pct
+        description: "Average relative humidity percentage"
+      - name: max_relative_humidity_pct
+        description: "Maximum relative humidity percentage"
+      - name: min_relative_humidity_pct
+        description: "Minimum relative humidity percentage"
+      - name: avg_dew_point_f
+        description: "Average dew point in degrees Fahrenheit"
+      - name: min_dew_point_f
+        description: "Minimum dew point in degrees Fahrenheit"
+      - name: max_dew_point_f
+        description: "Maximum dew point in degrees Fahrenheit"
+      - name: avg_heat_index_f
+        description: "Average NOAA/Rothfusz heat index in degrees Fahrenheit"
+      - name: max_heat_index_f
+        description: "Maximum NOAA/Rothfusz heat index in degrees Fahrenheit"
+      - name: num_readings
+        description: "Number of 20-minute aligned readings in the day"
+
   - name: dining_food_summary
     description: "Summary of food-related spend and carbon emissions (CO2eq) by fiscal year and customer."
     meta:

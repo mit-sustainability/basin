@@ -29,6 +29,7 @@ from orchestrator.assets import (
     engagement,
     campus_utility,
 )
+from orchestrator.assets import indoor_heat
 from orchestrator.jobs.business_travel_job import business_asset_job
 from orchestrator.jobs.confluence_wiki_snapshot import confluence_wiki_snapshot_job
 from orchestrator.jobs.website_content_health import (
@@ -45,6 +46,8 @@ from orchestrator.jobs.waste_job import waste_asset_job
 from orchestrator.jobs.dlc_footprint import footprint_job
 from orchestrator.jobs.engagement import attendance_job
 from orchestrator.jobs.campus_utility import campus_utility_job
+from orchestrator.jobs.indoor_heat_job import indoor_heat_job
+from orchestrator.jobs.indoor_heat_calibration_job import indoor_heat_calibration_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
@@ -53,6 +56,7 @@ from orchestrator.constants import (
     dh_api_key,
 )
 from orchestrator.resources.datahub import DataHubResource
+from orchestrator.resources.dropbox import DropboxResource
 from orchestrator.resources.confluence import ConfluenceResource
 from orchestrator.resources.mit_warehouse import MITWHRSResource
 from orchestrator.resources.playwright import PlaywrightBrowserResource
@@ -77,6 +81,7 @@ engagement_assets = load_assets_from_modules([engagement])
 utility_assets = load_assets_from_modules([campus_utility])
 website_content_assets = load_assets_from_modules([website_content_health])
 transit_assets = load_assets_from_modules([transit])
+indoor_heat_assets = load_assets_from_modules([indoor_heat])
 
 
 @resource
@@ -105,7 +110,8 @@ defs = Definitions(
     + engagement_assets
     + utility_assets
     + website_content_assets
-    + transit_assets,
+    + transit_assets
+    + indoor_heat_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
@@ -122,6 +128,8 @@ defs = Definitions(
         campus_utility_job,
         website_content_health_job,
         website_content_health_link_check_job,
+        indoor_heat_job,
+        indoor_heat_calibration_job,
     ],
     sensors=[sensor_ghg_manual],
     resources={
@@ -145,5 +153,6 @@ defs = Definitions(
             base_url="https://passprogram.mbta.com",
             accept_downloads=True,
         ),
+        "dropbox": DropboxResource(),
     },
 )
