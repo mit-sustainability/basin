@@ -62,10 +62,10 @@ def test_handle_output_replace_existing(mock_db_connection, mock_dataframe, mock
         manager.handle_output(mock_context, mock_dataframe)
 
         # Assertions for replace mode
-        assert mock_db_connection.execute.call_count >= 2  # existence check + delete
+        assert mock_db_connection.execute.call_count >= 2  # existence check + truncate
         executed_sql = [str(call.args[0]) for call in mock_db_connection.execute.call_args_list]
         assert any("information_schema.tables" in sql for sql in executed_sql)
-        assert any('DELETE FROM public."test_table"' in sql for sql in executed_sql)
+        assert any('TRUNCATE public."test_table"' in sql for sql in executed_sql)
         mock_dataframe.to_sql.assert_called_once_with(
             con=mock_db_connection,
             name="test_table",
