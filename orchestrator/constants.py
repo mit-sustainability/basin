@@ -27,7 +27,6 @@ EM_CREDENTIALS = {
 dh_api_key = os.getenv("DATAHUB_API_KEY")
 PLATFORM_ENV = os.getenv("PLATFORM_ENV")
 food_cat_endpoint = os.getenv("FOOD_API_ENDPOINT")
-dropbox_token = os.getenv("DROPBOX_ACCESS_TOKEN")
 
 # If DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is set, a manifest will be created at run time.
 # Otherwise, we expect a manifest to be present in the project's target directory.

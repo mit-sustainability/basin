@@ -4,7 +4,7 @@ from io import BytesIO
 
 import dropbox
 from dropbox.common import PathRoot
-from dagster import ConfigurableResource, get_dagster_logger
+from dagster import ConfigurableResource, Failure, get_dagster_logger
 
 logger = get_dagster_logger()
 

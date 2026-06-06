@@ -110,6 +110,11 @@ def _read_sensor_file(file_bytes: BytesIO, meta: dict) -> pd.DataFrame:
     df = df.rename(columns=_DIRECT_RENAMES | _FAHRENHEIT_RENAMES)
     df = df.loc[:, ~df.columns.duplicated(keep="first")]
 
+    # Drop rows with no sensor readings (e.g. HOBO "Logged" footer rows)
+    reading_cols = [c for c in ["temperature_c", "temp_f_raw", "relative_humidity_pct"] if c in df.columns]
+    if reading_cols:
+        df = df[df[reading_cols].notna().any(axis=1)]
+
     for f_col, c_col in [("temp_f_raw", "temperature_c"), ("dew_point_f_raw", "dew_point_c")]:
         if f_col in df.columns:
             if c_col not in df.columns:
@@ -152,7 +157,7 @@ class IndoorHeatSensorRawSchema(pa.DataFrameModel):
 
 
 class IndoorHeatConfig(Config):
-    dropbox_folder: str = "ns:4039652928/Program Topics/Data/Projects/Outdoor campus heat data 2025/HOBO_Data END OF SEASON COLLECTION"
+    dropbox_folder: str = "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Latest"
 
 
 @asset(
@@ -203,7 +208,7 @@ def indoor_heat_sensor(
 
 
 class SensorConfigPath(Config):
-    config_file_path: str = "ns:4039652928/Program Topics/Data/Projects/Outdoor campus heat data 2025/config_hobo.json"
+    config_file_path: str = "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/indoor_sensor_config.json"
 
 
 def _load_sensor_metadata(dropbox: DropboxResource, config_file_path: str) -> pd.DataFrame:
@@ -212,11 +217,15 @@ def _load_sensor_metadata(dropbox: DropboxResource, config_file_path: str) -> pd
     for sid, meta in raw.items():
         rows.append({
             "sensor_id": sid,
-            "sensor_name": meta.get("name"),
-            "lat": meta.get("coords", [None, None])[0],
-            "lon": meta.get("coords", [None, None])[1],
-            "deployment": meta.get("deployment"),
-            "radiation_shield": meta.get("radiation_shield") or meta.get("rediation_shield"),
+            "hobo_id": str(meta.get("hobo_id")),
+            "calibration_id": meta.get("calibration_id"),
+            "floor": meta.get("floor"),
+            "orientation": meta.get("orientation"),
+            "window_state": meta.get("window_state"),
+            "blinds_state": meta.get("blinds_state"),
+            "note": meta.get("note"),
+            "sensor_photo": meta.get("sensor_photo"),
+            "window_photo": meta.get("window_photo"),
         })
     return pd.DataFrame(rows)
 

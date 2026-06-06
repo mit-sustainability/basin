@@ -783,7 +783,7 @@ sources:
           - name: last_update
             description: "Timestamp of ingestion into the warehouse"
       - name: indoor_heat_sensor_config
-        description: "Sensor site metadata from config_hobo.json (name, coords, deployment, radiation shield)"
+        description: "Sensor site metadata from indoor_sensor_config.json (name, coords, deployment, radiation shield)"
         meta:
           owner: yu_cheng@mit.edu
           dagster:
@@ -791,16 +791,24 @@ sources:
         columns:
           - name: sensor_id
             description: "Sensor identifier (matches indoor_heat_sensor.sensor_id)"
-          - name: sensor_name
-            description: "Human-readable site name"
-          - name: lat
-            description: "Latitude of deployment location"
-          - name: lon
-            description: "Longitude of deployment location"
-          - name: deployment
-            description: "Deployment phase (e.g. Phase 1, Phase 2)"
-          - name: radiation_shield
-            description: "Whether the sensor has a radiation shield fitted"
+          - name: hobo_id
+            description: "HOBO logger hardware ID"
+          - name: calibration_id
+            description: "Calibration run identifier for this sensor"
+          - name: floor
+            description: "Floor number of the deployment location"
+          - name: orientation
+            description: "Cardinal orientation of the sensor (e.g. East, West)"
+          - name: window_state
+            description: "Window open/close state at the deployment site"
+          - name: blinds_state
+            description: "Blinds open/close state at the deployment site"
+          - name: note
+            description: "Free-text notes about the deployment"
+          - name: sensor_photo
+            description: "Filename of the sensor photo"
+          - name: window_photo
+            description: "Filename of the window photo"
   - name: staging
     description: Python generated file in the MITOS warehouse with initial data processing
     schema: staging

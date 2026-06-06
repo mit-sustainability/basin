@@ -89,7 +89,7 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
                         )
                         if self.write_method == "replace" and exists:
                             logger.info("Clearing existing rows before replace.")
-                            con.execute(text(f'DELETE FROM {schema}."{table}";'))
+                            con.execute(text(f'TRUNCATE {schema}."{table}";'))
                         if_exists = "append" if self.write_method != "replace" or exists else "replace"
                         obj.to_sql(
                             con=con,
