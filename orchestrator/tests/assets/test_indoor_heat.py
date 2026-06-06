@@ -204,20 +204,33 @@ def test_calculate_heat_index_f_uses_rothfusz_above_80():
 def test_indoor_heat_sensor_config_loads_metadata():
     import json as _json
     config_data = {
-        "22086527": {"name": "Medical Parking Lot", "coords": [42.36, -71.09], "deployment": "Phase 1", "rediation_shield": "False"},
-        "22086522": {"name": "Eastman Court", "coords": [42.37, -71.08], "deployment": "Phase 1", "radiation_shield": "True"},
+        "304": {
+            "hobo_id": 21777605, "calibration_id": 6, "floor": 7,
+            "orientation": "East", "window_state": "Closed 24/7",
+            "blinds_state": "Open", "note": None,
+            "sensor_photo": "704 sensor.HEIC", "window_photo": "704 windows.HEIC",
+        },
+        "305": {
+            "hobo_id": 21777606, "calibration_id": 7, "floor": 3,
+            "orientation": "West", "window_state": "Open", "blinds_state": "Closed",
+            "note": "near HVAC vent", "sensor_photo": None, "window_photo": None,
+        },
     }
     mock_dropbox = MagicMock()
     mock_dropbox.download_file.return_value = BytesIO(_json.dumps(config_data).encode())
     result = indoor_heat_sensor_config(
-        config=SensorConfigPath(config_file_path="/test/config.json"),
+        config=SensorConfigPath(config_file_path="/test/indoor_sensor_config.json"),
         dropbox=mock_dropbox,
     )
     df = result.value
     assert len(df) == 2
-    assert set(df.columns) == {"sensor_id", "sensor_name", "lat", "lon", "deployment", "radiation_shield"}
-    assert df.loc[df["sensor_id"] == "22086527", "radiation_shield"].iloc[0] == "False"
-    assert df.loc[df["sensor_id"] == "22086522", "radiation_shield"].iloc[0] == "True"
+    assert set(df.columns) == {
+        "sensor_id", "hobo_id", "calibration_id", "floor",
+        "orientation", "window_state", "blinds_state", "note",
+        "sensor_photo", "window_photo",
+    }
+    assert df.loc[df["sensor_id"] == "304", "floor"].iloc[0] == 7
+    assert df.loc[df["sensor_id"] == "305", "orientation"].iloc[0] == "West"
 
 
 # ── stg_indoor_heat_aligned asset (dedup + °F + 20-min bins) ─────────────────
