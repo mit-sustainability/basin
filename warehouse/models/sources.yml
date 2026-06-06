@@ -768,6 +768,8 @@ sources:
           dagster:
             asset_key: ["indoor_heat_sensor"]
         columns:
+          - name: row_num
+            description: "Row number from source file"
           - name: sensor_id
             description: "Sensor identifier extracted from filename"
           - name: datetime_edt
