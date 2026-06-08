@@ -59,10 +59,10 @@ RUN uv run dbt deps --project-dir warehouse --profiles-dir warehouse && \
 ENV CMDSTAN=/opt/cmdstan
 RUN uv run python -c "from cmdstanpy import install_cmdstan; install_cmdstan(dir='/opt')" \
     && ln -s "$(find /opt -maxdepth 1 -type d -name 'cmdstan-*' | head -n 1)" /opt/cmdstan
-RUN playwright install --with-deps chromium
+RUN uv run playwright install --with-deps chromium
 
 EXPOSE 3000
 WORKDIR /opt/dagster/app/orchestrator
 ENV PYTHONPATH="/opt/dagster/app/"
 
-CMD ["dagster-webserver", "-w", "workspace.yaml", "-h", "0.0.0.0", "-p", "3000"]
+CMD ["uv", "run", "dagster-webserver", "-w", "workspace.yaml", "-h", "0.0.0.0", "-p", "3000"]
