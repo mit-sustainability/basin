@@ -36,6 +36,7 @@ COPY warehouse warehouse
 
 # Install all Python dependencies from lockfile
 RUN uv sync --frozen --no-dev
+ENV PATH="/opt/dagster/app/.venv/bin:$PATH"
 
 # Set dbt build env vars
 ARG pg_host
@@ -65,4 +66,4 @@ EXPOSE 3000
 WORKDIR /opt/dagster/app/orchestrator
 ENV PYTHONPATH="/opt/dagster/app/"
 
-CMD ["uv", "run", "dagster-webserver", "-w", "workspace.yaml", "-h", "0.0.0.0", "-p", "3000"]
+CMD ["dagster-webserver", "-w", "workspace.yaml", "-h", "0.0.0.0", "-p", "3000"]

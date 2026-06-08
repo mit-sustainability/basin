@@ -62,4 +62,4 @@ services:
       - ECS_CAPACITY_PROVIDER_STRATEGY=${ECS_CAPACITY_PROVIDER_STRATEGY}
       - MBTA_TRANSIT_USERNAME=${MBTA_TRANSIT_USERNAME}
       - MBTA_TRANSIT_PASSWORD=${MBTA_TRANSIT_PASSWORD}
-    command: ["uv", "run", "dagster-daemon", "run"]
+    command: "dagster-daemon run"
