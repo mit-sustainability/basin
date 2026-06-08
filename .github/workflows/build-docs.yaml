@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   # Build the docs
@@ -15,21 +16,33 @@ jobs:
         id: step-01
         uses: actions/checkout@v4
 
-      - name: "Step 02 - Install dbt"
+      - name: "Step 02 - Install uv"
         id: step-02
-        working-directory: ./warehouse
-        run: bash setup.sh
+        uses: astral-sh/setup-uv@v5
 
-      - name: "Step 03 - Verify dbt"
+      - name: "Step 03 - Install dependencies"
         id: step-03
-        run: dbt --version
-
-      - name: "Step 04 - Generate dbt docs"
-        id: step-04
-        working-directory: ./warehouse
         run: |
-          export DBT_PROFILES_DIR=$PWD
-          dbt docs generate -t docs
+          uv sync --frozen
+          mkdir -p ~/.dbt && cp warehouse/profiles.yml ~/.dbt/profiles.yml
+
+      - name: "Step 04 - Install dbt packages"
+        id: step-04
+        run: uv run dbt deps --project-dir warehouse --profiles-dir warehouse
+
+      - name: "Step 05 - Verify dbt"
+        id: step-05
+        run: uv run dbt --version
+
+      - name: "Step 06 - Generate dbt docs"
+        id: step-06
+        working-directory: ./warehouse
+        env:
+          PG_WAREHOUSE_HOST: ${{ secrets.PG_WAREHOUSE_HOST }}
+          PG_USER: ${{ secrets.PG_USER }}
+          PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+        run: |
+          uv run dbt docs generate -t docs
           cp docstyle.css target/
           cp MITOS_globe.png target/
           cd target
@@ -41,8 +54,8 @@ jobs:
           cp *.json *.html *.png *.css graph.gpickle ${{ github.workspace }}/docs
           ls -ltra ${{ github.workspace }}/docs
 
-      - name: "Step 05 - Upload pages to artifact"
-        id: step-05
+      - name: "Step 07 - Upload pages to artifact"
+        id: step-07
         uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ github.workspace }}/docs
