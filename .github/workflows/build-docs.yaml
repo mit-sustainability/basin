@@ -19,6 +19,8 @@ jobs:
       - name: "Step 02 - Install uv"
         id: step-02
         uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
 
       - name: "Step 03 - Install dependencies"
         id: step-03
