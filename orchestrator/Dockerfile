@@ -46,8 +46,8 @@ ENV PG_USER=${pg_user}
 ENV PG_PASSWORD=${pg_pass}
 
 # Install dbt packages and compile manifest
-RUN dbt deps --project-dir warehouse --profiles-dir warehouse && \
-    dbt \
+RUN uv run dbt deps --project-dir warehouse --profiles-dir warehouse && \
+    uv run dbt \
         --no-use-colors \
         --log-format json \
         ls \
