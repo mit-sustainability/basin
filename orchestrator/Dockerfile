@@ -57,7 +57,7 @@ RUN uv run dbt deps --project-dir warehouse --profiles-dir warehouse && \
         --output json
 
 ENV CMDSTAN=/opt/cmdstan
-RUN python -c "from cmdstanpy import install_cmdstan; install_cmdstan(dir='/opt')" \
+RUN uv run python -c "from cmdstanpy import install_cmdstan; install_cmdstan(dir='/opt')" \
     && ln -s "$(find /opt -maxdepth 1 -type d -name 'cmdstan-*' | head -n 1)" /opt/cmdstan
 RUN playwright install --with-deps chromium
 
