@@ -1,12 +1,15 @@
 import json
+import os
 import re
-from datetime import datetime
+import tempfile
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pandera as pa
-from dagster import Config, Failure, Output, ResourceParam, asset, get_dagster_logger
+from dagster import AssetKey, Config, Failure, Output, ResourceParam, asset, get_dagster_logger
 from dagster_pandera import pandera_schema_to_dagster_type
 from pandera.typing import DateTime, Series
 
@@ -394,4 +397,107 @@ def indoor_heat_calibration(pg_engine: ResourceParam[PostgreConnResources]) -> N
     outlier_count = int(sensor_stats["is_outlier"].sum())
     logger.info(
         f"Calibration complete: {len(sensor_stats)} sensors, {outlier_count} outliers"
+    )
+
+
+# ── indoor_heat_export ────────────────────────────────────────────────────────
+
+_EDT = timezone(timedelta(hours=-4))
+
+_EXPORT_QUERY = """
+    SELECT sensor_id, datetime_edt, temperature_f, relative_humidity_pct,
+           dew_point_f, heat_index_f, floor, orientation, window_state, blinds_state,
+           sensor_photo, window_photo
+    FROM final.final_indoor_heat_combined
+    ORDER BY sensor_id, datetime_edt
+"""
+
+
+def _parse_edt(raw) -> str:
+    """Convert datetime_edt (EDT string or Timestamp) to UTC ISO 8601 string."""
+    if isinstance(raw, str):
+        dt = datetime.strptime(raw.strip(), "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=_EDT)
+    else:
+        dt = pd.Timestamp(raw).to_pydatetime().replace(tzinfo=_EDT)
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _write_heat_export(output_dir: Path, df: pd.DataFrame, now: datetime) -> tuple[Path, dict]:
+    stamp = now.strftime("%Y%m%dT%H%M%SZ")
+    readings_filename = f"readings_{stamp}.json"
+    readings_path = output_dir / readings_filename
+    browser_path = f"/data/{readings_filename}"
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    records = [
+        {
+            "room": str(row["sensor_id"]).lower(),
+            "floor": int(float(row["floor"])) if pd.notna(row["floor"]) else None,
+            "timestamp": _parse_edt(row["datetime_edt"]),
+            "temperature_f": round(float(row["temperature_f"]), 3),
+            "humidity_pct": round(float(row["relative_humidity_pct"]), 3),
+            "dew_point_f": round(float(row["dew_point_f"]), 3),
+            "heat_index_f": round(float(row["heat_index_f"]), 3),
+            "orientation": row.get("orientation"),
+            "window_state": row.get("window_state"),
+            "blinds_state": row.get("blinds_state"),
+            "sensor_photo": row.get("sensor_photo"),
+            "window_photo": row.get("window_photo"),
+        }
+        for _, row in df.iterrows()
+        if pd.notna(row.get("sensor_id"))
+    ]
+
+    # Step 1: write readings — manifest always written after, so frontend never sees a dangling pointer
+    readings_path.write_text(json.dumps(records, default=str, indent=2))
+
+    # Retention: keep only the latest versioned file
+    for old in output_dir.glob("readings_*.json"):
+        if old != readings_path:
+            old.unlink()
+
+    manifest = {
+        "generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "files": {"readings": browser_path},
+    }
+
+    # Step 2: atomic manifest write — temp file in same dir ensures same-fs rename
+    with tempfile.NamedTemporaryFile(mode="w", dir=output_dir, suffix=".tmp", delete=False) as tf:
+        tf.write(json.dumps(manifest, indent=2))
+        tmp_name = tf.name
+    Path(tmp_name).rename(output_dir / "manifest.json")
+
+    return readings_path, manifest
+
+
+@asset(
+    compute_kind="python",
+    group_name="exports",
+    deps=[AssetKey(["final", "final_indoor_heat_combined"]), "indoor_heat_sensor_config"],
+)
+def indoor_heat_export(pg_engine: ResourceParam[PostgreConnResources]) -> Output[None]:
+    """Export joined sensor readings to JSON + manifest for the indoor-heat dashboard."""
+    output_dir = Path(os.environ.get("INDOOR_HEAT_OUTPUT_DIR", "/opt/dagster/output"))
+
+    engine = pg_engine.create_engine()
+    with engine.connect() as conn:
+        df = pd.read_sql(_EXPORT_QUERY, conn)
+
+    row_count = len(df)
+    logger.info(f"indoor_heat_export: {row_count} rows from {df['sensor_id'].nunique()} sensors")
+
+    now = datetime.utcnow()
+    readings_path, manifest = _write_heat_export(output_dir, df, now)
+
+    logger.info(f"indoor_heat_export: wrote {readings_path}")
+    logger.info(f"indoor_heat_export: manifest → {manifest['files']['readings']}")
+
+    return Output(
+        value=None,
+        metadata={
+            "row_count": row_count,
+            "readings_file": str(readings_path),
+            "manifest_browser_path": manifest["files"]["readings"],
+        },
     )
