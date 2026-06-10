@@ -448,6 +448,41 @@ models:
       - name: num_readings
         description: "Number of 20-minute aligned readings in the day"
 
+  - name: final_indoor_heat_combined
+    description: >
+      Granular 20-minute sensor readings joined with room/sensor metadata.
+      Combines staging.stg_indoor_heat_aligned with raw.indoor_heat_sensor_config
+      for use by the indoor-heat dashboard JSON export.
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: sensor_id
+        description: "Sensor identifier (e.g. '304', '504')."
+      - name: datetime_edt
+        description: "Timestamp of the 20-minute reading bin, in EDT."
+      - name: temperature_f
+        description: "Average temperature in °F for the bin."
+      - name: relative_humidity_pct
+        description: "Average relative humidity percentage for the bin."
+      - name: dew_point_f
+        description: "Average dew point in °F for the bin."
+      - name: heat_index_f
+        description: "NOAA/Rothfusz heat index in °F for the bin."
+      - name: floor
+        description: "Floor number of the sensor deployment location."
+      - name: orientation
+        description: "Cardinal orientation of the sensor (e.g. East, West)."
+      - name: window_state
+        description: "Window open/close state at deployment site."
+      - name: blinds_state
+        description: "Blinds open/close state at deployment site."
+      - name: hobo_id
+        description: "HOBO logger hardware ID."
+      - name: calibration_id
+        description: "Calibration group identifier."
+      - name: note
+        description: "Free-text deployment notes."
+
   - name: dining_food_summary
     description: "Summary of food-related spend and carbon emissions (CO2eq) by fiscal year and customer."
     meta:

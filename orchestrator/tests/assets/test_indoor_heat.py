@@ -1,3 +1,5 @@
+import json
+from datetime import datetime
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
@@ -12,8 +14,11 @@ from orchestrator.assets.indoor_heat import (
     _calculate_heat_index_f,
     _compute_calibration_stats,
     _load_sensor_metadata,
+    _parse_edt,
     _parse_sensor_filename,
     _read_sensor_file,
+    _write_heat_export,
+    indoor_heat_export,
     indoor_heat_sensor,
     indoor_heat_sensor_config,
     stg_indoor_heat_aligned,
@@ -69,37 +74,7 @@ def test_read_sensor_file_standardizes_columns():
     assert result["sensor_id"].iloc[0] == "3"
 
 
-# ── indoor_heat_sensor asset ─────────────────────────────────────────────────
-
-def test_indoor_heat_sensor_processes_all_files():
-    mock_dropbox = MagicMock()
-    mock_dropbox.list_sensor_files.return_value = [
-        ("MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx", "/folder/MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx"),
-    ]
-    mock_dropbox.download_file.return_value = _make_sensor_excel()
-
-    result = indoor_heat_sensor(
-        config=IndoorHeatConfig(dropbox_folder="/folder"),
-        dropbox=mock_dropbox,
-    )
-
-    assert len(result.value) == 2
-    assert result.metadata["total_files"].value == 1
-
-
-def test_indoor_heat_sensor_raises_if_no_files_in_dropbox():
-    mock_dropbox = MagicMock()
-    mock_dropbox.list_sensor_files.return_value = []
-
-    with pytest.raises(Failure, match="No sensor files found"):
-        indoor_heat_sensor(
-            config=IndoorHeatConfig(dropbox_folder="/empty"),
-            dropbox=mock_dropbox,
-        )
-
-
 def _make_celsius_space_variant_excel() -> BytesIO:
-    """Simulates HOBO export with space-before-comma column names."""
     df = pd.DataFrame({
         "#": [1, 2],
         "Date-Time (EDT)": ["05/15/2026 12:00:00", "05/15/2026 12:20:00"],
@@ -114,7 +89,6 @@ def _make_celsius_space_variant_excel() -> BytesIO:
 
 
 def _make_fahrenheit_excel() -> BytesIO:
-    """Simulates HOBO export with °F columns."""
     df = pd.DataFrame({
         "#": [1, 2],
         "Date-Time (EDT)": ["05/15/2026 12:00:00", "05/15/2026 12:20:00"],
@@ -171,18 +145,40 @@ def test_read_sensor_file_handles_csv():
     assert result["temperature_c"].iloc[0] == pytest.approx(21.96, abs=0.01)
 
 
-def test_read_sensor_file_fills_missing_dew_point_with_nan():
+def test_read_sensor_file_handles_missing_optional_columns():
     meta = {"sensor_id": "1", "source_file": "nodew.xlsx"}
     result = _read_sensor_file(_make_no_dew_point_excel(), meta)
-    assert "dew_point_c" in result.columns
     assert pd.isna(result["dew_point_c"].iloc[0])
-
-
-def test_read_sensor_file_generates_row_num_when_hash_absent():
-    meta = {"sensor_id": "1", "source_file": "nodew.xlsx"}
-    result = _read_sensor_file(_make_no_dew_point_excel(), meta)
-    assert "row_num" in result.columns
     assert result["row_num"].iloc[0] == 0
+
+
+# ── indoor_heat_sensor asset ─────────────────────────────────────────────────
+
+def test_indoor_heat_sensor_processes_all_files():
+    mock_dropbox = MagicMock()
+    mock_dropbox.list_sensor_files.return_value = [
+        ("MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx", "/folder/MIT+Camb 3 2026-05-15 14_04_50 EDT.xlsx"),
+    ]
+    mock_dropbox.download_file.return_value = _make_sensor_excel()
+
+    result = indoor_heat_sensor(
+        config=IndoorHeatConfig(dropbox_folder="/folder"),
+        dropbox=mock_dropbox,
+    )
+
+    assert len(result.value) == 2
+    assert result.metadata["total_files"].value == 1
+
+
+def test_indoor_heat_sensor_raises_if_no_files_in_dropbox():
+    mock_dropbox = MagicMock()
+    mock_dropbox.list_sensor_files.return_value = []
+
+    with pytest.raises(Failure, match="No sensor files found"):
+        indoor_heat_sensor(
+            config=IndoorHeatConfig(dropbox_folder="/empty"),
+            dropbox=mock_dropbox,
+        )
 
 
 # ── heat index helper ────────────────────────────────────────────────────────
@@ -268,7 +264,6 @@ def test_stg_indoor_heat_aligned_collapses_readings_into_20min_bins():
     df = result.value
     # Sensor A: 12:00 and 12:05 collapse to 12:00 bin → 1 row
     # Sensor B: 12:00 and 12:20 are separate bins → 2 rows
-    # Total: 3 rows
     assert len(df) == 3
 
 
@@ -277,7 +272,6 @@ def test_stg_indoor_heat_aligned_averages_readings_in_bin():
         result = stg_indoor_heat_aligned(pg_engine=MagicMock())
     df = result.value
     sensor_a = df[df["sensor_id"] == "A"].iloc[0]
-    # avg(21.96, 21.80)°C = 21.88°C → 71.384°F; avg RH = (41.92+42.12)/2 = 42.02
     assert sensor_a["temperature_f"] == pytest.approx(21.88 * 9/5 + 32, abs=0.01)
     assert sensor_a["relative_humidity_pct"] == pytest.approx(42.02, abs=0.01)
 
@@ -362,3 +356,108 @@ def test_compute_calibration_stats_detects_excluded_outlier():
     _, sensor_stats = _compute_calibration_stats(_make_aligned_df_12_sensors())
     outlier = sensor_stats[sensor_stats["sensor_id"] == "OUTLIER"].iloc[0]
     assert outlier["severity"] == "excluded"
+
+
+# ── _parse_edt ────────────────────────────────────────────────────────────────
+
+def test_parse_edt_converts_string_to_utc():
+    assert _parse_edt("2026-06-09 12:00:00.000000") == "2026-06-09T16:00:00Z"
+
+
+def test_parse_edt_converts_timestamp_to_utc():
+    assert _parse_edt(pd.Timestamp("2026-06-09 12:00:00")) == "2026-06-09T16:00:00Z"
+
+
+# ── _write_heat_export ────────────────────────────────────────────────────────
+
+def _make_export_df(n: int = 2) -> pd.DataFrame:
+    return pd.DataFrame({
+        "sensor_id": ["304", "504"][:n],
+        "datetime_edt": pd.to_datetime(["2026-06-09 12:00:00", "2026-06-09 12:00:00"][:n]),
+        "temperature_f": [78.2, 80.1][:n],
+        "relative_humidity_pct": [65.0, 62.3][:n],
+        "dew_point_f": [63.0, 60.0][:n],
+        "heat_index_f": [82.0, 84.0][:n],
+        "floor": [3, 5][:n],
+        "orientation": ["East", "West"][:n],
+        "window_state": ["Closed 24/7", "Open"][:n],
+        "blinds_state": ["Open", "Closed"][:n],
+    })
+
+
+def test_write_heat_export_readings_filename_uses_timestamp(tmp_path):
+    readings_path, _ = _write_heat_export(tmp_path, _make_export_df(), datetime(2026, 6, 9, 12, 0, 0))
+    assert readings_path.name == "readings_20260609T120000Z.json"
+
+
+def test_write_heat_export_manifest_content(tmp_path):
+    now = datetime(2026, 6, 9, 12, 0, 0)
+    _, manifest = _write_heat_export(tmp_path, _make_export_df(), now)
+    assert manifest["generated_at"] == "2026-06-09T12:00:00Z"
+    assert manifest["files"]["readings"] == "/data/readings_20260609T120000Z.json"
+
+
+def test_write_heat_export_column_mapping(tmp_path):
+    readings_path, _ = _write_heat_export(tmp_path, _make_export_df(1), datetime(2026, 6, 9, 12, 0, 0))
+    r = json.loads(readings_path.read_text())[0]
+    assert r["room"] == "304"  # numeric ids unchanged by .lower()
+    assert r["floor"] == 3
+    assert r["timestamp"] == "2026-06-09T16:00:00Z"
+    assert r["temperature_f"] == pytest.approx(78.2)
+    assert r["humidity_pct"] == pytest.approx(65.0)
+    assert r["dew_point_f"] == pytest.approx(63.0)
+    assert r["heat_index_f"] == pytest.approx(82.0)
+
+
+def test_write_heat_export_room_id_lowercased(tmp_path):
+    df = pd.DataFrame({
+        "sensor_id": ["Penthouse", "Courtyard"],
+        "datetime_edt": pd.to_datetime(["2026-06-09 12:00:00"] * 2),
+        "temperature_f": [78.2, 80.1],
+        "relative_humidity_pct": [65.0, 62.3],
+        "dew_point_f": [63.0, 60.0],
+        "heat_index_f": [82.0, 84.0],
+        "floor": [None, None],
+        "orientation": [None, None],
+        "window_state": [None, None],
+        "blinds_state": [None, None],
+    })
+    readings_path, _ = _write_heat_export(tmp_path, df, datetime(2026, 6, 9, 12, 0, 0))
+    rooms = {r["room"] for r in json.loads(readings_path.read_text())}
+    assert rooms == {"penthouse", "courtyard"}
+
+
+def test_write_heat_export_manifest_written_atomically(tmp_path, monkeypatch):
+    import pathlib
+    rename_calls = []
+    original_rename = pathlib.Path.rename
+
+    def tracking_rename(self, target):
+        rename_calls.append(str(target))
+        return original_rename(self, target)
+
+    monkeypatch.setattr(pathlib.Path, "rename", tracking_rename)
+    _write_heat_export(tmp_path, _make_export_df(), datetime(2026, 6, 9, 12, 0, 0))
+    assert any("manifest.json" in t for t in rename_calls)
+
+
+def test_write_heat_export_retention_keeps_only_latest(tmp_path):
+    df = _make_export_df()
+    for hour in [10, 11, 12]:
+        _write_heat_export(tmp_path, df, datetime(2026, 6, 9, hour, 0, 0))
+    remaining = sorted(tmp_path.glob("readings_*.json"))
+    assert len(remaining) == 1
+    assert remaining[0].name == "readings_20260609T120000Z.json"
+
+
+def test_indoor_heat_export_asset_row_count_metadata(tmp_path, monkeypatch):
+    monkeypatch.setenv("INDOOR_HEAT_OUTPUT_DIR", str(tmp_path))
+    mock_engine = MagicMock()
+
+    with patch("orchestrator.assets.indoor_heat.pd.read_sql", return_value=_make_export_df(2)):
+        mock_pg = MagicMock()
+        mock_pg.create_engine.return_value = mock_engine
+        result = indoor_heat_export(pg_engine=mock_pg)
+
+    assert result.metadata["row_count"].value == 2
+    assert result.metadata["manifest_browser_path"].value.startswith("/data/")
