@@ -9,7 +9,6 @@ jobs:
   # Build the docs
   build:
     runs-on: ubuntu-latest
-    environment: github-pages
 
     steps:
       - name: "Step 01 - Checkout current branch"
