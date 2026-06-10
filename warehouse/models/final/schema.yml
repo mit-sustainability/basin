@@ -482,6 +482,10 @@ models:
         description: "Calibration group identifier."
       - name: note
         description: "Free-text deployment notes."
+      - name: sensor_photo
+        description: "Filename of the sensor photo."
+      - name: window_photo
+        description: "Filename of the window photo."
 
   - name: dining_food_summary
     description: "Summary of food-related spend and carbon emissions (CO2eq) by fiscal year and customer."

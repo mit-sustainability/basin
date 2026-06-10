@@ -406,7 +406,8 @@ _EDT = timezone(timedelta(hours=-4))
 
 _EXPORT_QUERY = """
     SELECT sensor_id, datetime_edt, temperature_f, relative_humidity_pct,
-           dew_point_f, heat_index_f, floor, orientation, window_state, blinds_state
+           dew_point_f, heat_index_f, floor, orientation, window_state, blinds_state,
+           sensor_photo, window_photo
     FROM final.final_indoor_heat_combined
     ORDER BY sensor_id, datetime_edt
 """
@@ -441,6 +442,8 @@ def _write_heat_export(output_dir: Path, df: pd.DataFrame, now: datetime) -> tup
             "orientation": row.get("orientation"),
             "window_state": row.get("window_state"),
             "blinds_state": row.get("blinds_state"),
+            "sensor_photo": row.get("sensor_photo"),
+            "window_photo": row.get("window_photo"),
         }
         for _, row in df.iterrows()
         if pd.notna(row.get("sensor_id"))
