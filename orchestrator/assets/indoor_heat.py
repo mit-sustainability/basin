@@ -451,6 +451,7 @@ def _write_heat_export(output_dir: Path, df: pd.DataFrame, now: datetime) -> tup
 
     # Step 1: write readings — manifest always written after, so frontend never sees a dangling pointer
     readings_path.write_text(json.dumps(records, default=str, indent=2))
+    readings_path.chmod(0o644)
 
     # Retention: keep only the latest versioned file
     for old in output_dir.glob("readings_*.json"):
@@ -466,7 +467,9 @@ def _write_heat_export(output_dir: Path, df: pd.DataFrame, now: datetime) -> tup
     with tempfile.NamedTemporaryFile(mode="w", dir=output_dir, suffix=".tmp", delete=False) as tf:
         tf.write(json.dumps(manifest, indent=2))
         tmp_name = tf.name
-    Path(tmp_name).rename(output_dir / "manifest.json")
+    tmp_path = Path(tmp_name)
+    tmp_path.chmod(0o644)
+    tmp_path.rename(output_dir / "manifest.json")
 
     return readings_path, manifest
 
