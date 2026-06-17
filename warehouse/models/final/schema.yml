@@ -448,6 +448,37 @@ models:
       - name: num_readings
         description: "Number of 20-minute aligned readings in the day"
 
+  - name: final_outdoor_heat_combined
+    description: >
+      Granular 20-minute sensor readings joined with sensor metadata (lat/lon/name).
+      Combines staging.stg_outdoor_heat_aligned with raw.outdoor_heat_sensor_config
+      for use by the ArcGIS Online outdoor heat export.
+    meta:
+      owner: yu_cheng@mit.edu
+    columns:
+      - name: sensor_id
+        description: "Sensor identifier"
+      - name: datetime_edt
+        description: "Timestamp of the 20-minute reading bin, in EDT"
+      - name: temperature_f
+        description: "Average temperature in °F for the bin"
+      - name: relative_humidity_pct
+        description: "Average relative humidity percentage for the bin"
+      - name: dew_point_f
+        description: "Average dew point in °F for the bin"
+      - name: heat_index_f
+        description: "NOAA/Rothfusz heat index in °F for the bin"
+      - name: sensor_name
+        description: "Human-readable site name"
+      - name: lat
+        description: "Latitude of sensor deployment location"
+      - name: lon
+        description: "Longitude of sensor deployment location"
+      - name: deployment
+        description: "Deployment phase (e.g. Phase 1, Phase 2)"
+      - name: radiation_shield
+        description: "Whether the sensor has a radiation shield fitted"
+
   - name: indoor_heat_daily_summary
     description: "Daily aggregated heat sensor metrics (temperature, humidity, dew point) per sensor and location"
     meta:
