@@ -7,7 +7,7 @@ from io import BytesIO
 import numpy as np
 import pandas as pd
 import pandera as pa
-from dagster import Config, Failure, Output, ResourceParam, asset, get_dagster_logger
+from dagster import AssetKey, Config, Failure, Output, ResourceParam, asset, get_dagster_logger
 from dagster_pandera import pandera_schema_to_dagster_type
 from pandera.typing import DateTime, Series
 
@@ -20,6 +20,13 @@ logger = get_dagster_logger()
 _DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 _AGOL_LAYER_URL = os.getenv("ARCGIS_OUTDOOR_HEAT_LAYER_URL", "")
+
+_OUTDOOR_EXPORT_QUERY = """
+    SELECT sensor_id, datetime_edt, temperature_f, relative_humidity_pct,
+           dew_point_f, heat_index_f, sensor_name, lat, lon, deployment, radiation_shield
+    FROM final.final_outdoor_heat_combined
+    ORDER BY sensor_id, datetime_edt
+"""
 
 
 def _parse_sensor_filename(filename: str) -> dict:
@@ -212,9 +219,11 @@ def _load_sensor_metadata(dropbox: DropboxResource, config_file_path: str) -> pd
             "lat": meta.get("coords", [None, None])[0],
             "lon": meta.get("coords", [None, None])[1],
             "deployment": meta.get("deployment"),
-            "radiation_shield": meta.get("radiation_shield") or meta.get("rediation_shield"),
+            "radiation_shield": meta["radiation_shield"] if "radiation_shield" in meta else meta.get("rediation_shield"),
         })
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    df["radiation_shield"] = df["radiation_shield"].astype(object)
+    return df
 
 
 @asset(
@@ -286,33 +295,35 @@ def stg_outdoor_heat_aligned(pg_engine: ResourceParam[PostgreConnResources]) -> 
 
 
 @asset(
-    deps=[stg_outdoor_heat_aligned],
+    deps=[AssetKey(["final", "final_outdoor_heat_combined"]), "outdoor_heat_sensor_config"],
     compute_kind="python",
-    group_name="staging",
+    group_name="exports",
 )
 def agol_outdoor_heat_sync(
     pg_engine: ResourceParam[PostgreConnResources],
     arcgis: ResourceParam[ArcGISResource],
 ) -> Output[None]:
-    """Upsert stg_outdoor_heat_aligned into the ArcGIS Online hosted feature layer."""
+    """Full-replace the ArcGIS Online outdoor heat feature layer with current data."""
     if not _AGOL_LAYER_URL:
         raise Failure("ARCGIS_OUTDOOR_HEAT_LAYER_URL env var is not set")
 
     engine = pg_engine.create_engine()
-    df = pd.read_sql_query("SELECT * FROM staging.stg_outdoor_heat_aligned", engine)
+    with engine.connect() as conn:
+        df = pd.read_sql(_OUTDOOR_EXPORT_QUERY, conn)
+
     df["datetime_edt"] = df["datetime_edt"].astype(str)
 
-    result = arcgis.upsert_features(
+    result = arcgis.replace_features(
         layer_url=_AGOL_LAYER_URL,
         df=df,
-        key_fields=["sensor_id", "datetime_edt"],
+        geometry_fields=("lat", "lon"),
     )
 
     return Output(
         value=None,
         metadata={
-            "features_added": result["adds"],
-            "features_updated": result["updates"],
+            "features_deleted": result["deleted"],
+            "features_added": result["added"],
             "total_rows_synced": len(df),
         },
     )
