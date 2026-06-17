@@ -1,3 +1,5 @@
+{{ config(materialized='table') }}
+
 SELECT
     a.sensor_id,
     a.datetime_edt,
