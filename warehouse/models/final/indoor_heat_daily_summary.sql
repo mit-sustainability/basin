@@ -1,10 +1,10 @@
 SELECT
     a.sensor_id,
-    c.sensor_name,
-    c.lat,
-    c.lon,
-    c.deployment,
-    c.radiation_shield,
+    c.floor,
+    c.orientation,
+    c.window_state,
+    c.blinds_state,
+    c.note,
     CAST(a.datetime_edt AS DATE)   AS reading_date,
     AVG(a.temperature_f)           AS avg_temperature_f,
     MAX(a.temperature_f)           AS max_temperature_f,
@@ -22,5 +22,5 @@ FROM {{ source("staging", "stg_indoor_heat_aligned") }} a
 LEFT JOIN {{ source("raw", "indoor_heat_sensor_config") }} c
     ON a.sensor_id = c.sensor_id
 GROUP BY
-    a.sensor_id, c.sensor_name, c.lat, c.lon, c.deployment, c.radiation_shield,
+    a.sensor_id, c.floor, c.orientation, c.window_state, c.blinds_state, c.note,
     CAST(a.datetime_edt AS DATE)

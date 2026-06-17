@@ -36,6 +36,7 @@ COPY warehouse warehouse
 
 # Install all Python dependencies from lockfile
 RUN uv sync --frozen --no-dev
+ENV PATH="/opt/dagster/app/.venv/bin:$PATH"
 
 # Set dbt build env vars
 ARG pg_host
@@ -46,8 +47,8 @@ ENV PG_USER=${pg_user}
 ENV PG_PASSWORD=${pg_pass}
 
 # Install dbt packages and compile manifest
-RUN dbt deps --project-dir warehouse --profiles-dir warehouse && \
-    dbt \
+RUN uv run dbt deps --project-dir warehouse --profiles-dir warehouse && \
+    uv run dbt \
         --no-use-colors \
         --log-format json \
         ls \
@@ -57,9 +58,9 @@ RUN dbt deps --project-dir warehouse --profiles-dir warehouse && \
         --output json
 
 ENV CMDSTAN=/opt/cmdstan
-RUN python -c "from cmdstanpy import install_cmdstan; install_cmdstan(dir='/opt')" \
+RUN uv run python -c "from cmdstanpy import install_cmdstan; install_cmdstan(dir='/opt')" \
     && ln -s "$(find /opt -maxdepth 1 -type d -name 'cmdstan-*' | head -n 1)" /opt/cmdstan
-RUN playwright install --with-deps chromium
+RUN uv run playwright install --with-deps chromium
 
 EXPOSE 3000
 WORKDIR /opt/dagster/app/orchestrator

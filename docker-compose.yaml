@@ -28,6 +28,12 @@ services:
       - ECS_CAPACITY_PROVIDER_STRATEGY=${ECS_CAPACITY_PROVIDER_STRATEGY}
       - MBTA_TRANSIT_USERNAME=${MBTA_TRANSIT_USERNAME}
       - MBTA_TRANSIT_PASSWORD=${MBTA_TRANSIT_PASSWORD}
+      - DROPBOX_REFRESH_TOKEN=${DROPBOX_REFRESH_TOKEN}
+      - DROPBOX_APP_KEY=${DROPBOX_APP_KEY}
+      - DROPBOX_APP_SECRET=${DROPBOX_APP_SECRET}
+      - INDOOR_HEAT_OUTPUT_DIR=/opt/dagster/output
+    volumes:
+      - /var/www/indoor-heat-2026/data:/opt/dagster/output
     ports:
       - 3000:3000
   dagster-daemon:
@@ -62,4 +68,10 @@ services:
       - ECS_CAPACITY_PROVIDER_STRATEGY=${ECS_CAPACITY_PROVIDER_STRATEGY}
       - MBTA_TRANSIT_USERNAME=${MBTA_TRANSIT_USERNAME}
       - MBTA_TRANSIT_PASSWORD=${MBTA_TRANSIT_PASSWORD}
+      - DROPBOX_REFRESH_TOKEN=${DROPBOX_REFRESH_TOKEN}
+      - DROPBOX_APP_KEY=${DROPBOX_APP_KEY}
+      - DROPBOX_APP_SECRET=${DROPBOX_APP_SECRET}
+      - INDOOR_HEAT_OUTPUT_DIR=/opt/dagster/output
+    volumes:
+      - /var/www/indoor-heat-2026/data:/opt/dagster/output
     command: "dagster-daemon run"

@@ -1,7 +1,7 @@
 import os
 
 import boto3
-from dagster import Definitions, EnvVar, load_assets_from_modules, resource
+from dagster import Definitions, load_assets_from_modules, resource
 from dagster_dbt import DbtCliResource
 from dagster_aws.pipes import PipesECSClient, PipesLambdaClient
 from dagster_aws.s3 import S3Resource
