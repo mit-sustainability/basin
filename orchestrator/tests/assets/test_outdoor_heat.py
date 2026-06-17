@@ -59,7 +59,7 @@ def test_outdoor_heat_sensor_config_loads_metadata():
     assert df.loc[df["sensor_id"] == "S1", "sensor_name"].iloc[0] == "Site Alpha"
     assert df.loc[df["sensor_id"] == "S1", "lat"].iloc[0] == pytest.approx(42.361)
     assert df.loc[df["sensor_id"] == "S1", "lon"].iloc[0] == pytest.approx(-71.097)
-    assert df.loc[df["sensor_id"] == "S2", "radiation_shield"].iloc[0] is False
+    assert df.loc[df["sensor_id"] == "S2", "radiation_shield"].iloc[0] == False
 
 
 # ── agol_outdoor_heat_sync ────────────────────────────────────────────────────

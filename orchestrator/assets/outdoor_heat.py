@@ -222,7 +222,7 @@ def _load_sensor_metadata(dropbox: DropboxResource, config_file_path: str) -> pd
             "radiation_shield": meta["radiation_shield"] if "radiation_shield" in meta else meta.get("rediation_shield"),
         })
     df = pd.DataFrame(rows)
-    df["radiation_shield"] = df["radiation_shield"].astype(object)
+    df["radiation_shield"] = pd.array(df["radiation_shield"].tolist(), dtype=pd.BooleanDtype())
     return df
 
 
