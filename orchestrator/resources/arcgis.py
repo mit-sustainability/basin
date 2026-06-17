@@ -163,20 +163,29 @@ class ArcGISResource(ConfigurableResource):
                 }
             features.append(feature)
 
-        add_resp = requests.post(
-            f"{layer_url}/addFeatures",
-            data={"features": json.dumps(features), "f": "json", "token": token},
-            timeout=_TIMEOUT,
-        )
-        add_resp.raise_for_status()
-        add_body = add_resp.json()
-        if "error" in add_body:
-            raise Failure(f"ArcGIS addFeatures error: {add_body['error']}")
+        added = 0
+        batch_size = 1000
+        for i in range(0, max(len(features), 1), batch_size):
+            batch = features[i : i + batch_size]
+            if not batch:
+                break
+            add_resp = requests.post(
+                f"{layer_url}/addFeatures",
+                data={"features": json.dumps(batch), "f": "json", "token": token},
+                timeout=_TIMEOUT,
+            )
+            add_resp.raise_for_status()
+            add_body = add_resp.json()
+            if "error" in add_body:
+                raise Failure(f"ArcGIS addFeatures error: {add_body['error']}")
 
-        added = sum(1 for r in add_body.get("addResults", []) if r.get("success"))
-        add_fail = len(add_body.get("addResults", [])) - added
-        if add_fail:
-            logger.warning(f"ArcGIS addFeatures: {add_fail} failures")
+            batch_success = sum(1 for r in add_body.get("addResults", []) if r.get("success"))
+            batch_fail = len(add_body.get("addResults", [])) - batch_success
+            if batch_fail:
+                raise Failure(
+                    f"ArcGIS addFeatures: {batch_fail} record(s) failed in batch {i // batch_size + 1}"
+                )
+            added += batch_success
 
         logger.info(f"ArcGIS replace: {deleted} deleted, {added} added")
         return {"deleted": deleted, "added": added}

@@ -302,3 +302,60 @@ class TestReplaceFeatures:
                     layer_url="https://example.com/FeatureServer/0",
                     df=df,
                 )
+
+    def test_raises_on_partial_add_failure(self, resource):
+        delete_resp = MagicMock()
+        delete_resp.json.return_value = {"deleteResults": []}
+        add_resp = MagicMock()
+        add_resp.json.return_value = {
+            "addResults": [{"success": True}, {"success": False, "error": {"code": 400}}]
+        }
+
+        def routing_post(url, data=None, **kwargs):
+            if url.endswith("/token"):
+                return self._token_resp()
+            elif url.endswith("/deleteFeatures"):
+                return delete_resp
+            return add_resp
+
+        df = pd.DataFrame([{"sensor_id": "A"}, {"sensor_id": "B"}])
+
+        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
+            with pytest.raises(Failure, match="record\\(s\\) failed"):
+                resource.replace_features(
+                    layer_url="https://example.com/FeatureServer/0",
+                    df=df,
+                )
+
+    def test_batches_large_payloads(self, resource):
+        import json as _json
+        delete_resp = MagicMock()
+        delete_resp.json.return_value = {"deleteResults": []}
+
+        post_calls = []
+
+        def routing_post(url, data=None, **kwargs):
+            post_calls.append((url, data))
+            if url.endswith("/token"):
+                return self._token_resp()
+            elif url.endswith("/deleteFeatures"):
+                return delete_resp
+            # Return success count matching actual batch size
+            batch_len = len(_json.loads(data["features"]))
+            r = MagicMock()
+            r.json.return_value = {"addResults": [{"success": True}] * batch_len}
+            return r
+
+        df = pd.DataFrame([{"sensor_id": f"S{i}"} for i in range(2500)])
+
+        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
+            result = resource.replace_features(
+                layer_url="https://example.com/FeatureServer/0",
+                df=df,
+            )
+
+        add_calls = [(url, data) for url, data in post_calls if "addFeatures" in url]
+        assert len(add_calls) == 3  # ceil(2500/1000) = 3 batches
+        batch_sizes = [len(_json.loads(data["features"])) for _, data in add_calls]
+        assert batch_sizes == [1000, 1000, 500]
+        assert result["added"] == 2500
