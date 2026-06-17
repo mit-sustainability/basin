@@ -149,9 +149,10 @@ class ArcGISResource(ConfigurableResource):
             raise Failure(f"ArcGIS deleteFeatures error: {del_body['error']}")
         deleted = len(del_body.get("deleteResults", []))
 
+        geometry_col_set = set(geometry_fields) if geometry_fields else set()
         features: list[dict[str, Any]] = []
         for _, row in df.iterrows():
-            attrs = {col: _serialize(row[col]) for col in df.columns}
+            attrs = {col: _serialize(row[col]) for col in df.columns if col not in geometry_col_set}
             feature: dict[str, Any] = {"attributes": attrs}
             if geometry_fields:
                 lat_col, lon_col = geometry_fields
