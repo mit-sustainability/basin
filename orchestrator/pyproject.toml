@@ -8,7 +8,9 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-exclude = ["tests*"]
+where = [".."]
+include = ["orchestrator*"]
+exclude = ["orchestrator.tests*"]
 
 [tool.dagster]
 module_name = "orchestrator"

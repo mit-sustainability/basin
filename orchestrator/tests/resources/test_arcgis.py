@@ -164,68 +164,97 @@ class TestSerialize:
 
 
 class TestReplaceFeatures:
-    def _route(self, token_resp, delete_resp, add_resp):
-        """Return a side_effect function that routes POST calls by URL."""
-        def mock_post(url, data=None, **kwargs):
-            if url.endswith("/token"):
-                return token_resp
-            elif url.endswith("/deleteFeatures"):
-                return delete_resp
-            else:
-                return add_resp
-        return mock_post
-
     def _token_resp(self):
         r = MagicMock()
         r.json.return_value = {"access_token": "tok"}
         return r
 
+    def _ids_resp(self, ids: list[int]):
+        r = MagicMock()
+        r.json.return_value = {"objectIds": ids}
+        return r
+
+    def _del_resp(self, n: int):
+        r = MagicMock()
+        r.json.return_value = {"deleteResults": [{"success": True}] * n}
+        return r
+
+    def _routing(self, existing_ids: list[int], add_side_effect=None):
+        """Build mock GET/POST handlers for the replace flow."""
+
+        def mock_get(url, params=None, **kwargs):
+            if "query" in url:
+                return self._ids_resp(existing_ids)
+            raise AssertionError(f"Unexpected GET: {url}")
+
+        post_calls = []
+
+        def mock_post(url, data=None, **kwargs):
+            post_calls.append((url, data))
+            if url.endswith("/token"):
+                return self._token_resp()
+            if url.endswith("/deleteFeatures"):
+                n = len((data or {}).get("objectIds", "").split(",")) if (data or {}).get("objectIds") else 0
+                return self._del_resp(n)
+            # addFeatures
+            if add_side_effect:
+                return add_side_effect(url, data)
+            import json as _json
+            batch_len = len(_json.loads(data["features"]))
+            r = MagicMock()
+            r.json.return_value = {"addResults": [{"success": True}] * batch_len}
+            return r
+
+        return mock_get, mock_post, post_calls
+
     def test_deletes_all_then_adds_all(self, resource):
-        delete_resp = MagicMock()
-        delete_resp.json.return_value = {"deleteResults": [{"success": True}, {"success": True}]}
-        add_resp = MagicMock()
-        add_resp.json.return_value = {"addResults": [{"success": True}, {"success": True}]}
+        mock_get, mock_post, _ = self._routing(existing_ids=[1, 2])
 
         df = pd.DataFrame([
             {"sensor_id": "A", "temperature_f": 80.0},
             {"sensor_id": "B", "temperature_f": 85.0},
         ])
 
-        with patch("orchestrator.resources.arcgis.requests.post",
-                   side_effect=self._route(self._token_resp(), delete_resp, add_resp)):
-            result = resource.replace_features(
-                layer_url="https://example.com/FeatureServer/0",
-                df=df,
-            )
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                result = resource.replace_features(
+                    layer_url="https://example.com/FeatureServer/0",
+                    df=df,
+                )
 
         assert result["deleted"] == 2
         assert result["added"] == 2
 
+    def test_skips_delete_when_layer_empty(self, resource):
+        mock_get, mock_post, post_calls = self._routing(existing_ids=[])
+
+        df = pd.DataFrame([{"sensor_id": "A", "temperature_f": 80.0}])
+
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                result = resource.replace_features(
+                    layer_url="https://example.com/FeatureServer/0",
+                    df=df,
+                )
+
+        delete_calls = [url for url, _ in post_calls if "deleteFeatures" in url]
+        assert delete_calls == []
+        assert result["deleted"] == 0
+        assert result["added"] == 1
+
     def test_attaches_point_geometry_when_geometry_fields_set(self, resource):
         import json as _json
-        delete_resp = MagicMock()
-        delete_resp.json.return_value = {"deleteResults": []}
-        add_resp = MagicMock()
-        add_resp.json.return_value = {"addResults": [{"success": True}]}
-
-        post_calls = []
-
-        def routing_post(url, data=None, **kwargs):
-            post_calls.append((url, data))
-            if url.endswith("/token"):
-                return self._token_resp()
-            elif url.endswith("/deleteFeatures"):
-                return delete_resp
-            return add_resp
+        mock_get, mock_post, post_calls = self._routing(existing_ids=[])
 
         df = pd.DataFrame([{"sensor_id": "S1", "lat": 42.36, "lon": -71.09, "temperature_f": 80.0}])
 
-        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
-            resource.replace_features(
-                layer_url="https://example.com/FeatureServer/0",
-                df=df,
-                geometry_fields=("lat", "lon"),
-            )
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                resource.replace_features(
+                    layer_url="https://example.com/FeatureServer/0",
+                    df=df,
+                    geometry_fields=("lat", "lon"),
+                )
 
         add_data = next(data for url, data in post_calls if "addFeatures" in url)
         features = _json.loads(add_data["features"])
@@ -235,127 +264,124 @@ class TestReplaceFeatures:
 
     def test_no_geometry_when_geometry_fields_none(self, resource):
         import json as _json
-        delete_resp = MagicMock()
-        delete_resp.json.return_value = {"deleteResults": []}
-        add_resp = MagicMock()
-        add_resp.json.return_value = {"addResults": [{"success": True}]}
-
-        post_calls = []
-
-        def routing_post(url, data=None, **kwargs):
-            post_calls.append((url, data))
-            if url.endswith("/token"):
-                return self._token_resp()
-            elif url.endswith("/deleteFeatures"):
-                return delete_resp
-            return add_resp
+        mock_get, mock_post, post_calls = self._routing(existing_ids=[])
 
         df = pd.DataFrame([{"sensor_id": "S1", "temperature_f": 80.0}])
 
-        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
-            resource.replace_features(
-                layer_url="https://example.com/FeatureServer/0",
-                df=df,
-                geometry_fields=None,
-            )
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                resource.replace_features(
+                    layer_url="https://example.com/FeatureServer/0",
+                    df=df,
+                    geometry_fields=None,
+                )
 
         add_data = next(data for url, data in post_calls if "addFeatures" in url)
         features = _json.loads(add_data["features"])
         assert "geometry" not in features[0]
 
-    def test_raises_on_delete_error(self, resource):
-        delete_resp = MagicMock()
-        delete_resp.json.return_value = {"error": {"code": 500, "message": "Server error"}}
+    def test_raises_on_ids_query_error(self, resource):
+        err_resp = MagicMock()
+        err_resp.json.return_value = {"error": {"code": 500, "message": "Server error"}}
 
-        def routing_post(url, data=None, **kwargs):
+        with patch("orchestrator.resources.arcgis.requests.get", return_value=err_resp):
+            with patch("orchestrator.resources.arcgis.requests.post", return_value=self._token_resp()):
+                with pytest.raises(Failure, match="query \\(ids\\) error"):
+                    resource.replace_features(
+                        layer_url="https://example.com/FeatureServer/0",
+                        df=pd.DataFrame([{"sensor_id": "A"}]),
+                    )
+
+    def test_raises_on_delete_error(self, resource):
+        ids_resp = self._ids_resp([1])
+        del_err = MagicMock()
+        del_err.json.return_value = {"error": {"code": 500, "message": "Delete failed"}}
+
+        def mock_post(url, data=None, **kwargs):
             if url.endswith("/token"):
                 return self._token_resp()
-            return delete_resp
+            return del_err
 
-        df = pd.DataFrame([{"sensor_id": "A"}])
-
-        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
-            with pytest.raises(Failure, match="deleteFeatures error"):
-                resource.replace_features(
-                    layer_url="https://example.com/FeatureServer/0",
-                    df=df,
-                )
+        with patch("orchestrator.resources.arcgis.requests.get", return_value=ids_resp):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                with pytest.raises(Failure, match="deleteFeatures error"):
+                    resource.replace_features(
+                        layer_url="https://example.com/FeatureServer/0",
+                        df=pd.DataFrame([{"sensor_id": "A"}]),
+                    )
 
     def test_raises_on_add_error(self, resource):
-        delete_resp = MagicMock()
-        delete_resp.json.return_value = {"deleteResults": []}
-        add_resp = MagicMock()
-        add_resp.json.return_value = {"error": {"code": 500, "message": "Add failed"}}
+        add_err = MagicMock()
+        add_err.json.return_value = {"error": {"code": 500, "message": "Add failed"}}
+        mock_get, mock_post, _ = self._routing(
+            existing_ids=[],
+            add_side_effect=lambda url, data: add_err,
+        )
 
-        def routing_post(url, data=None, **kwargs):
-            if url.endswith("/token"):
-                return self._token_resp()
-            elif url.endswith("/deleteFeatures"):
-                return delete_resp
-            return add_resp
-
-        df = pd.DataFrame([{"sensor_id": "A"}])
-
-        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
-            with pytest.raises(Failure, match="addFeatures error"):
-                resource.replace_features(
-                    layer_url="https://example.com/FeatureServer/0",
-                    df=df,
-                )
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                with pytest.raises(Failure, match="addFeatures error"):
+                    resource.replace_features(
+                        layer_url="https://example.com/FeatureServer/0",
+                        df=pd.DataFrame([{"sensor_id": "A"}]),
+                    )
 
     def test_raises_on_partial_add_failure(self, resource):
-        delete_resp = MagicMock()
-        delete_resp.json.return_value = {"deleteResults": []}
-        add_resp = MagicMock()
-        add_resp.json.return_value = {
-            "addResults": [{"success": True}, {"success": False, "error": {"code": 400}}]
-        }
+        import json as _json
 
-        def routing_post(url, data=None, **kwargs):
-            if url.endswith("/token"):
-                return self._token_resp()
-            elif url.endswith("/deleteFeatures"):
-                return delete_resp
-            return add_resp
+        def add_partial(url, data):
+            r = MagicMock()
+            r.json.return_value = {
+                "addResults": [{"success": True}, {"success": False, "error": {"code": 400}}]
+            }
+            return r
 
-        df = pd.DataFrame([{"sensor_id": "A"}, {"sensor_id": "B"}])
+        mock_get, mock_post, _ = self._routing(
+            existing_ids=[],
+            add_side_effect=add_partial,
+        )
 
-        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
-            with pytest.raises(Failure, match="record\\(s\\) failed"):
-                resource.replace_features(
-                    layer_url="https://example.com/FeatureServer/0",
-                    df=df,
-                )
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                with pytest.raises(Failure, match="record\\(s\\) failed"):
+                    resource.replace_features(
+                        layer_url="https://example.com/FeatureServer/0",
+                        df=pd.DataFrame([{"sensor_id": "A"}, {"sensor_id": "B"}]),
+                    )
 
     def test_batches_large_payloads(self, resource):
         import json as _json
-        delete_resp = MagicMock()
-        delete_resp.json.return_value = {"deleteResults": []}
-
-        post_calls = []
-
-        def routing_post(url, data=None, **kwargs):
-            post_calls.append((url, data))
-            if url.endswith("/token"):
-                return self._token_resp()
-            elif url.endswith("/deleteFeatures"):
-                return delete_resp
-            # Return success count matching actual batch size
-            batch_len = len(_json.loads(data["features"]))
-            r = MagicMock()
-            r.json.return_value = {"addResults": [{"success": True}] * batch_len}
-            return r
+        mock_get, mock_post, post_calls = self._routing(existing_ids=[])
 
         df = pd.DataFrame([{"sensor_id": f"S{i}"} for i in range(2500)])
 
-        with patch("orchestrator.resources.arcgis.requests.post", side_effect=routing_post):
-            result = resource.replace_features(
-                layer_url="https://example.com/FeatureServer/0",
-                df=df,
-            )
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                result = resource.replace_features(
+                    layer_url="https://example.com/FeatureServer/0",
+                    df=df,
+                )
 
         add_calls = [(url, data) for url, data in post_calls if "addFeatures" in url]
         assert len(add_calls) == 3  # ceil(2500/1000) = 3 batches
         batch_sizes = [len(_json.loads(data["features"])) for _, data in add_calls]
         assert batch_sizes == [1000, 1000, 500]
         assert result["added"] == 2500
+
+    def test_batches_large_delete(self, resource):
+        # 1100 existing features should result in 3 delete batches (500+500+100)
+        existing = list(range(1, 1101))
+        mock_get, mock_post, post_calls = self._routing(existing_ids=existing)
+
+        df = pd.DataFrame([{"sensor_id": "A"}])
+
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
+                result = resource.replace_features(
+                    layer_url="https://example.com/FeatureServer/0",
+                    df=df,
+                )
+
+        delete_calls = [(url, data) for url, data in post_calls if "deleteFeatures" in url]
+        assert len(delete_calls) == 3
+        assert result["deleted"] == 1100

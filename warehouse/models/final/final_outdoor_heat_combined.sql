@@ -8,10 +8,7 @@ SELECT
     a.dew_point_f,
     a.heat_index_f,
     c.sensor_name,
-    c.lat,
-    c.lon,
-    c.deployment,
-    c.radiation_shield
+    c.deployment
 FROM {{ source("staging", "stg_outdoor_heat_aligned") }} a
 LEFT JOIN {{ source("raw", "outdoor_heat_sensor_config") }} c
     ON a.sensor_id = c.sensor_id

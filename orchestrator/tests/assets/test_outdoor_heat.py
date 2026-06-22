@@ -34,15 +34,19 @@ def _make_combined_df() -> pd.DataFrame:
 def test_outdoor_heat_sensor_config_loads_metadata():
     config_data = {
         "S1": {
-            "name": "Site Alpha",
-            "coords": [42.361, -71.097],
-            "deployment": "Phase 1",
+            "filename_match": "Site Alpha",
+            "name": "Site Alpha - Zone 1",
+            "lat": 42.361,
+            "lon": -71.097,
+            "zone": "Zone 1",
             "radiation_shield": True,
         },
         "S2": {
-            "name": "Site Beta",
-            "coords": [42.362, -71.098],
-            "deployment": "Phase 2",
+            "filename_match": "Site Beta",
+            "name": "Site Beta - Zone 2",
+            "lat": 42.362,
+            "lon": -71.098,
+            "zone": "Zone 2",
             "radiation_shield": False,
         },
     }
@@ -55,10 +59,12 @@ def test_outdoor_heat_sensor_config_loads_metadata():
     )
     df = result.value
     assert len(df) == 2
-    assert set(df.columns) == {"sensor_id", "sensor_name", "lat", "lon", "deployment", "radiation_shield"}
-    assert df.loc[df["sensor_id"] == "S1", "sensor_name"].iloc[0] == "Site Alpha"
+    assert set(df.columns) == {"sensor_id", "filename_match", "sensor_name", "lat", "lon", "deployment", "radiation_shield"}
+    assert df.loc[df["sensor_id"] == "S1", "sensor_name"].iloc[0] == "Site Alpha - Zone 1"
+    assert df.loc[df["sensor_id"] == "S1", "filename_match"].iloc[0] == "Site Alpha"
     assert df.loc[df["sensor_id"] == "S1", "lat"].iloc[0] == pytest.approx(42.361)
     assert df.loc[df["sensor_id"] == "S1", "lon"].iloc[0] == pytest.approx(-71.097)
+    assert df.loc[df["sensor_id"] == "S1", "deployment"].iloc[0] == "Zone 1"
     assert df.loc[df["sensor_id"] == "S2", "radiation_shield"].iloc[0] == False
 
 

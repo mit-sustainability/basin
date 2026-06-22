@@ -833,7 +833,7 @@ sources:
           - name: last_update
             description: "Timestamp of ingestion into the warehouse"
       - name: outdoor_heat_sensor_config
-        description: "Outdoor sensor site metadata from config JSON (name, coords, deployment, radiation shield)"
+        description: "Outdoor sensor site metadata from config JSON (name, coords, zone, radiation shield)"
         meta:
           owner: yu_cheng@mit.edu
           dagster:
@@ -841,6 +841,8 @@ sources:
         columns:
           - name: sensor_id
             description: "Sensor identifier"
+          - name: filename_match
+            description: "Exact filename prefix used to match Dropbox files to this sensor"
           - name: sensor_name
             description: "Human-readable site name"
           - name: lat
@@ -848,7 +850,7 @@ sources:
           - name: lon
             description: "Longitude of deployment location"
           - name: deployment
-            description: "Deployment phase (e.g. Phase 1, Phase 2)"
+            description: "Zone grouping for the sensor (e.g. Zone 1, Zone 2)"
           - name: radiation_shield
             description: "Whether the sensor has a radiation shield fitted"
   - name: staging

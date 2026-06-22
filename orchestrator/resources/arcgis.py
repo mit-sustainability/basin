@@ -7,7 +7,8 @@ from dagster import ConfigurableResource, Failure, get_dagster_logger
 
 logger = get_dagster_logger()
 
-_TIMEOUT = 30
+_AUTH_TIMEOUT = 30
+_DATA_TIMEOUT = 120
 
 
 class ArcGISResource(ConfigurableResource):
@@ -30,7 +31,7 @@ class ArcGISResource(ConfigurableResource):
                 "grant_type": "client_credentials",
                 "f": "json",
             },
-            timeout=_TIMEOUT,
+            timeout=_AUTH_TIMEOUT,
         )
         resp.raise_for_status()
         body = resp.json()
@@ -50,7 +51,7 @@ class ArcGISResource(ConfigurableResource):
                 "f": "json",
                 "token": token,
             },
-            timeout=_TIMEOUT,
+            timeout=_DATA_TIMEOUT,
         )
         resp.raise_for_status()
         body = resp.json()
@@ -107,7 +108,7 @@ class ArcGISResource(ConfigurableResource):
                 "f": "json",
                 "token": token,
             },
-            timeout=_TIMEOUT,
+            timeout=_DATA_TIMEOUT,
         )
         resp.raise_for_status()
         body = resp.json()
@@ -138,16 +139,44 @@ class ArcGISResource(ConfigurableResource):
         """
         token = self._get_token()
 
-        del_resp = requests.post(
-            f"{layer_url}/deleteFeatures",
-            data={"where": "1=1", "f": "json", "token": token},
-            timeout=_TIMEOUT,
+        # Check layer capabilities before attempting writes.
+        cap_resp = requests.get(layer_url, params={"f": "json", "token": token}, timeout=_DATA_TIMEOUT)
+        cap_resp.raise_for_status()
+        capabilities = cap_resp.json().get("capabilities", "")
+        if "Delete" not in capabilities or "Create" not in capabilities:
+            raise Failure(
+                f"Layer does not support editing (capabilities: {capabilities!r}). "
+                "Enable editing (Add + Update + Delete) in ArcGIS Online → Content → Settings."
+            )
+
+        # Fetch all ObjectIDs first (light query), then delete in batches.
+        # deleteFeatures where=1=1 causes 504 on large layers; truncateFeatures
+        # requires Sync capability not enabled on new UI-created layers.
+        ids_resp = requests.get(
+            f"{layer_url}/query",
+            params={"where": "1=1", "returnIdsOnly": "true", "f": "json", "token": token},
+            timeout=_DATA_TIMEOUT,
         )
-        del_resp.raise_for_status()
-        del_body = del_resp.json()
-        if "error" in del_body:
-            raise Failure(f"ArcGIS deleteFeatures error: {del_body['error']}")
-        deleted = len(del_body.get("deleteResults", []))
+        ids_resp.raise_for_status()
+        ids_body = ids_resp.json()
+        if "error" in ids_body:
+            raise Failure(f"ArcGIS query (ids) error: {ids_body['error']}")
+        object_ids: list[int] = ids_body.get("objectIds") or []
+
+        deleted = 0
+        _DELETE_BATCH = 500
+        for i in range(0, len(object_ids), _DELETE_BATCH):
+            batch_ids = object_ids[i : i + _DELETE_BATCH]
+            del_resp = requests.post(
+                f"{layer_url}/deleteFeatures",
+                data={"objectIds": ",".join(str(oid) for oid in batch_ids), "f": "json", "token": token},
+                timeout=_DATA_TIMEOUT,
+            )
+            del_resp.raise_for_status()
+            del_body = del_resp.json()
+            if "error" in del_body:
+                raise Failure(f"ArcGIS deleteFeatures error: {del_body['error']}")
+            deleted += len(del_body.get("deleteResults", []))
 
         geometry_col_set = set(geometry_fields) if geometry_fields else set()
         features: list[dict[str, Any]] = []
@@ -172,7 +201,7 @@ class ArcGISResource(ConfigurableResource):
             add_resp = requests.post(
                 f"{layer_url}/addFeatures",
                 data={"features": json.dumps(batch), "f": "json", "token": token},
-                timeout=_TIMEOUT,
+                timeout=_DATA_TIMEOUT,
             )
             add_resp.raise_for_status()
             add_body = add_resp.json()

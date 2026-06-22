@@ -450,9 +450,9 @@ models:
 
   - name: final_outdoor_heat_combined
     description: >
-      Granular 20-minute sensor readings joined with sensor metadata (lat/lon/name).
-      Combines staging.stg_outdoor_heat_aligned with raw.outdoor_heat_sensor_config
-      for use by the ArcGIS Online outdoor heat export.
+      Granular 20-minute sensor readings joined with sensor name and deployment zone.
+      Combines staging.stg_outdoor_heat_aligned with raw.outdoor_heat_sensor_config.
+      Geometry (lat/lon) is joined at export time from the config table.
     meta:
       owner: yu_cheng@mit.edu
     columns:
@@ -470,14 +470,8 @@ models:
         description: "NOAA/Rothfusz heat index in °F for the bin"
       - name: sensor_name
         description: "Human-readable site name"
-      - name: lat
-        description: "Latitude of sensor deployment location"
-      - name: lon
-        description: "Longitude of sensor deployment location"
       - name: deployment
-        description: "Deployment phase (e.g. Phase 1, Phase 2)"
-      - name: radiation_shield
-        description: "Whether the sensor has a radiation shield fitted"
+        description: "Deployment zone (e.g. Phase 1, Phase 2)"
 
   - name: indoor_heat_daily_summary
     description: "Daily aggregated heat sensor metrics (temperature, humidity, dew point) per sensor and location"

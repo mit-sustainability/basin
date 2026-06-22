@@ -1,0 +1,6 @@
+2026-06-20 11:25:53 -0400 - dagster - DEBUG - __ASSET_JOB - 6a966bfe-a2a1-4cac-bd46-b46b02214d36 - 23014 - LOGS_CAPTURED - Started capturing logs in process (pid: 23014).
+2026-06-20 11:25:53 -0400 - dagster - DEBUG - __ASSET_JOB - 6a966bfe-a2a1-4cac-bd46-b46b02214d36 - 23014 - agol_outdoor_heat_sync - STEP_START - Started execution of step "agol_outdoor_heat_sync".
+2026-06-20 11:25:54 -0400 - dagster - INFO - __ASSET_JOB - 6a966bfe-a2a1-4cac-bd46-b46b02214d36 - agol_outdoor_heat_sync - ArcGIS replace: 1 deleted, 18 added
+2026-06-20 11:25:54 -0400 - dagster - DEBUG - __ASSET_JOB - 6a966bfe-a2a1-4cac-bd46-b46b02214d36 - 23014 - agol_outdoor_heat_sync - STEP_OUTPUT - Yielded output "result" of type "Nothing". (Type check passed).
+2026-06-20 11:25:54 -0400 - dagster - DEBUG - __ASSET_JOB - 6a966bfe-a2a1-4cac-bd46-b46b02214d36 - 23014 - agol_outdoor_heat_sync - ASSET_MATERIALIZATION - Materialized value agol_outdoor_heat_sync.
+2026-06-20 11:25:54 -0400 - dagster - DEBUG - __ASSET_JOB - 6a966bfe-a2a1-4cac-bd46-b46b02214d36 - 23014 - agol_outdoor_heat_sync - STEP_SUCCESS - Finished execution of step "agol_outdoor_heat_sync" in 1.22s.
