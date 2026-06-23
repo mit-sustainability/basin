@@ -126,6 +126,81 @@ class ArcGISResource(ConfigurableResource):
         logger.info(f"ArcGIS sync: {add_success} added, {update_success} updated")
         return {"adds": add_success, "updates": update_success}
 
+    # Maps pandas dtype kinds to ArcGIS field type strings.
+    _DTYPE_TO_ESRI = {
+        "f": "esriFieldTypeDouble",
+        "i": "esriFieldTypeInteger",
+        "u": "esriFieldTypeInteger",
+        "b": "esriFieldTypeSmallInteger",
+        "O": "esriFieldTypeString",
+        "U": "esriFieldTypeString",
+        "M": "esriFieldTypeString",  # ponytail: datetimes sent as strings anyway
+    }
+    _SYSTEM_FIELD_TYPES = {
+        "esriFieldTypeOID",
+        "esriFieldTypeGlobalID",
+        "esriFieldTypeGeometry",
+    }
+
+    def _ensure_fields(self, layer_url: str, df: pd.DataFrame, token: str, skip_cols: set[str]) -> None:
+        """Add any DataFrame columns missing from the layer schema via addToDefinition.
+
+        Safe to call repeatedly — only pushes fields that don't already exist.
+        """
+        info = requests.get(layer_url, params={"f": "json", "token": token}, timeout=_DATA_TIMEOUT)
+        info.raise_for_status()
+        layer_info = info.json()
+
+        existing = {
+            f["name"]
+            for f in layer_info.get("fields", [])
+            if f.get("type") not in self._SYSTEM_FIELD_TYPES
+        }
+
+        new_fields = [
+            {
+                "name": col,
+                "alias": col,
+                "type": self._DTYPE_TO_ESRI.get(df[col].dtype.kind, "esriFieldTypeString"),
+                "length": 255 if df[col].dtype.kind in ("O", "U", "M") else None,
+                "nullable": True,
+                "editable": True,
+            }
+            for col in df.columns
+            if col not in existing and col not in skip_cols
+        ]
+
+        if not new_fields:
+            return
+
+        # Strip None length — ArcGIS rejects it for numeric types.
+        for f in new_fields:
+            if f["length"] is None:
+                del f["length"]
+
+        logger.info(f"ArcGIS schema: adding fields: {[f['name'] for f in new_fields]}")
+        # ponytail: token must be a URL param here — addToDefinition is an admin op;
+        # putting it in the POST body produces a spurious 400 "Invalid query parameters".
+        resp = requests.post(
+            f"{layer_url}/addToDefinition",
+            params={"f": "json", "token": token},
+            data={"addToDefinition": json.dumps({"fields": new_fields})},
+            timeout=_DATA_TIMEOUT,
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        if "error" in body:
+            # addToDefinition requires an owner/admin token; client_credentials tokens can't do this.
+            # Log and continue — addFeatures will still work once fields exist in the layer.
+            logger.warning(
+                f"ArcGIS addToDefinition failed (likely token permission): {body['error']}\n"
+                f"Add these fields manually in AGOL → Data → Fields → + Add field: "
+                f"{[f['name'] for f in new_fields]}"
+            )
+            return
+
+        logger.info(f"ArcGIS schema: added {len(new_fields)} field(s): {[f['name'] for f in new_fields]}")
+
     def replace_features(
         self,
         layer_url: str,
@@ -142,12 +217,16 @@ class ArcGISResource(ConfigurableResource):
         # Check layer capabilities before attempting writes.
         cap_resp = requests.get(layer_url, params={"f": "json", "token": token}, timeout=_DATA_TIMEOUT)
         cap_resp.raise_for_status()
-        capabilities = cap_resp.json().get("capabilities", "")
+        layer_meta = cap_resp.json()
+        capabilities = layer_meta.get("capabilities", "")
         if "Delete" not in capabilities or "Create" not in capabilities:
             raise Failure(
                 f"Layer does not support editing (capabilities: {capabilities!r}). "
                 "Enable editing (Add + Update + Delete) in ArcGIS Online → Content → Settings."
             )
+
+        skip = set(geometry_fields) if geometry_fields else set()
+        self._ensure_fields(layer_url, df, token, skip_cols=skip)
 
         # Fetch all ObjectIDs first (light query), then delete in batches.
         # deleteFeatures where=1=1 causes 504 on large layers; truncateFeatures
@@ -224,8 +303,11 @@ def _serialize(value: Any) -> Any:
     """Convert pandas/numpy scalar types to JSON-serializable Python types."""
     if pd.isna(value) if not isinstance(value, (list, dict)) else False:
         return None
+    if isinstance(value, bool):
+        return int(value)
     if hasattr(value, "item"):
-        return value.item()
+        v = value.item()
+        return int(v) if isinstance(v, bool) else v
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return value

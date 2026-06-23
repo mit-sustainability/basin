@@ -29,14 +29,10 @@ _TIMESERIES_QUERY = """
     ORDER BY sensor_id, datetime_edt
 """
 
-_OUTDOOR_EXPORT_QUERY = """
-    SELECT DISTINCT ON (r.sensor_id)
-        r.sensor_id, r.datetime_edt, r.temperature_f, r.relative_humidity_pct,
-        r.dew_point_f, r.heat_index_f,
-        c.sensor_name, c.lat, c.lon, c.deployment, c.radiation_shield
-    FROM staging.stg_outdoor_heat_aligned r
-    JOIN raw.outdoor_heat_sensor_config c ON r.sensor_id = c.sensor_id
-    ORDER BY r.sensor_id, r.datetime_edt DESC
+_SENSOR_LOCATIONS_QUERY = """
+    SELECT sensor_id, sensor_name, deployment, sponsor, lat, lon, radiation_shield
+    FROM raw.outdoor_heat_sensor_config
+    ORDER BY sensor_id
 """
 
 
@@ -189,6 +185,7 @@ def _load_sensor_metadata(dropbox: DropboxResource, config_file_path: str) -> pd
             "lat": meta.get("lat"),
             "lon": meta.get("lon"),
             "deployment": meta.get("zone"),
+            "sponsor": meta.get("sponsor"),
             "radiation_shield": meta["radiation_shield"] if "radiation_shield" in meta else None,
         })
     df = pd.DataFrame(rows)
@@ -317,7 +314,7 @@ def stg_outdoor_heat_aligned(pg_engine: ResourceParam[PostgreConnResources]) -> 
 
 
 @asset(
-    deps=[AssetKey(["final", "final_outdoor_heat_combined"]), "outdoor_heat_sensor_config"],
+    deps=["outdoor_heat_sensor_config"],
     compute_kind="python",
     group_name="exports",
 )
@@ -325,15 +322,17 @@ def agol_outdoor_heat_sync(
     pg_engine: ResourceParam[PostgreConnResources],
     arcgis: ResourceParam[ArcGISResource],
 ) -> Output[None]:
-    """Full-replace the ArcGIS Online outdoor heat feature layer with current data."""
+    """Sync sensor locations (config) to the ArcGIS Online point layer.
+
+    Readings are in the timeseries layer; the dashboard joins them by sensor_id.
+    This asset only needs to re-run when sensor config changes.
+    """
     if not _AGOL_LAYER_URL:
         raise Failure("ARCGIS_OUTDOOR_HEAT_LAYER_URL env var is not set")
 
     engine = pg_engine.create_engine()
     with engine.connect() as conn:
-        df = pd.read_sql(_OUTDOOR_EXPORT_QUERY, conn)
-
-    df["datetime_edt"] = df["datetime_edt"].astype(str)
+        df = pd.read_sql(_SENSOR_LOCATIONS_QUERY, conn)
 
     result = arcgis.replace_features(
         layer_url=_AGOL_LAYER_URL,
@@ -346,7 +345,7 @@ def agol_outdoor_heat_sync(
         metadata={
             "features_deleted": result["deleted"],
             "features_added": result["added"],
-            "total_rows_synced": len(df),
+            "sensors_synced": len(df),
         },
     )
 
