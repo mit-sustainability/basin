@@ -844,13 +844,15 @@ sources:
           - name: filename_match
             description: "Exact filename prefix used to match Dropbox files to this sensor"
           - name: sensor_name
-            description: "Human-readable site name"
+            description: "Human-readable site name (JSON key: name)"
           - name: lat
             description: "Latitude of deployment location"
           - name: lon
             description: "Longitude of deployment location"
           - name: deployment
-            description: "Zone grouping for the sensor (e.g. Zone 1, Zone 2)"
+            description: "Zone grouping for the sensor (JSON key: zone)"
+          - name: sponsor
+            description: "Sponsoring group or department for the sensor"
           - name: radiation_shield
             description: "Whether the sensor has a radiation shield fitted"
   - name: staging
