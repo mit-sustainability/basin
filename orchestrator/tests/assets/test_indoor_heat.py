@@ -450,6 +450,12 @@ def test_write_heat_export_retention_keeps_only_latest(tmp_path):
     assert remaining[0].name == "readings_20260609T120000Z.json"
 
 
+def test_write_heat_export_uses_custom_browser_base(tmp_path):
+    now = datetime(2026, 6, 9, 12, 0, 0)
+    _, manifest = _write_heat_export(tmp_path, _make_export_df(), now, browser_base="/data/phase2")
+    assert manifest["files"]["readings"] == "/data/phase2/readings_20260609T120000Z.json"
+
+
 def test_indoor_heat_export_asset_row_count_metadata(tmp_path, monkeypatch):
     monkeypatch.setenv("INDOOR_HEAT_OUTPUT_DIR", str(tmp_path))
     mock_engine = MagicMock()
