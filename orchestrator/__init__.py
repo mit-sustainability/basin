@@ -29,7 +29,7 @@ from orchestrator.assets import (
     engagement,
     campus_utility,
 )
-from orchestrator.assets import indoor_heat
+from orchestrator.assets import indoor_heat, outdoor_heat
 from orchestrator.jobs.business_travel_job import business_asset_job
 from orchestrator.jobs.confluence_wiki_snapshot import confluence_wiki_snapshot_job
 from orchestrator.jobs.website_content_health import (
@@ -48,13 +48,18 @@ from orchestrator.jobs.engagement import attendance_job
 from orchestrator.jobs.campus_utility import campus_utility_job
 from orchestrator.jobs.indoor_heat_job import indoor_heat_job
 from orchestrator.jobs.indoor_heat_calibration_job import indoor_heat_calibration_job
+from orchestrator.jobs.outdoor_heat_job import outdoor_heat_job
 from orchestrator.constants import (
     dbt_project_dir,
     DWRHS_CREDENTIALS,
     PG_CREDENTIALS,
     EM_CREDENTIALS,
     dh_api_key,
+    ARCGIS_CLIENT_ID,
+    ARCGIS_CLIENT_SECRET,
+    ARCGIS_ORG_URL,
 )
+from orchestrator.resources.arcgis import ArcGISResource
 from orchestrator.resources.datahub import DataHubResource
 from orchestrator.resources.dropbox import DropboxResource
 from orchestrator.resources.confluence import ConfluenceResource
@@ -82,6 +87,7 @@ utility_assets = load_assets_from_modules([campus_utility])
 website_content_assets = load_assets_from_modules([website_content_health])
 transit_assets = load_assets_from_modules([transit])
 indoor_heat_assets = load_assets_from_modules([indoor_heat])
+outdoor_heat_assets = load_assets_from_modules([outdoor_heat])
 
 
 @resource
@@ -111,7 +117,8 @@ defs = Definitions(
     + utility_assets
     + website_content_assets
     + transit_assets
-    + indoor_heat_assets,
+    + indoor_heat_assets
+    + outdoor_heat_assets,
     schedules=schedules,
     jobs=[
         business_asset_job,
@@ -130,6 +137,7 @@ defs = Definitions(
         website_content_health_link_check_job,
         indoor_heat_job,
         indoor_heat_calibration_job,
+        outdoor_heat_job,
     ],
     sensors=[sensor_ghg_manual],
     resources={
@@ -154,5 +162,10 @@ defs = Definitions(
             accept_downloads=True,
         ),
         "dropbox": DropboxResource(),
+        "arcgis": ArcGISResource(
+            client_id=ARCGIS_CLIENT_ID,
+            client_secret=ARCGIS_CLIENT_SECRET,
+            org_url=ARCGIS_ORG_URL,
+        ),
     },
 )

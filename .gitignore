@@ -144,6 +144,7 @@ warehouse/.user.yml
 .terraform
 
 # Dagster
+/.dagster/
 orchestrator/.dagster/*
 !orchestrator/.dagster/dagster.yaml
 
