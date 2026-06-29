@@ -24,29 +24,29 @@ from orchestrator.resources.dropbox import DropboxResource
 # ── Fill these in once the student provides the Dropbox folder structure ───────
 PHASES: dict[str, dict] = {
     "phase1": {
-        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase1",
+        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase1 Archive/Latest",
         "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase1/sensor_config.json",
         "output_dir":     "./output/phase1",
         "browser_base":   "/data/phase1",
     },
     "phase2": {
-        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase2",
+        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase2 Archive/Latest",
         "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase2/sensor_config.json",
         "output_dir":     "./output/phase2",
         "browser_base":   "/data/phase2",
     },
     "phase3": {
-        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase3",
+        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase3 Archive/Latest",
         "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase3/sensor_config.json",
         "output_dir":     "./output/phase3",
         "browser_base":   "/data/phase3",
     },
-    "phase4": {
-        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase4",
-        "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase4/sensor_config.json",
-        "output_dir":     "./output/phase4",
-        "browser_base":   "/data/phase4",
-    },
+    # "phase4": {
+    #     "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase4",
+    #     "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase4/sensor_config.json",
+    #     "output_dir":     "./output/phase4",
+    #     "browser_base":   "/data/phase4",
+    # },
 }
 # ──────────────────────────────────────────────────────────────────────────────
 
