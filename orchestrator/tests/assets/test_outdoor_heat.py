@@ -102,4 +102,4 @@ def test_agol_outdoor_heat_sync_returns_correct_metadata():
 
     assert result.metadata["features_deleted"].value == 10
     assert result.metadata["features_added"].value == 12
-    assert result.metadata["total_rows_synced"].value == 2
+    assert result.metadata["sensors_synced"].value == 2

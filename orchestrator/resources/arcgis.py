@@ -255,7 +255,11 @@ class ArcGISResource(ConfigurableResource):
             del_body = del_resp.json()
             if "error" in del_body:
                 raise Failure(f"ArcGIS deleteFeatures error: {del_body['error']}")
-            deleted += len(del_body.get("deleteResults", []))
+            results = del_body.get("deleteResults", [])
+            failed = [r for r in results if not r.get("success")]
+            if failed:
+                raise Failure(f"ArcGIS deleteFeatures partial failure: {failed}")
+            deleted += len(results)
 
         geometry_col_set = set(geometry_fields) if geometry_fields else set()
         features: list[dict[str, Any]] = []
