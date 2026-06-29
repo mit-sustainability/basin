@@ -179,13 +179,18 @@ class TestReplaceFeatures:
         r.json.return_value = {"deleteResults": [{"success": True}] * n}
         return r
 
+    def _cap_resp(self):
+        r = MagicMock()
+        r.json.return_value = {"capabilities": "Create,Delete,Query,Update,Editing", "fields": []}
+        return r
+
     def _routing(self, existing_ids: list[int], add_side_effect=None):
         """Build mock GET/POST handlers for the replace flow."""
 
         def mock_get(url, params=None, **kwargs):
             if "query" in url:
                 return self._ids_resp(existing_ids)
-            raise AssertionError(f"Unexpected GET: {url}")
+            return self._cap_resp()
 
         post_calls = []
 
@@ -193,6 +198,10 @@ class TestReplaceFeatures:
             post_calls.append((url, data))
             if url.endswith("/token"):
                 return self._token_resp()
+            if url.endswith("/addToDefinition"):
+                r = MagicMock()
+                r.json.return_value = {"success": True}
+                return r
             if url.endswith("/deleteFeatures"):
                 n = len((data or {}).get("objectIds", "").split(",")) if (data or {}).get("objectIds") else 0
                 return self._del_resp(n)
@@ -284,7 +293,12 @@ class TestReplaceFeatures:
         err_resp = MagicMock()
         err_resp.json.return_value = {"error": {"code": 500, "message": "Server error"}}
 
-        with patch("orchestrator.resources.arcgis.requests.get", return_value=err_resp):
+        def mock_get(url, params=None, **kwargs):
+            if "query" in url:
+                return err_resp
+            return self._cap_resp()
+
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
             with patch("orchestrator.resources.arcgis.requests.post", return_value=self._token_resp()):
                 with pytest.raises(Failure, match="query \\(ids\\) error"):
                     resource.replace_features(
@@ -297,12 +311,17 @@ class TestReplaceFeatures:
         del_err = MagicMock()
         del_err.json.return_value = {"error": {"code": 500, "message": "Delete failed"}}
 
+        def mock_get(url, params=None, **kwargs):
+            if "query" in url:
+                return ids_resp
+            return self._cap_resp()
+
         def mock_post(url, data=None, **kwargs):
             if url.endswith("/token"):
                 return self._token_resp()
             return del_err
 
-        with patch("orchestrator.resources.arcgis.requests.get", return_value=ids_resp):
+        with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
             with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
                 with pytest.raises(Failure, match="deleteFeatures error"):
                     resource.replace_features(

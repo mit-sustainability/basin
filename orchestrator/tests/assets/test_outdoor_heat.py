@@ -59,7 +59,7 @@ def test_outdoor_heat_sensor_config_loads_metadata():
     )
     df = result.value
     assert len(df) == 2
-    assert set(df.columns) == {"sensor_id", "filename_match", "sensor_name", "lat", "lon", "deployment", "radiation_shield"}
+    assert set(df.columns) == {"sensor_id", "filename_match", "sensor_name", "lat", "lon", "deployment", "radiation_shield", "sponsor"}
     assert df.loc[df["sensor_id"] == "S1", "sensor_name"].iloc[0] == "Site Alpha - Zone 1"
     assert df.loc[df["sensor_id"] == "S1", "filename_match"].iloc[0] == "Site Alpha"
     assert df.loc[df["sensor_id"] == "S1", "lat"].iloc[0] == pytest.approx(42.361)
