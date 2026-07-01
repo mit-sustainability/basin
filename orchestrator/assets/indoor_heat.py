@@ -422,11 +422,11 @@ def _parse_edt(raw) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _write_heat_export(output_dir: Path, df: pd.DataFrame, now: datetime) -> tuple[Path, dict]:
+def _write_heat_export(output_dir: Path, df: pd.DataFrame, now: datetime, browser_base: str = "/data") -> tuple[Path, dict]:
     stamp = now.strftime("%Y%m%dT%H%M%SZ")
     readings_filename = f"readings_{stamp}.json"
     readings_path = output_dir / readings_filename
-    browser_path = f"/data/{readings_filename}"
+    browser_path = f"{browser_base}/{readings_filename}"
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
