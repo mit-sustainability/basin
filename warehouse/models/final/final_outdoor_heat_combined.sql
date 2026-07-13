@@ -1,3 +1,6 @@
+-- table (not the project's default `view`): agol_outdoor_heat_timeseries reads this
+-- model in full on every export run, and materializing it avoids re-running the
+-- upstream join/aggregation on every ArcGIS sync.
 {{ config(materialized='table') }}
 
 SELECT

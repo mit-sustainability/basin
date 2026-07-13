@@ -47,7 +47,7 @@ Dropbox (xlsx/csv)
 
 ### 1. `warehouse/models/final/final_outdoor_heat_combined.sql` (new)
 
-Mirrors `final_indoor_heat_combined.sql`. Joins 20-min binned readings with sensor config to attach spatial and descriptive metadata:
+Mirrors `final_indoor_heat_combined.sql`. Joins 20-min binned readings with sensor config to attach descriptive metadata (lat/lon/radiation_shield live only in `raw.outdoor_heat_sensor_config`, which `agol_outdoor_heat_sync` reads directly for the locations layer — this model only needs the display name and deployment zone for the timeseries layer):
 
 ```sql
 SELECT
@@ -58,10 +58,7 @@ SELECT
     a.dew_point_f,
     a.heat_index_f,
     c.sensor_name,
-    c.lat,
-    c.lon,
-    c.deployment,
-    c.radiation_shield
+    c.deployment
 FROM {{ source("staging", "stg_outdoor_heat_aligned") }} a
 LEFT JOIN {{ source("raw", "outdoor_heat_sensor_config") }} c
     ON a.sensor_id = c.sensor_id
@@ -89,14 +86,19 @@ Steps:
 4. `addFeatures` with full list
 5. Return `{"deleted": n, "added": n}`
 
-### 3. `agol_outdoor_heat_sync` asset (updated)
+### 3. `agol_outdoor_heat_sync` and `agol_outdoor_heat_timeseries` assets
 
-In `orchestrator/assets/outdoor_heat.py`:
-- **Reads from:** `final.final_outdoor_heat_combined` (was `staging.stg_outdoor_heat_aligned`)
-- **Calls:** `arcgis.replace_features(layer_url=_AGOL_LAYER_URL, df=df, geometry_fields=("lat", "lon"))`
-- **deps:** `[AssetKey(["final", "final_outdoor_heat_combined"]), "outdoor_heat_sensor_config"]`
-- **group_name:** `"exports"` (was `"staging"`)
-- Env var guard on `ARCGIS_OUTDOOR_HEAT_LAYER_URL` stays as-is
+In `orchestrator/assets/outdoor_heat.py`, the AGOL sync is split into two assets by layer:
+- **`agol_outdoor_heat_sync`** — syncs sensor *locations* (lat/lon/name/deployment/sponsor/radiation_shield)
+  from `raw.outdoor_heat_sensor_config` to the point layer. Only needs to re-run when sensor config
+  changes. **deps:** `["outdoor_heat_sensor_config"]`. **group_name:** `"exports"`.
+  Calls `arcgis.replace_features(layer_url=_AGOL_LAYER_URL, df=df, geometry_fields=("lat", "lon"))`.
+  Env var guard on `ARCGIS_OUTDOOR_HEAT_LAYER_URL`.
+- **`agol_outdoor_heat_timeseries`** — full-replaces the time series layer with all readings from
+  `final.final_outdoor_heat_combined`, joined to sensor_name/deployment by `sensor_id` on the AGOL side.
+  **deps:** `[AssetKey(["final", "final_outdoor_heat_combined"]), "outdoor_heat_sensor_config"]`.
+  **group_name:** `"exports"`. Calls `arcgis.replace_features(layer_url=_AGOL_TIMESERIES_URL, df=df, geometry_fields=None)`.
+  Env var guard on `ARCGIS_OUTDOOR_HEAT_TIMESERIES_URL`.
 
 ### 4. `orchestrator/jobs/outdoor_heat_job.py` (new)
 

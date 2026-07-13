@@ -59,7 +59,7 @@ def test_outdoor_heat_sensor_config_loads_metadata():
     )
     df = result.value
     assert len(df) == 2
-    assert set(df.columns) == {"sensor_id", "filename_match", "sensor_name", "lat", "lon", "deployment", "radiation_shield"}
+    assert set(df.columns) == {"sensor_id", "filename_match", "sensor_name", "lat", "lon", "deployment", "sponsor", "radiation_shield"}
     assert df.loc[df["sensor_id"] == "S1", "sensor_name"].iloc[0] == "Site Alpha - Zone 1"
     assert df.loc[df["sensor_id"] == "S1", "filename_match"].iloc[0] == "Site Alpha"
     assert df.loc[df["sensor_id"] == "S1", "lat"].iloc[0] == pytest.approx(42.361)
@@ -102,4 +102,4 @@ def test_agol_outdoor_heat_sync_returns_correct_metadata():
 
     assert result.metadata["features_deleted"].value == 10
     assert result.metadata["features_added"].value == 12
-    assert result.metadata["total_rows_synced"].value == 2
+    assert result.metadata["sensors_synced"].value == 2

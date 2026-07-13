@@ -1,12 +1,18 @@
-"""Export one indoor-heat phase to JSON + manifest.
+"""Export one indoor-heat phase to JSON + manifest, without running Dagster or Postgres.
 
 Usage:
     python scripts/export_indoor_phase.py --phase phase1
 
 Fill in PHASES below with the Dropbox paths the student provides for each phase.
+
+Note: this still imports parsing helpers from orchestrator.assets.indoor_heat, so the
+Dagster package (and its deps) must be installed in the environment — "without Dagster"
+means this script doesn't need a running Dagster instance or a Postgres database, not
+that the orchestrator package is dependency-free.
 """
 
 import argparse
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -22,30 +28,34 @@ from orchestrator.assets.indoor_heat import (
 from orchestrator.resources.dropbox import DropboxResource
 
 # ── Fill these in once the student provides the Dropbox folder structure ───────
+_BASE = "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026"
+_CONFIG = f"{_BASE}/indoor_sensor_config.json"
+
 PHASES: dict[str, dict] = {
     "phase1": {
-        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase1 Archive/Latest",
-        "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase1/sensor_config.json",
-        "output_dir":     "./output/phase1",
-        "browser_base":   "/data/phase1",
+        "dropbox_folder": f"{_BASE}/Phase 1 Archive/Latest",
+        "config_path": _CONFIG,
+        "output_dir": "./output/phase1",
+        "browser_base": "/data/phase1",
     },
     "phase2": {
-        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase2 Archive/Latest",
-        "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase2/sensor_config.json",
-        "output_dir":     "./output/phase2",
-        "browser_base":   "/data/phase2",
+        "dropbox_folder": f"{_BASE}/Phase 2 Archive/Latest",
+        "config_path": f"{_BASE}/Phase 2 Archive/phase2_sensor_config.json",
+        "output_dir": "./output/phase2",
+        "browser_base": "/data/phase2",
     },
     "phase3": {
-        "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase3 Archive/Latest",
-        "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase3/sensor_config.json",
-        "output_dir":     "./output/phase3",
-        "browser_base":   "/data/phase3",
+        "dropbox_folder": f"{_BASE}/Phase 3 Archive/Latest",
+        "config_path": f"{_BASE}/Phase 3 Archive/phase3_sensor_config.json",
+        "output_dir": "./output/phase3",
+        "browser_base": "/data/phase3",
     },
+    # phase4/Latest is currently empty
     # "phase4": {
-    #     "dropbox_folder": "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase4",
-    #     "config_path":    "ns:4039652928/Program Topics/Data/Projects/Indoor campus heat data 2026/Phase4/sensor_config.json",
-    #     "output_dir":     "./output/phase4",
-    #     "browser_base":   "/data/phase4",
+    #     "dropbox_folder": f"{_BASE}/Phase 4 Archive/Latest",
+    #     "config_path": _CONFIG,
+    #     "output_dir": "./output/phase4",
+    #     "browser_base": "/data/phase4",
     # },
 }
 # ──────────────────────────────────────────────────────────────────────────────
@@ -103,9 +113,17 @@ def run_phase(phase: str, dropbox: DropboxResource) -> None:
     merged = aligned.merge(config_df, on="sensor_id", how="left")
 
     output_dir = Path(cfg["output_dir"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = output_dir / "readings.csv"
+    merged.to_csv(csv_path, index=False)
+    print(f"  wrote {csv_path}")
+
     readings_path, manifest = _write_heat_export(
         output_dir, merged, datetime.utcnow(), browser_base=cfg["browser_base"]
     )
+    # pandas writes Python NaN literals; replace with JSON null
+    raw = Path(readings_path).read_text()
+    Path(readings_path).write_text(re.sub(r": NaN", ": null", raw))
     print(f"  wrote {readings_path}")
     print(f"  manifest -> {manifest['files']['readings']}")
 

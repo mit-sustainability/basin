@@ -102,13 +102,19 @@ def _calculate_heat_index_f(temp_f: pd.Series, rh: pd.Series) -> pd.Series:
 
 def _read_sensor_file(file_bytes: BytesIO, meta: dict) -> pd.DataFrame:
     """Load a sensor file (.xlsx/.xls/.csv), normalize all column variants to °C."""
+    header = file_bytes.read(4)
+    file_bytes.seek(0)
+    # ponytail: xlsx files are ZIP archives; some sensors save .csv files as xlsx
+    is_xlsx = header[:2] == b"PK"
+    is_xls = header[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"[:8]
+
     ext = meta["source_file"].rsplit(".", 1)[-1].lower()
-    if ext == "csv":
-        df = pd.read_csv(file_bytes)
-    elif ext == "xls":
+    if is_xlsx:
+        df = pd.read_excel(file_bytes, engine="openpyxl")
+    elif is_xls or ext == "xls":
         df = pd.read_excel(file_bytes, engine="xlrd")
     else:
-        df = pd.read_excel(file_bytes, engine="openpyxl")
+        df = pd.read_csv(file_bytes)
 
     df = df.rename(columns=_DIRECT_RENAMES | _FAHRENHEIT_RENAMES)
     df = df.loc[:, ~df.columns.duplicated(keep="first")]
