@@ -12,14 +12,9 @@ website_content_health_schedule = ScheduleDefinition(
     cron_schedule="0 9 1 * *",
 )
 
-indoor_heat_schedule = ScheduleDefinition(
-    job=indoor_heat_job,
-    cron_schedule="0 0 * * 0",  # Sunday midnight UTC
-)
-
 outdoor_heat_schedule = ScheduleDefinition(
     job=outdoor_heat_job,
-    cron_schedule="0 0 * * 0",  # Sunday midnight UTC
+    cron_schedule="0 0 * * 1",  # Monday midnight UTC
 )
 
 schedules = [
