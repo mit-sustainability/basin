@@ -72,7 +72,7 @@ TRANSIT_NORMALIZED_COLUMNS = [
 
 class TransitMonthlyConfig(Config):
     start_month: str
-    end_month: str | None = None
+    end_month: str
 
 
 @dataclass(frozen=True)
