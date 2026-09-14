@@ -2,13 +2,26 @@ from pathlib import Path
 
 from dagster import Failure
 import pandas as pd
+from pydantic import ValidationError
 import pytest
 
 from orchestrator.assets.transit import (
+    TransitMonthlyConfig,
     _month_range,
     _normalize_transit_monthly_summary,
     _process_transit_workbook,
 )
+
+
+def test_transit_monthly_config_requires_end_month():
+    with pytest.raises(ValidationError):
+        TransitMonthlyConfig(start_month="2026-01")
+
+
+def test_transit_monthly_config_accepts_start_and_end_month():
+    config = TransitMonthlyConfig(start_month="2026-01", end_month="2026-02")
+    assert config.start_month == "2026-01"
+    assert config.end_month == "2026-02"
 
 
 def test_normalize_transit_monthly_summary_history():
