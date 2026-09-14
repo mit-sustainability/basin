@@ -63,7 +63,6 @@ class PostgreSQLPandasIOManager(ConfigurableIOManager):
     user: Optional[str] = "postgres"
     password: Optional[str] = "test"
     database: Optional[str] = "postgres"
-    dbschema: Optional[str] = "public"
     write_method: Optional[str] = "replace"
 
     @property
