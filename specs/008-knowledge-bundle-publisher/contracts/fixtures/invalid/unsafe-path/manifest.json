@@ -1,0 +1,16 @@
+{
+  "bundle_version": "fixture-v1",
+  "documents": [
+    {
+      "document_id": "unsafe",
+      "markdown_path": "../outside.md",
+      "source_type": "mkdocs",
+      "source_key": "docs/unsafe.md",
+      "canonical_url": "https://example.edu/unsafe/",
+      "source_revision": "abc123",
+      "exported_at": "2026-10-16T00:00:00Z",
+      "title": "Unsafe",
+      "headings": []
+    }
+  ]
+}

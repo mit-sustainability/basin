@@ -85,3 +85,36 @@ def test_confluence_request_validates_required_configuration():
 
     with pytest.raises(Failure, match="CONFLUENCE_PAT"):
         resource._request_json("/rest/api/content", params={})
+
+
+def test_confluence_normalize_page_keeps_ancestors_and_rendered_html():
+    resource = ConfluenceResource(auth_token="t")
+
+    page = resource._normalize_page(
+        {
+            "id": "9",
+            "title": "Child",
+            "ancestors": [{"id": 1, "title": "Home"}, {"id": "2", "title": "Guide"}],
+            "body": {"export_view": {"value": "<p>hi</p>"}},
+            "version": {"number": 4},
+        }
+    )
+
+    assert page.ancestors == (("1", "Home"), ("2", "Guide"))
+    assert page.export_html == "<p>hi</p>"
+    assert page.storage_xhtml == ""
+
+
+def test_confluence_list_descendants_walks_children_breadth_first():
+    resource = ConfluenceResource(auth_token="t", page_limit=1)
+    tree = {"1": ["2", "3"], "2": ["4"], "3": [], "4": []}
+
+    def fake_request(path, params):
+        parent = path.split("/")[4]
+        kids = tree[parent][params["start"] : params["start"] + 1]
+        return {"results": [{"id": kid, "title": kid, "version": {"number": 1}} for kid in kids]}
+
+    with patch.object(ConfluenceResource, "_request_json", side_effect=fake_request):
+        pages = resource.list_descendants("1")
+
+    assert [page.page_id for page in pages] == ["2", "3", "4"]

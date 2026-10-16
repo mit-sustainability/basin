@@ -1,0 +1,32 @@
+{
+  "bundle_version": "fixture-v1",
+  "documents": [
+    {
+      "document_id": "sustainability-boundary",
+      "markdown_path": "sustainability/methodology/boundary.md",
+      "source_type": "mkdocs",
+      "source_key": "docs/methodology/boundary.md",
+      "canonical_url": "https://example.edu/sustainability/boundary/",
+      "source_revision": "abc123",
+      "exported_at": "2026-10-16T00:00:00Z",
+      "title": "Organizational boundary",
+      "headings": [
+        {"title": "Overview", "level": 2, "anchor": "overview", "path": "Overview"},
+        {"title": "Overview", "level": 2, "anchor": "overview-1", "path": "Methods / Overview"}
+      ]
+    },
+    {
+      "document_id": "office-expense-approval",
+      "markdown_path": "office/procedures/expense-approval.md",
+      "source_type": "confluence",
+      "source_key": "12345",
+      "canonical_url": "https://confluence.example.edu/pages/viewpage.action?pageId=12345",
+      "source_revision": "17",
+      "exported_at": "2026-10-16T00:00:00Z",
+      "title": "Expense approval",
+      "headings": [
+        {"title": "Required receipts", "level": 2, "anchor": "required-receipts", "path": "Required receipts"}
+      ]
+    }
+  ]
+}

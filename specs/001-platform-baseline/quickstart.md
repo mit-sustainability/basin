@@ -22,6 +22,7 @@ Use this guide to inspect and verify the current platform behavior that the base
 5. If selective ECS offload is enabled, verify that the EC2-hosted Dagster instance can launch the configured ECS task definition and that the task can reach the warehouse before materializing an offloaded asset.
 6. For the website content health domain, verify that Dagster exposes five partitions for `website_content_health_job` and that manual materialization can target any single bucket or all five buckets.
 7. For the Confluence wiki domain, set `CONFLUENCE_BASE_URL`, `CONFLUENCE_PAT`, and optionally `CONFLUENCE_SPACE_KEY`, then materialize `confluence_wiki_snapshot_job` to populate `raw.confluence_mitos_pages`.
+8. For the knowledge bundle, set `CONFLUENCE_PAT` and AWS credentials, then materialize `knowledge_publish_job`. The `knowledge_published` asset metadata shows `BEACON_KNOWLEDGE_VERSION` and `BEACON_KNOWLEDGE_SHA256` to pin in a reviewed Beacon deployment promotion; an unchanged bundle is reported as `skipped` and not uploaded.
 
 ## Verify Tests
 

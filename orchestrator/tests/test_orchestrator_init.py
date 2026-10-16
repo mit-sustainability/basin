@@ -30,3 +30,16 @@ def test_orchestrator_definitions_register_confluence_resource():
     assert isinstance(confluence_resource, ConfluenceResource)
     assert confluence_resource.base_url == "https://wikis.mit.edu/confluence"
     assert confluence_resource.space_key == "MITOS"
+
+
+def test_orchestrator_definitions_register_knowledge_publish_job():
+    import orchestrator
+
+    job = orchestrator.defs.resolve_job_def("knowledge_publish_job")
+
+    assert {key.to_user_string() for key in job.asset_layer.executable_asset_keys} == {
+        "knowledge_mkdocs_documents",
+        "knowledge_confluence_documents",
+        "knowledge_bundle",
+        "knowledge_published",
+    }

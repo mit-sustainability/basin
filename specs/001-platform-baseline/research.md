@@ -21,6 +21,7 @@
   - AWS S3 resource
   - AWS Lambda Pipes client
   - Confluence REST resource for MITOS wiki snapshot ingestion
+  - Knowledge bundle publisher (MkDocs + Confluence to immutable S3 bundle for Beacon MCP)
 
 ### Warehouse runtime
 
