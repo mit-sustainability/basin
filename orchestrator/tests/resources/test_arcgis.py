@@ -205,6 +205,10 @@ class TestReplaceFeatures:
             if url.endswith("/deleteFeatures"):
                 n = len((data or {}).get("objectIds", "").split(",")) if (data or {}).get("objectIds") else 0
                 return self._del_resp(n)
+            if url.endswith("/addToDefinition"):
+                r = MagicMock()
+                r.json.return_value = {"success": True}
+                return r
             # addFeatures
             if add_side_effect:
                 return add_side_effect(url, data)
@@ -298,8 +302,15 @@ class TestReplaceFeatures:
                 return err_resp
             return self._cap_resp()
 
+        def mock_post(url, data=None, **kwargs):
+            if url.endswith("/addToDefinition"):
+                r = MagicMock()
+                r.json.return_value = {"success": True}
+                return r
+            return self._token_resp()
+
         with patch("orchestrator.resources.arcgis.requests.get", side_effect=mock_get):
-            with patch("orchestrator.resources.arcgis.requests.post", return_value=self._token_resp()):
+            with patch("orchestrator.resources.arcgis.requests.post", side_effect=mock_post):
                 with pytest.raises(Failure, match="query \\(ids\\) error"):
                     resource.replace_features(
                         layer_url="https://example.com/FeatureServer/0",

@@ -4,7 +4,6 @@ from dagster_dbt import build_schedule_from_dbt_selection
 from orchestrator.assets.postgres import mitos_dbt_assets
 from orchestrator.jobs.business_travel_job import business_asset_job
 from orchestrator.jobs.website_content_health import website_content_health_job
-from orchestrator.jobs.indoor_heat_job import indoor_heat_job
 from orchestrator.jobs.outdoor_heat_job import outdoor_heat_job
 
 website_content_health_schedule = ScheduleDefinition(
@@ -12,14 +11,9 @@ website_content_health_schedule = ScheduleDefinition(
     cron_schedule="0 9 1 * *",
 )
 
-indoor_heat_schedule = ScheduleDefinition(
-    job=indoor_heat_job,
-    cron_schedule="0 0 * * 0",  # Sunday midnight UTC
-)
-
 outdoor_heat_schedule = ScheduleDefinition(
     job=outdoor_heat_job,
-    cron_schedule="0 0 * * 0",  # Sunday midnight UTC
+    cron_schedule="0 0 * * 1",  # Monday midnight UTC
 )
 
 schedules = [
@@ -31,6 +25,5 @@ schedules = [
     ),
     ScheduleDefinition(job=business_asset_job, cron_schedule="0 0 1 * *"),
     website_content_health_schedule,
-    indoor_heat_schedule,
     outdoor_heat_schedule,
 ]

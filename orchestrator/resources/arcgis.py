@@ -4,6 +4,7 @@ from typing import Any
 import pandas as pd
 import requests
 from dagster import ConfigurableResource, Failure, get_dagster_logger
+from pydantic import field_validator
 
 logger = get_dagster_logger()
 
@@ -21,7 +22,17 @@ class ArcGISResource(ConfigurableResource):
     client_secret: str
     org_url: str = "https://www.arcgis.com"
 
+    @field_validator("org_url")
+    @classmethod
+    def _strip_trailing_slash(cls, v: str) -> str:
+        return v.rstrip("/")
+
     def _get_token(self) -> str:
+        if not self.client_id or not self.client_secret:
+            raise Failure(
+                "ArcGISResource is missing client_id/client_secret. "
+                "Set ARCGIS_CLIENT_ID and ARCGIS_CLIENT_SECRET."
+            )
         url = f"{self.org_url}/sharing/rest/oauth2/token"
         resp = requests.post(
             url,
