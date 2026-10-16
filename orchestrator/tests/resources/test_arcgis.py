@@ -179,9 +179,9 @@ class TestReplaceFeatures:
         r.json.return_value = {"deleteResults": [{"success": True}] * n}
         return r
 
-    def _capabilities_resp(self):
+    def _cap_resp(self):
         r = MagicMock()
-        r.json.return_value = {"capabilities": "Create,Delete,Update", "fields": []}
+        r.json.return_value = {"capabilities": "Create,Delete,Query,Update,Editing", "fields": []}
         return r
 
     def _routing(self, existing_ids: list[int], add_side_effect=None):
@@ -190,8 +190,7 @@ class TestReplaceFeatures:
         def mock_get(url, params=None, **kwargs):
             if "query" in url:
                 return self._ids_resp(existing_ids)
-            # bare layer_url — capabilities check or _ensure_fields schema check
-            return self._capabilities_resp()
+            return self._cap_resp()
 
         post_calls = []
 
@@ -199,6 +198,10 @@ class TestReplaceFeatures:
             post_calls.append((url, data))
             if url.endswith("/token"):
                 return self._token_resp()
+            if url.endswith("/addToDefinition"):
+                r = MagicMock()
+                r.json.return_value = {"success": True}
+                return r
             if url.endswith("/deleteFeatures"):
                 n = len((data or {}).get("objectIds", "").split(",")) if (data or {}).get("objectIds") else 0
                 return self._del_resp(n)
@@ -297,7 +300,7 @@ class TestReplaceFeatures:
         def mock_get(url, params=None, **kwargs):
             if "query" in url:
                 return err_resp
-            return self._capabilities_resp()
+            return self._cap_resp()
 
         def mock_post(url, data=None, **kwargs):
             if url.endswith("/addToDefinition"):
@@ -322,7 +325,7 @@ class TestReplaceFeatures:
         def mock_get(url, params=None, **kwargs):
             if "query" in url:
                 return ids_resp
-            return self._capabilities_resp()
+            return self._cap_resp()
 
         def mock_post(url, data=None, **kwargs):
             if url.endswith("/token"):
