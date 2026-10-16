@@ -88,3 +88,46 @@ def test_revoked_version_is_refused():
 def test_manifest_diff_ignores_unchanged_documents():
     docs = [{"document_id": "a", "source_revision": "1", "markdown_sha256": "x"}]
     assert manifest_diff(docs, docs) == {"added": [], "removed": [], "changed": []}
+
+
+def test_unchanged_content_after_revocation_publishes_a_new_version():
+    s3 = FakeS3()
+    first = publish_bundle(s3, "bkt", "kb", build_bundle([make_doc("a")]))
+    s3.objects["kb/revoked.json"] = json.dumps({"revoked": [first["bundle_version"]]}).encode()
+    later = build_bundle([make_doc("a", exported_at="2026-10-17T00:00:00Z")])
+    entry = publish_bundle(s3, "bkt", "kb", later)
+
+    assert entry["skipped"] is False and entry["bundle_version"] != first["bundle_version"]
+
+
+def test_metadata_only_change_is_reported_as_changed():
+    s3 = FakeS3()
+    publish_bundle(s3, "bkt", "kb", build_bundle([make_doc("a")]))
+    entry = publish_bundle(s3, "bkt", "kb", build_bundle([make_doc("a", canonical_url="https://new.example/a")]))
+
+    assert entry["diff"]["changed"] == ["a"]
+
+
+def test_retry_after_failed_ledger_write_adopts_stored_archive():
+    class FlakyS3(FakeS3):
+        fail = True
+
+        def put_object(self, Bucket, Key, Body, **kw):
+            if "/ledger/" in Key and self.fail:
+                self.fail = False
+                raise RuntimeError("ledger write failed")
+            super().put_object(Bucket, Key, Body, **kw)
+
+    s3 = FlakyS3()
+    first = build_bundle([make_doc("a")])
+    with pytest.raises(RuntimeError):
+        publish_bundle(s3, "bkt", "kb", first)
+    retry = build_bundle([make_doc("a", exported_at="2026-10-16T09:00:00Z")])
+    entry = publish_bundle(s3, "bkt", "kb", retry)
+
+    assert entry["sha256"] == first.sha256 and f"kb/ledger/{first.version}.json" in s3.objects
+
+
+def test_manifest_diff_falls_back_for_legacy_ledger_entries():
+    old = [{"document_id": "a", "source_revision": "1", "markdown_sha256": "x"}]
+    assert manifest_diff(old, [{**old[0], "fingerprint": "f"}])["changed"] == []

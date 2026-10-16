@@ -84,20 +84,27 @@ def extract_headings(markdown: str) -> list[dict]:
     return headings
 
 
+def _row(d: Document) -> list:
+    """Manifest-affecting fields of a document, excluding the per-run `exported_at`."""
+    return [
+        d.document_id,
+        d.markdown_path,
+        d.canonical_url,
+        d.source_revision,
+        d.title,
+        hashlib.sha256(d.markdown.encode("utf-8")).hexdigest(),
+        extract_headings(d.markdown),
+    ]
+
+
+def doc_fingerprint(d: Document) -> str:
+    """Per-document hash used by the ledger diff to spot metadata-only changes."""
+    return hashlib.sha256(json.dumps(_row(d)).encode("utf-8")).hexdigest()
+
+
 def content_hash(documents: list[Document]) -> str:
     """Hash of bundle content, excluding the per-run `exported_at` timestamp."""
-    rows = [
-        [
-            d.document_id,
-            d.markdown_path,
-            d.canonical_url,
-            d.source_revision,
-            d.title,
-            hashlib.sha256(d.markdown.encode("utf-8")).hexdigest(),
-            extract_headings(d.markdown),
-        ]
-        for d in sorted(documents, key=lambda d: d.document_id)
-    ]
+    rows = [_row(d) for d in sorted(documents, key=lambda d: d.document_id)]
     return hashlib.sha256(json.dumps(rows).encode("utf-8")).hexdigest()
 
 

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import tarfile
 from datetime import datetime, timezone
 
 from botocore.exceptions import ClientError
 
-from orchestrator.knowledge.bundle import Bundle
+from orchestrator.knowledge.bundle import Bundle, doc_fingerprint
 
 CONFLICT_CODES = {"PreconditionFailed", "ConditionalRequestConflict"}
 MISSING_CODES = {"NoSuchKey", "404"}
@@ -55,17 +57,34 @@ def _ledger_entries(client, bucket: str, prefix: str) -> list[dict]:
         token = page["NextContinuationToken"]
 
 
-def _doc_index(documents: list[dict]) -> dict[str, tuple]:
-    return {d["document_id"]: (d["source_revision"], d["markdown_sha256"]) for d in documents}
-
-
 def manifest_diff(previous: list[dict], current: list[dict]) -> dict[str, list[str]]:
-    old, new = _doc_index(previous), _doc_index(current)
+    # Ledger entries written before `fingerprint` existed only support revision + Markdown hash.
+    if all("fingerprint" in d for d in previous):
+        key = lambda d: d["fingerprint"]  # noqa: E731
+    else:
+        key = lambda d: (d["source_revision"], d["markdown_sha256"])  # noqa: E731
+    old, new = {d["document_id"]: key(d) for d in previous}, {d["document_id"]: key(d) for d in current}
     return {
         "added": sorted(new.keys() - old.keys()),
         "removed": sorted(old.keys() - new.keys()),
         "changed": sorted(k for k in new.keys() & old.keys() if new[k] != old[k]),
     }
+
+
+def _verified_stored_sha(client, bucket: str, key: str, bundle: Bundle) -> str:
+    """Return the sha256 of the stored archive after checking it holds this bundle's content."""
+    raw = client.get_object(Bucket=bucket, Key=key)["Body"].read()
+    try:
+        with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
+            files = {m.name: tar.extractfile(m).read() for m in tar.getmembers() if m.isfile()}
+        manifest = json.loads(files.get("manifest.json", b"{}"))
+    except (tarfile.TarError, OSError, ValueError):
+        manifest, files = {}, {}
+    expected = {d.markdown_path: d.markdown.encode("utf-8") for d in bundle.documents}
+    stored = {k: v for k, v in files.items() if k != "manifest.json"}
+    if manifest.get("bundle_version") != bundle.version or stored != expected:
+        raise AlreadyPublishedError(f"s3://{bucket}/{key} exists but does not match this bundle's content")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def publish_bundle(client, bucket: str, prefix: str, bundle: Bundle) -> dict:
@@ -79,7 +98,7 @@ def publish_bundle(client, bucket: str, prefix: str, bundle: Bundle) -> dict:
 
     entries = _ledger_entries(client, bucket, prefix)
     previous = max(entries, key=lambda e: e["published_at"]) if entries else None
-    if previous and previous["content_hash"] == bundle.content_hash:
+    if previous and previous["content_hash"] == bundle.content_hash and previous["bundle_version"] not in revoked:
         return {**previous, "skipped": True}
 
     documents = [
@@ -89,6 +108,7 @@ def publish_bundle(client, bucket: str, prefix: str, bundle: Bundle) -> dict:
             "source_key": d.source_key,
             "source_revision": d.source_revision,
             "markdown_sha256": hashlib.sha256(d.markdown.encode("utf-8")).hexdigest(),
+            "fingerprint": doc_fingerprint(d),
         }
         for d in sorted(bundle.documents, key=lambda d: d.document_id)
     ]
@@ -102,7 +122,11 @@ def publish_bundle(client, bucket: str, prefix: str, bundle: Bundle) -> dict:
         "diff": manifest_diff(previous["documents"] if previous else [], documents),
         "previous_version": previous["bundle_version"] if previous else None,
     }
-    _put_new(client, bucket, entry["archive_key"], bundle.archive, "application/gzip")
+    try:
+        _put_new(client, bucket, entry["archive_key"], bundle.archive, "application/gzip")
+    except AlreadyPublishedError:
+        # A prior run uploaded the archive but failed before writing the ledger: adopt it.
+        entry["sha256"] = _verified_stored_sha(client, bucket, entry["archive_key"], bundle)
     _put_new(
         client,
         bucket,

@@ -51,7 +51,7 @@ def test_confluence_html_keeps_tables_and_drops_macro_chrome():
         '<div class="recently-updated"><h2>Recently Updated</h2></div>'
         '<input type="hidden" value="x"/><img src="/a.png"/>'
     )
-    md = html_to_markdown(html, "https://wikis.mit.edu/confluence")
+    md = html_to_markdown(html, "https://wikis.mit.edu/confluence/pages/viewpage.action?pageId=1")
 
     assert "[link](https://wikis.mit.edu/confluence/display/X/Y)" in md
     assert "| Tool | Use |" in md and "| A | B |" in md
@@ -76,3 +76,10 @@ def test_confluence_export_builds_documents_with_hierarchy_and_dedupes():
     assert docs[1].document_id == "confluence-11" and docs[1].source_revision == "2"
     assert docs[1].canonical_url == "https://wikis.mit.edu/confluence/pages/viewpage.action?pageId=11"
     assert docs[1].markdown == "# Setup Steps\n\nbody\n"
+
+
+def test_confluence_links_resolve_against_the_current_page():
+    page = "https://wikis.mit.edu/confluence/pages/viewpage.action?pageId=1"
+    md = html_to_markdown('<a href="#setup">s</a> <a href="https://x.org/a">x</a>', page)
+
+    assert f"[s]({page}#setup)" in md and "[x](https://x.org/a)" in md
