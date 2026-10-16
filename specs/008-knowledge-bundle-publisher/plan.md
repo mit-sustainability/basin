@@ -8,8 +8,8 @@ Source assets emit `Document` records (manifest fields plus Markdown body). `kno
 
 ## Touched paths
 
-- `orchestrator/knowledge/` (new, pure Python, no Dagster imports): `models.py` (Document, manifest writer), `headings.py`, `validate.py`, `archive.py`
-- `orchestrator/assets/knowledge.py`, `orchestrator/jobs/knowledge_publish.py`
+- `orchestrator/resources/knowledge_bundle.py` (new, pure Python, no Dagster imports): config, manifest validation, Document/Bundle, headings, deterministic archive, immutable S3 publish + ledger
+- `orchestrator/assets/knowledge.py` (assets plus MkDocs and Confluence exporters), `orchestrator/jobs/knowledge_publish.py`
 - `orchestrator/resources/confluence.py` (`ancestors` and `export_html` on `ConfluencePage`, plus `get_page`, `list_children`, `list_descendants`; descendants walk `/child/page` because `/descendant/page` returns HTTP 500 on wikis.mit.edu)
 - `orchestrator/__init__.py` (register assets/job; reuse `S3Resource`)
 - `orchestrator/tests/`
