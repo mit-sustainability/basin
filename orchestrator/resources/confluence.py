@@ -9,6 +9,7 @@ from dagster import ConfigurableResource, Failure, get_dagster_logger
 
 logger = get_dagster_logger()
 DEFAULT_EXPAND = "body.storage,history,metadata.labels,version"
+EXPORT_EXPAND = "body.export_view,ancestors,version"
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,8 @@ class ConfluencePage:
     labels: list[str]
     storage_xhtml: str
     version: int
+    ancestors: tuple[tuple[str, str], ...] = ()
+    export_html: str = ""
 
 
 class ConfluenceResource(ConfigurableResource):
@@ -96,7 +99,44 @@ class ConfluenceResource(ConfigurableResource):
             labels=sorted({label.get("name", "") for label in labels if label.get("name")}),
             storage_xhtml=storage_xhtml,
             version=int(version.get("number") or 0),
+            ancestors=tuple((str(a["id"]), a.get("title", "")) for a in payload.get("ancestors", [])),
+            export_html=payload.get("body", {}).get("export_view", {}).get("value", "") or "",
         )
+
+    def get_page(self, page_id: str, expand: str = EXPORT_EXPAND) -> ConfluencePage:
+        """Fetch one page by ID, by default with rendered HTML and ancestors."""
+
+        return self._normalize_page(self._request_json(f"/rest/api/content/{page_id}", {"expand": expand}))
+
+    def list_children(self, page_id: str, expand: str = EXPORT_EXPAND) -> list[ConfluencePage]:
+        """Page through the direct child pages of `page_id`."""
+
+        pages: list[ConfluencePage] = []
+        start = 0
+        while True:
+            payload = self._request_json(
+                f"/rest/api/content/{page_id}/child/page",
+                {"expand": expand, "start": start, "limit": self.page_limit},
+            )
+            results = payload.get("results", [])
+            pages.extend(self._normalize_page(result) for result in results)
+            if len(results) < self.page_limit:
+                return pages
+            start += len(results)
+
+    def list_descendants(self, page_id: str, expand: str = EXPORT_EXPAND) -> list[ConfluencePage]:
+        """Breadth-first walk of child pages.
+
+        ponytail: `/descendant/page` returns HTTP 500 on wikis.mit.edu, so walk `/child/page`.
+        """
+
+        found: list[ConfluencePage] = []
+        queue = [page_id]
+        while queue:
+            children = self.list_children(queue.pop(0), expand)
+            found.extend(children)
+            queue.extend(child.page_id for child in children)
+        return found
 
     def list_pages(self, expand: str = DEFAULT_EXPAND) -> list[ConfluencePage]:
         """Page through the configured space and flatten all results into one list."""

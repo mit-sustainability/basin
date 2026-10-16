@@ -15,6 +15,7 @@ from orchestrator.assets.postgres import mitos_dbt_assets
 from orchestrator.assets import (
     business_travel,
     confluence_wiki,
+    knowledge,
     website_content_health,
     commuting,
     transit,
@@ -32,6 +33,7 @@ from orchestrator.assets import (
 from orchestrator.assets import indoor_heat, outdoor_heat
 from orchestrator.jobs.business_travel_job import business_asset_job
 from orchestrator.jobs.confluence_wiki_snapshot import confluence_wiki_snapshot_job
+from orchestrator.jobs.knowledge_publish import knowledge_publish_job
 from orchestrator.jobs.website_content_health import (
     website_content_health_job,
     website_content_health_link_check_job,
@@ -74,6 +76,7 @@ from orchestrator.sensors.s3_bucket import sensor_ghg_manual
 construction_assets = load_assets_from_modules([construction])
 business_travel_assets = load_assets_from_modules([business_travel])
 confluence_wiki_assets = load_assets_from_modules([confluence_wiki])
+knowledge_assets = load_assets_from_modules([knowledge])
 waste_assets = load_assets_from_modules([waste])
 commuting_assets = load_assets_from_modules([commuting])
 parking_assets = load_assets_from_modules([parking])
@@ -105,6 +108,7 @@ defs = Definitions(
     + construction_assets
     + business_travel_assets
     + confluence_wiki_assets
+    + knowledge_assets
     + waste_assets
     + commuting_assets
     + parking_assets
@@ -123,6 +127,7 @@ defs = Definitions(
     jobs=[
         business_asset_job,
         confluence_wiki_snapshot_job,
+        knowledge_publish_job,
         construction_asset_job,
         waste_asset_job,
         commuting_asset_job,
