@@ -29,6 +29,10 @@ Source assets emit `Document` records (manifest fields plus Markdown body). `kno
 - Simple pages (headings, lists, links) convert equivalently either way.
 - Not verified: include/excerpt-include expansion. None of the 5 sampled pages use them. Re-check when a root page that does is added.
 
+## Beacon heading alignment
+
+Beacon's `document_section` pairs the i-th manifest heading with the i-th match of `(?m)^#{1,6}\s+.+$` in the Markdown (H1s and fenced lines included). `extract_headings` therefore uses that same regex and skips nothing; the manifest lists the H1 too. Verified by loading a live-built bundle through Beacon's `KnowledgeBundle.load` and requesting all 92 sections (0 misaligned). Re-run this check if Beacon's loader changes.
+
 ## Field mapping
 
 | Field | MkDocs | Confluence |

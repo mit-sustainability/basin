@@ -13,13 +13,24 @@ from orchestrator.knowledge.validate import validate_manifest
 from .conftest import FIXTURES, make_doc
 
 
-def test_headings_skip_title_dedupe_anchors_and_track_path():
-    md = "# Title\n\n## Overview\n\n### Sub *a*\n\n## Overview\n\n```\n## not a heading\n```\n"
-    assert extract_headings(md) == [
-        {"title": "Overview", "level": 2, "anchor": "overview", "path": "Overview"},
-        {"title": "Sub a", "level": 3, "anchor": "sub-a", "path": "Overview / Sub a"},
-        {"title": "Overview", "level": 2, "anchor": "overview-1", "path": "Overview"},
+def test_headings_include_title_and_follow_beacon_heading_regex():
+    md = "# Title\n\n## Overview\n\n### Sub *a*\n\n## Overview ##\n\n```\n## in fence\n```\n"
+    headings = extract_headings(md)
+    assert [(h["level"], h["title"], h["anchor"]) for h in headings] == [
+        (1, "Title", "title"),
+        (2, "Overview", "overview"),
+        (3, "Sub a", "sub-a"),
+        (2, "Overview", "overview-1"),
+        (2, "in fence", "in-fence"),  # Beacon's regex counts fenced lines, so index alignment needs them
     ]
+    assert headings[2]["path"] == "Title / Overview / Sub a"
+
+
+def test_headings_are_index_aligned_with_beacon_regex():
+    import re
+
+    md = "# T\n\ntext\n\n## A\n\n### B\n\n```\n# c\n```\n\n## A\n"
+    assert len(extract_headings(md)) == len(re.findall(r"(?m)^#{1,6}\s+.+$", md))
 
 
 def test_heading_anchor_does_not_collide_with_literal_suffix():

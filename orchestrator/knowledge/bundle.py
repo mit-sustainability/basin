@@ -17,6 +17,7 @@ from orchestrator.knowledge.validate import validate_manifest
 
 FENCE = re.compile(r"^\s*(```|~~~)")
 HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$")
+BEACON_HEADING = re.compile(r"(?m)^#{1,6}\s+.+$")
 LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 
 
@@ -54,24 +55,20 @@ def _plain(title: str) -> str:
 
 
 def extract_headings(markdown: str) -> list[dict]:
-    """Ordered level 2-6 headings (level 1 is the document title).
+    """Ordered headings, index-aligned with Beacon's section lookup.
 
-    ponytail: ATX headings only; setext (underlined) headings are ignored.
+    Beacon pairs the i-th manifest heading with the i-th match of `^#{1,6}\\s+.+$` over the
+    whole Markdown (H1s and fenced lines included), so this uses the same regex and skips nothing.
+    ponytail: a `# comment` line inside a code fence becomes a heading; strip fences upstream if it matters.
     """
     headings: list[dict] = []
     stack: list[tuple[int, str]] = []
     used: set[str] = set()
-    in_fence = False
-    for line in markdown.splitlines():
-        if FENCE.match(line):
-            in_fence = not in_fence
-            continue
-        match = None if in_fence else HEADING.match(line)
-        if not match or len(match.group(1)) == 1:
-            continue
-        level, title = len(match.group(1)), _plain(match.group(2))
-        if not title:
-            continue
+    for match in BEACON_HEADING.finditer(markdown):
+        raw = match.group()
+        level = len(raw.split()[0])
+        text = re.sub(r"\s+#+$", "", raw[level:].strip())
+        title = _plain(text) or text
         while stack and stack[-1][0] >= level:
             stack.pop()
         stack.append((level, title))
@@ -97,6 +94,7 @@ def content_hash(documents: list[Document]) -> str:
             d.source_revision,
             d.title,
             hashlib.sha256(d.markdown.encode("utf-8")).hexdigest(),
+            extract_headings(d.markdown),
         ]
         for d in sorted(documents, key=lambda d: d.document_id)
     ]
