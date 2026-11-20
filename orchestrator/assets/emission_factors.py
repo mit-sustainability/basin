@@ -6,6 +6,7 @@ versioned emission factor archive. See specs/009-emission-factor-archive/.
 """
 
 from dataclasses import dataclass
+import re
 from datetime import datetime
 from typing import Callable, Optional
 
@@ -20,6 +21,7 @@ from dagster import (
     Output,
     ResourceParam,
 )
+import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series
@@ -221,6 +223,95 @@ def parse_supply_chain(link: str, release: EmissionFactorRelease) -> pd.DataFram
             "unit": "kg CO2e/USD",
         }
     )
+
+
+HUB_TABLES = {"waste": "Table 9", "mobile": "Table 10", "gwp": "Table 11"}
+
+
+def waste_disposal_name(header: str) -> str:
+    """Normalize a Table 9 disposal header ('RecycledA', 'Anaerobically Digested (Dry ...)E') to snake_case"""
+    h = str(header).strip()
+    if h.lower().startswith("anaerobically digested"):
+        return "dry_anaerobically_digested" if "(dry" in h.lower() else "wet_anaerobically_digested"
+    return normalize_column_name(re.sub(r"(?<=[a-z])[A-Z]$", "", h))
+
+
+_FOOTNOTE = re.compile(r"\s+[A-Z]$")
+
+
+def _blank(v) -> bool:
+    return v is None or (isinstance(v, float) and np.isnan(v)) or (isinstance(v, str) and not v.strip())
+
+
+def locate_table(sheet: pd.DataFrame, label: str, source: str) -> pd.DataFrame:
+    """Extract one Hub table from a ``header=None`` sheet by its exact label cell (e.g. 'Table 9').
+
+    The header is the first row after the label with >= 2 non-blank cells; data runs until
+    the first blank row or a row whose first non-blank cell starts with 'Source'.
+    """
+    hits = [(i, j) for i, row in enumerate(sheet.itertuples(index=False)) for j, v in enumerate(row)
+            if isinstance(v, str) and v.strip() == label]
+    if not hits:
+        raise ValueError(f"'{label}' not found in {source}")
+    rows = sheet.values.tolist()
+    i = hits[0][0] + 1
+    while i < len(rows) and sum(not _blank(v) for v in rows[i]) < 2:
+        i += 1
+    if i == len(rows):
+        raise ValueError(f"'{label}' in {source} has no header row")
+    header, data = rows[i], []
+    for row in rows[i + 1:]:
+        cells = [v for v in row if not _blank(v)]
+        if not cells or (isinstance(cells[0], str) and cells[0].strip().startswith("Source")):
+            break
+        data.append(row)
+    keep = [j for j, h in enumerate(header) if not _blank(h)]
+    return pd.DataFrame([[r[j] for j in keep] for r in data], columns=[str(header[j]).strip() for j in keep])
+
+
+def _col(df: pd.DataFrame, prefix: str) -> str:
+    return next(c for c in df.columns if c.startswith(prefix))
+
+
+def parse_ghg_ef_hub(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
+    """Waste (Table 9) and business travel / commuting (Table 10) factors from one Hub edition"""
+    sheet = pd.read_excel(link, sheet_name=0, header=None, engine="openpyxl")
+
+    gwp = locate_table(sheet, HUB_TABLES["gwp"], release.filename)
+    formula = gwp[_col(gwp, "Chemical Formula")].astype(str).str.replace("\xa0", "").str.strip()
+    gwp_by_gas = dict(zip(formula, pd.to_numeric(gwp["100-Year GWP"], errors="coerce")))
+
+    mobile = locate_table(sheet, HUB_TABLES["mobile"], release.filename)
+    co2, ch4, n2o = (pd.to_numeric(mobile[_col(mobile, p)], errors="coerce") for p in ("CO2", "CH4", "N2O"))
+    names = mobile["Vehicle Type"].astype(str).str.strip()
+    mobile_out = pd.DataFrame(
+        {
+            "factor_key": names.str.replace(_FOOTNOTE, "", regex=True),
+            "factor_key_type": "vehicle_type",
+            "factor_basis": "activity",
+            "factor_name": names,
+            "factor_value": co2 + ch4 * gwp_by_gas["CH4"] / 1000 + n2o * gwp_by_gas["N2O"] / 1000,
+            "unit": "kg CO2e/" + mobile["Units"].astype(str).str.strip(),
+        }
+    )
+
+    waste = locate_table(sheet, HUB_TABLES["waste"], release.filename)
+    waste.columns = ["material", *[waste_disposal_name(c) for c in waste.columns[1:]]]
+    long = waste.melt(id_vars="material", var_name="disposal", value_name="factor_value")
+    long["factor_value"] = pd.to_numeric(long["factor_value"], errors="coerce")
+    long = long.dropna(subset=["factor_value"])
+    material = long["material"].astype(str).str.strip()
+    waste_out = pd.DataFrame(
+        {
+            "factor_key": material + "|" + long["disposal"],
+            "factor_key_type": "waste_material_disposal",
+            "factor_basis": "activity",
+            "factor_name": material,
+            "factor_value": long["factor_value"],
+            "unit": "MT CO2e/short ton",
+        }
+    )
+    return pd.concat([mobile_out.dropna(subset=["factor_value"]), waste_out], ignore_index=True)
 
 
 def build_archive(
@@ -445,3 +536,14 @@ ARCHIVE_DAGSTER_TYPE = pandera_schema_to_dagster_type(EmissionFactorArchive)
 def ef_archive_supply_chain(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
     """Every registered Supply Chain GHG Emission Factors release, rolled up to USEEIO codes"""
     return build_archive(dhub, "supply_chain_naics", parse_supply_chain)
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+    dagster_type=ARCHIVE_DAGSTER_TYPE,
+)
+def ef_archive_ghg_ef_hub(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
+    """Every registered GHG Emission Factors Hub edition: mobile (Table 10) and waste (Table 9) factors"""
+    return build_archive(dhub, "ghg_ef_hub", parse_ghg_ef_hub)

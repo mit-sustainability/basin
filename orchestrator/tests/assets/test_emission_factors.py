@@ -353,3 +353,104 @@ def test_parse_supply_chain_rejects_unexpected_layout(mocker):
     mocker.patch("orchestrator.assets.emission_factors.pd.read_csv", return_value=pd.DataFrame({"a": [1]}))
     with pytest.raises(ValueError, match="Reference USEEIO Code"):
         ef.parse_supply_chain("link", _sc_release())
+
+
+# --- GHG Emission Factors Hub archive ---------------------------------------
+
+
+def _grid(rows, width=8):
+    """Build a header=None sheet: each row is a list placed from column 1 (column 0 holds table labels)"""
+    return pd.DataFrame([list(r) + [None] * (width - len(r)) for r in rows], dtype=object)
+
+
+N = None
+HUB_SHEET = _grid(
+    [
+        [N],
+        [N, "Table 1", "Stationary combustion"],
+        [N, N, "Fuel", "CO2"],
+        [N, N, "Coal", 1.0],
+        [N],
+        [N, "Table 9", "Scope 3 Category 5: Waste"],
+        [N, N, "These factors are intended for..."],
+        [N, N, N, "Metric Tons CO2e / Short Ton"],
+        [N, N, "Material", "RecycledA", "LandfilledB", "CombustedC", "CompostedD"],
+        [N, N, "Food Waste", "NA", 0.7, 0.05, 0.2],
+        [N, N, "Mixed MSW", N, 0.58, 0.43, N],
+        [N, N, "Source: EPA WARM"],
+        [N, N, "trailing note", 99],
+        [N],
+        [N, "Table 10", "Scope 3 Category 6: Business Travel"],
+        [N, N, "These factors are intended for..."],
+        [N, N, "Vehicle Type", "CO2 Factor \n(kg CO2 / unit)", "CH4 Factor \n(g CH4 / unit)",
+         "N2O Factor \n(g N2O / unit)", "Units"],
+        [N, N, "Passenger Car A", 1.0, 1000.0, 0.0, "vehicle-mile"],
+        [N, N, "Bus", 0.5, 0.0, 10.0, "passenger-mile"],
+        [N, N, "Source: \nCO2..."],
+        [N],
+        [N, "Table 11", "   Global Warming Potential "],
+        [N],
+        [N, N, "Industrial Designation or \nCommon Name", "Chemical Formula\xa0", "100-Year GWP"],
+        [N, N, "Carbon dioxide", "CO2", 1],
+        [N, N, "Methane", "CH4", 28],
+        [N, N, "Nitrous oxide", "N2O", 265],
+        [N],
+    ]
+)
+
+
+def test_locate_table_finds_by_exact_label_and_stops_at_source():
+    t = ef.locate_table(HUB_SHEET, "Table 9", "hub.xlsx")
+    assert list(t.columns) == ["Material", "RecycledA", "LandfilledB", "CombustedC", "CompostedD"]
+    assert t["Material"].tolist() == ["Food Waste", "Mixed MSW"]
+
+
+def test_locate_table_does_not_confuse_table_1_with_table_10():
+    t = ef.locate_table(HUB_SHEET, "Table 1", "hub.xlsx")
+    assert t["Fuel"].tolist() == ["Coal"]
+
+
+def test_locate_table_missing_label_names_source():
+    with pytest.raises(ValueError, match="'Table 99' not found in hub.xlsx"):
+        ef.locate_table(HUB_SHEET, "Table 99", "hub.xlsx")
+
+
+def _parse_hub(mocker):
+    mocker.patch("orchestrator.assets.emission_factors.pd.read_excel", return_value=HUB_SHEET)
+    rel = ef.releases_for("ghg_ef_hub")[0]
+    return ef.parse_ghg_ef_hub("link", rel).set_index("factor_key")
+
+
+def test_waste_melt_drops_na_and_blank_cells(mocker):
+    out = _parse_hub(mocker)
+    waste = out[out["factor_key_type"] == "waste_material_disposal"]
+    assert "Food Waste|recycled" not in waste.index
+    assert "Mixed MSW|composted" not in waste.index
+    assert waste.loc["Food Waste|composted", "factor_value"] == 0.2
+    assert (waste["unit"] == "MT CO2e/short ton").all()
+    assert (waste["factor_basis"] == "activity").all()
+
+
+def test_mobile_co2e_uses_gwp_from_same_file_and_strips_footnote(mocker):
+    out = _parse_hub(mocker)
+    car = out.loc["Passenger Car"]
+    assert car["factor_value"] == pytest.approx(1.0 + 1000.0 * 28 / 1000)
+    assert car["factor_name"] == "Passenger Car A"
+    assert car["unit"] == "kg CO2e/vehicle-mile"
+    assert out.loc["Bus", "factor_value"] == pytest.approx(0.5 + 10.0 * 265 / 1000)
+    assert out.loc["Bus", "factor_key_type"] == "vehicle_type"
+
+
+@pytest.mark.parametrize(
+    "header, expected",
+    [
+        ("RecycledA", "recycled"),
+        ("Landfilled", "landfilled"),
+        ("Anaerobically Digested (Dry Digestate with Curing)E", "dry_anaerobically_digested"),
+        ("Anaerobically Digested (Dry Digestate with Curing)", "dry_anaerobically_digested"),
+        ("Anaerobically Digested (Wet  Digestate with Curing)", "wet_anaerobically_digested"),
+    ],
+)
+def test_waste_disposal_names_are_stable_across_editions(header, expected):
+    """2024-April and 2025 editions drop the 'E' footnote on the digestion columns"""
+    assert ef.waste_disposal_name(header) == expected
