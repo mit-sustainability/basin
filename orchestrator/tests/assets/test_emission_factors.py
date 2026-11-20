@@ -1,10 +1,10 @@
-"""Unit tests for the construction assets"""
+"""Unit tests for the emission factor assets"""
 
 from unittest.mock import patch, MagicMock, Mock
 
 import pandas as pd
 import pytest
-from orchestrator.assets.construction import (
+from orchestrator.assets.emission_factors import (
     emission_factor_useeio_v2,
     emission_factor_naics,
 )
@@ -40,12 +40,12 @@ mock_dhub = Mock()
 mock_pg_engine = Mock()
 
 
-@patch("orchestrator.assets.construction.pd.ExcelFile")
+@patch("orchestrator.assets.emission_factors.pd.ExcelFile")
 @patch(
-    "orchestrator.assets.construction.pd.read_excel",
+    "orchestrator.assets.emission_factors.pd.read_excel",
     side_effect=[sample_ef_data, sample_code_data],
 )
-@patch("orchestrator.assets.construction.DataHubResource")
+@patch("orchestrator.assets.emission_factors.DataHubResource")
 def test_emission_factor_useeio_v2_success(mock_dhub, mock_read_excel, mock_excel_file):
     """Test the emission_factor_useeio_v2 asset function with a successful download"""
     # Setup mock DataHubResource
@@ -62,7 +62,7 @@ def test_emission_factor_useeio_v2_success(mock_dhub, mock_read_excel, mock_exce
     pd.testing.assert_frame_equal(result, merged_data[cols])
 
 
-@patch("orchestrator.assets.construction.DataHubResource")
+@patch("orchestrator.assets.emission_factors.DataHubResource")
 def test_emission_factor_useeio_v2_no_download_links_found(mock_dhub):
     """Test the exception that no files were found from Datahub"""
     # Setup mock DataHubResource
@@ -151,3 +151,18 @@ def test_emission_factor_naics_with_data(setup_mocks):
         "Supply Chain Emission Factors with Margins",
     ]
     assert list(result.columns) == expected_columns, f"Expected columns: {expected_columns}"
+
+
+def test_emission_factors_module_owns_legacy_assets():
+    """All legacy factor and CPI assets live in emission_factors.py"""
+    from orchestrator.assets import emission_factors as ef
+
+    for name in [
+        "emission_factor_useeio_v2",
+        "emission_factor_naics",
+        "commuting_emission_factors_EPA",
+        "waste_emission_factors_epa",
+        "food_emission_factor",
+        "annual_cpi_index",
+    ]:
+        assert hasattr(ef, name), name
