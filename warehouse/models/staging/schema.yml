@@ -451,6 +451,54 @@ models:
       - name: last_update
         description: "Timestamp when the record was last ingested"
 
+  - name: stg_emission_factor_archive
+    description: "Every archived emission factor release in one long table. dollar_year is null for activity-based factors."
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - family
+              - version
+              - factor_key
+              - factor_basis
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "factor_basis <> 'spend' OR dollar_year IS NOT NULL"
+    columns:
+      - name: family
+        description: "Factor family: supply_chain_naics, cornerstone_eeio, ghg_ef_hub, simap_food"
+        data_tests: [not_null]
+      - name: version
+        description: "Release label from the Python registry (cornerstone_eeio: '<release>/<data year>')"
+        data_tests: [not_null]
+      - name: publisher
+        description: "EPA, Cornerstone or SIMAP"
+      - name: factor_key
+        description: "Join key: USEEIO code, vehicle type, 'material|disposal' or SIMAP category"
+        data_tests: [not_null]
+      - name: factor_key_type
+        description: "useeio_code, vehicle_type, waste_material_disposal or simap_category"
+      - name: factor_basis
+        description: "spend (per USD of dollar_year) or activity (per physical unit)"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["spend", "activity"]
+      - name: factor_name
+        description: "Human-readable label as published"
+      - name: factor_value
+        description: "Emission factor value in `unit`"
+        data_tests: [not_null]
+      - name: unit
+        description: "e.g. kg CO2e/USD, kg CO2e/vehicle-mile, MT CO2e/short ton, kg CO2e/kg"
+        data_tests: [not_null]
+      - name: dollar_year
+        description: "USD year a spend factor is denominated in; null for activity factors"
+      - name: gwp_basis
+        description: "IPCC GWP set (AR5/AR6) when stated by the publisher"
+
 unit_tests:
   - name: test_waste_split_adjustment
     description: >
