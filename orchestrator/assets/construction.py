@@ -4,13 +4,11 @@ from dagster import (
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
-import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series
 
 from orchestrator.assets.utils import empty_dataframe_from_model, add_dhub_sync
-from orchestrator.resources.postgres_io_manager import PostgreConnResources
 from orchestrator.resources.datahub import DataHubResource
 
 
@@ -23,33 +21,6 @@ class ConstructionExpenseData(pa.DataFrameModel):
     new_construction: Series[int] = pa.Field(description="New Construction Cost in Million")
     renovation_and_renewal: Series[int] = pa.Field(description="Renovation Cost in Million")
     fiscal_year: Series[int] = pa.Field(lt=2025, description="Fiscal Year")
-
-
-@asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
-def emission_factor_useeio_v2(dhub: ResourceParam[DataHubResource]):
-    """This asset ingest the USEEIOv2.0.1 emission factor data from the Data Hub"""
-    project_id = dhub.get_project_id("Scope3 General")
-    logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "USEEIOv2.0.1")
-    if len(download_links) == 0:
-        logger.error("No download links found!")
-        return pd.DataFrame()
-    # Load the emission factor
-    workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
-    coef = pd.read_excel(workbook, sheet_name="N", index_col=0)
-    ef = coef.loc["Greenhouse Gases"]
-    ef_df = ef.reset_index()
-    ef_df.columns = ["ID", "emission_factor"]
-
-    # Load the category to emission factor code mapping
-    df_code = pd.read_excel(workbook, sheet_name="commodities_meta", index_col=0)
-    merged = pd.merge(ef_df, df_code, on="ID", how="inner")
-    columns = ["ID", "emission_factor", "Name", "Code", "Category", "Description"]
-    return merged[columns]
 
 
 @asset(
@@ -133,60 +104,6 @@ def dof_maintenance_cost(dhub: ResourceParam[DataHubResource]):
     )
     df_out["fiscal_year"] = range(2019, 2025)
     return df_out
-
-
-@asset(
-    deps=[emission_factor_useeio_v2],
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
-def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: PostgreConnResources):
-    """Ingest and combine NAICS and USEEIO emission factors for Scope3 purchased goods"""
-    project_id = dhub.get_project_id("Scope3 General")
-    download_links = dhub.search_files_from_project(project_id, "SupplyChainGHGEmissionFactors_v1.2_NAICS_CO2e_USD2021")
-    if len(download_links) == 0:
-        logger.info("No download links found!")
-        return pd.DataFrame()
-    # Load the NAICS_v1.2 emission factors related maintenance cost
-    df_naics = pd.read_csv(download_links[0])
-    df_naics.drop(columns=["GHG", "Unit"], inplace=True)
-
-    # Load USEEIO emission factors
-    engine = pg_engine.create_engine()
-    df_eeio = pd.read_sql_query("SELECT * FROM raw.emission_factor_useeio_v2", engine)
-
-    # Expand USEEIO code from NAICS table
-    ref1 = df_naics.copy()
-    ref1["Reference USEEIO Code"] = (
-        ref1["Reference USEEIO Code"].str.split(",").map(lambda elements: [e.strip() for e in elements])
-    )
-    ref1 = ref1.explode("Reference USEEIO Code", ignore_index=True)
-
-    explode = ref1.copy().iloc[:, 2:6]
-    explode.drop_duplicates(inplace=True, ignore_index=True)
-    explode.sort_values(by=["Reference USEEIO Code"], inplace=True, ignore_index=True)
-    explode["freq"] = explode.groupby("Reference USEEIO Code")["Reference USEEIO Code"].transform("count")
-    explode["NAICS"] = np.nan
-    for f in explode.query("freq > 1").index:
-        naics = ref1.loc[
-            (ref1["Reference USEEIO Code"] == explode.iloc[f, 3])
-            & (ref1["Supply Chain Emission Factors with Margins"] == explode.iloc[f, 2])
-        ]["2017 NAICS Title"]
-        explode.iloc[f, 5] = ",".join(map(str, naics))
-
-    # Drop the naics categories that may be included in others(Land Subdvision),
-    # and average the emission factor of the rest naics categories of the same eeio code
-    ref2 = explode.copy()
-    print(len(ref2))
-    ref2 = ref2[ref2["NAICS"] != ref2.iloc[23, 5]].reset_index(drop=True)
-    ref2 = ref2[ref2["NAICS"] != "Land Subdivision"].reset_index(drop=True)
-    ref2.drop(columns=["freq", "NAICS"], inplace=True)  # drop non-numeric columns
-    ref2 = ref2.groupby("Reference USEEIO Code").mean().reset_index()
-    factor_eeio_new = df_eeio.copy()
-    factor_eeio_new = factor_eeio_new.merge(ref2, left_on="Code", right_on="Reference USEEIO Code", how="left")
-    factor_eeio_new.drop(columns=["Reference USEEIO Code"], inplace=True)
-    return factor_eeio_new
 
 
 # Sync to datahub using the factory function

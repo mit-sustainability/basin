@@ -496,6 +496,30 @@ sources:
             description: "Emission factor when processed by dry anaerobic digestion"
           - name: wet_anaerobically_digested
             description: "Emission factor when processed by wet anaerobic digestion"
+      - name: ef_archive_supply_chain
+        description: "Every registered Supply Chain GHG Emission Factors release (EPA v1.2/v1.3.0, Cornerstone v1.4.0+), rolled up to USEEIO codes. Long schema shared by all ef_archive_* tables (see specs/009-emission-factor-archive)."
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["ef_archive_supply_chain"]
+      - name: ef_archive_cornerstone_eeio
+        description: "Cornerstone EEIO spend-based factors, US purchaser price, one version per data year. Long schema shared by all ef_archive_* tables (see specs/009-emission-factor-archive)."
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["ef_archive_cornerstone_eeio"]
+      - name: ef_archive_ghg_ef_hub
+        description: "GHG Emission Factors Hub editions: mobile (Table 10) and waste (Table 9) factors. Long schema shared by all ef_archive_* tables (see specs/009-emission-factor-archive)."
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["ef_archive_ghg_ef_hub"]
+      - name: ef_archive_simap_food
+        description: "SIMAP food emission factors (spend- and weight-based). Long schema shared by all ef_archive_* tables (see specs/009-emission-factor-archive)."
+        meta:
+          owner: yu_cheng@mit.edu
+          dagster:
+            asset_key: ["ef_archive_simap_food"]
       - name: ghg_manual_entries
         description: Sync manual entried GHG emission from Quickbase
         meta:

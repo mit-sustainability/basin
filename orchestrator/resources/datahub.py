@@ -132,6 +132,31 @@ class DataHubResource:
             logger.error("Fail to find any downloadable links.")
             return None
 
+    def search_files_by_name(self, project_id, search_term):
+        """Return raw search records (incl. ``display_name`` and ``hash_id``) for a search term.
+
+        DataHub search is fuzzy, so callers that need one specific file should
+        filter these records by exact ``display_name``.
+        """
+        self._ensure_authorized()
+        page_size, records = 50, []
+        while True:
+            res = requests.post(
+                f"{self.api_endpoint}/search",
+                headers=self.headers,
+                json={
+                    "term": search_term,
+                    "projects": [project_id],
+                    "paging": {"start": len(records), "size": page_size},
+                },
+                timeout=default_timeout,
+            )
+            res.raise_for_status()
+            page = res.json()["data"]
+            records.extend(page)
+            if len(page) < page_size:
+                return records
+
     def get_upload_link(self, meta):
         """Get upload link to datahub"""
         self._ensure_authorized()

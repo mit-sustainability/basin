@@ -24,6 +24,12 @@
   - `final`: user-facing summaries and inventory outputs
   - `snapshots`: change-tracking state where dbt snapshots are used
 
+### Emission Factor Release
+
+- Represents one published release of an emission factor family. Families: Supply Chain GHG EF (EPA v1.2/v1.3.0, Cornerstone v1.4.0+), Cornerstone EEIO, GHG Emission Factors Hub, and SIMAP food.
+- Declared in the Python registry and stored side by side in `raw.ef_archive_*` (long schema: `family, version, publisher, factor_key, factor_key_type, factor_basis, factor_name, factor_value, unit, dollar_year, gwp_basis, source_file`).
+- Unified in `staging.stg_emission_factor_archive`. The `emission_factor_assignment` seed assigns releases to categories by fiscal-year range, and `staging.emission_factor_by_fiscal_year` is the contract that pipelines join to.
+
 ### External Resource
 
 - Represents a system that BASIN depends on at runtime.
@@ -41,6 +47,7 @@
 - An **Asset Job** selects assets from one or more **Asset Domains** plus related dbt models.
 - A **Warehouse Layer** stores outputs from both Python assets and dbt models.
 - An **External Resource** is consumed by an **Asset Domain** during ingest, enrichment, or synchronization.
+- An **Emission Factor Release** is ingested by the emission factor archive and assigned to pipeline categories by fiscal year. Pipelines read factors and inflation targets only through `emission_factor_by_fiscal_year`.
 - A **Publication Artifact** is produced from a **Warehouse Layer** or from an enriched asset and exposed to downstream users or operators.
 
 ## Canonical Flow

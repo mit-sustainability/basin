@@ -106,29 +106,6 @@ def ba_food_orders(config: FoodOrderConfig, dhub: ResourceParam[DataHubResource]
 
 
 @asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
-def food_emission_factor(dhub: ResourceParam[DataHubResource]):
-    """This asset ingests the food emission factors
-    from the Data Hub"""
-    project_id = dhub.get_project_id("Scope3 Food")
-    logger.info(f"Found project id: {project_id}!")
-
-    download_links = dhub.search_files_from_project(project_id, "food_emission_factors_SIMAP.xlsx")
-    if len(download_links) == 0:
-        logger.error("No download links found!")
-    df = pd.read_excel(download_links[0], sheet_name="Final Table")
-    name_mapping = {
-        "Food Category": "simap_category",
-        "Spend-Based Emissions Factor (kg CO2e/2021 USD, purchaser price)": "spend-based emissions factor (kg CO2e/2021 USD)",
-        "Weight-Based Emissions Factors (kg CO2e/kg food)": "weight-based emissions factor (kg CO2e/kg food)",
-    }
-    return df.rename(columns=name_mapping)
-
-
-@asset(
     compute_kind="python",
     group_name="staging",
     key_prefix="staging",

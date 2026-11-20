@@ -20,6 +20,7 @@ from orchestrator.assets import (
     commuting,
     transit,
     construction,
+    emission_factors,
     food,
     parking,
     purchased_goods,
@@ -39,6 +40,7 @@ from orchestrator.jobs.website_content_health import (
     website_content_health_link_check_job,
 )
 from orchestrator.jobs.construction_job import construction_asset_job
+from orchestrator.jobs.emission_factor_archive import emission_factor_archive_job
 from orchestrator.jobs.commuting_job import commuting_asset_job
 from orchestrator.jobs.food_job import food_asset_job
 from orchestrator.jobs.ghg_inventory import ghg_job
@@ -74,6 +76,7 @@ from orchestrator.sensors.s3_bucket import sensor_ghg_manual
 # https://github.com/dagster-io/dagster/issues/12359
 
 construction_assets = load_assets_from_modules([construction])
+emission_factor_assets = load_assets_from_modules([emission_factors])
 business_travel_assets = load_assets_from_modules([business_travel])
 confluence_wiki_assets = load_assets_from_modules([confluence_wiki])
 knowledge_assets = load_assets_from_modules([knowledge])
@@ -106,6 +109,7 @@ def ecs_pipes_client_resource():
 defs = Definitions(
     assets=[mitos_dbt_assets]
     + construction_assets
+    + emission_factor_assets
     + business_travel_assets
     + confluence_wiki_assets
     + knowledge_assets
@@ -129,6 +133,7 @@ defs = Definitions(
         confluence_wiki_snapshot_job,
         knowledge_publish_job,
         construction_asset_job,
+        emission_factor_archive_job,
         waste_asset_job,
         commuting_asset_job,
         parking_asset_job,

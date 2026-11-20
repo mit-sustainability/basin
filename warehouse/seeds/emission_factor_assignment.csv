@@ -1,0 +1,12 @@
+category,family,version,fy_start,fy_end
+purchased_goods,supply_chain_naics,v1.2,2016,2024
+purchased_goods,supply_chain_naics,v1.4.0-rc.1,2025,
+construction,supply_chain_naics,v1.2,2015,2024
+construction,supply_chain_naics,v1.4.0-rc.1,2025,
+dof_maintenance,supply_chain_naics,v1.2,2019,2024
+dof_maintenance,supply_chain_naics,v1.4.0-rc.1,2025,
+commuting,ghg_ef_hub,2024,2018,2024
+commuting,ghg_ef_hub,2025,2025,
+waste,ghg_ef_hub,2024,2015,2024
+waste,ghg_ef_hub,2025,2025,
+food,simap_food,v1,2015,
