@@ -9,7 +9,7 @@ permissions:
     contents: read
 jobs:
     Run-Unit-Tests:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04  # ponytail: Playwright has no chromium build for ubuntu-26.04 yet; unpin when it does
         steps:
             - name: Checkout
               uses: actions/checkout@v4
