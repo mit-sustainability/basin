@@ -313,8 +313,16 @@ def locate_table(sheet: pd.DataFrame, label: str, source: str) -> pd.DataFrame:
     return pd.DataFrame([[r[j] for j in keep] for r in data], columns=[str(header[j]).strip() for j in keep])
 
 
-def _col(df: pd.DataFrame, prefix: str) -> str:
-    return next(c for c in df.columns if c.startswith(prefix))
+# Keys every Hub edition must contain; a missing one means a table was cut short or renamed.
+HUB_ANCHOR_KEYS = ("Passenger Car", "Bus", "Mixed MSW|landfilled")
+
+
+def _col(df: pd.DataFrame, prefix: str, source: str) -> str:
+    """The one column starting with ``prefix``; a renamed header fails with the file name"""
+    match = next((c for c in df.columns if c.startswith(prefix)), None)
+    if match is None:
+        raise ValueError(f"no column starting '{prefix}' in {source}; columns: {list(df.columns)}")
+    return match
 
 
 def parse_ghg_ef_hub(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
@@ -322,12 +330,16 @@ def parse_ghg_ef_hub(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
     sheet = pd.read_excel(link, sheet_name=0, header=None, engine="openpyxl")
 
     gwp = locate_table(sheet, HUB_TABLES["gwp"], release.filename)
-    formula = gwp[_col(gwp, "Chemical Formula")].astype(str).str.replace("\xa0", "").str.strip()
-    gwp_by_gas = dict(zip(formula, pd.to_numeric(gwp["100-Year GWP"], errors="coerce")))
+    src = release.filename
+    formula = gwp[_col(gwp, "Chemical Formula", src)].astype(str).str.replace("\xa0", "").str.strip()
+    gwp_by_gas = dict(zip(formula, pd.to_numeric(gwp[_col(gwp, "100-Year GWP", src)], errors="coerce")))
+    missing_gas = [g for g in ("CH4", "N2O") if g not in gwp_by_gas]
+    if missing_gas:
+        raise ValueError(f"GWP for {missing_gas} not found in {HUB_TABLES['gwp']} of {src}")
 
     mobile = locate_table(sheet, HUB_TABLES["mobile"], release.filename)
-    co2, ch4, n2o = (pd.to_numeric(mobile[_col(mobile, p)], errors="coerce") for p in ("CO2", "CH4", "N2O"))
-    names = mobile["Vehicle Type"].astype(str).str.strip()
+    co2, ch4, n2o = [pd.to_numeric(mobile[_col(mobile, p, src)], errors="coerce") for p in ("CO2", "CH4", "N2O")]
+    names = mobile[_col(mobile, "Vehicle Type", src)].astype(str).str.strip()
     mobile_out = pd.DataFrame(
         {
             "factor_key": names.str.replace(_FOOTNOTE, "", regex=True),
@@ -335,7 +347,7 @@ def parse_ghg_ef_hub(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
             "factor_basis": "activity",
             "factor_name": names,
             "factor_value": co2 + ch4 * gwp_by_gas["CH4"] / 1000 + n2o * gwp_by_gas["N2O"] / 1000,
-            "unit": "kg CO2e/" + mobile["Units"].astype(str).str.strip(),
+            "unit": "kg CO2e/" + mobile[_col(mobile, "Units", src)].astype(str).str.strip(),
         }
     )
 
@@ -355,7 +367,11 @@ def parse_ghg_ef_hub(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
             "unit": "MT CO2e/short ton",
         }
     )
-    return pd.concat([mobile_out.dropna(subset=["factor_value"]), waste_out], ignore_index=True)
+    out = pd.concat([mobile_out.dropna(subset=["factor_value"]), waste_out], ignore_index=True)
+    missing = [k for k in HUB_ANCHOR_KEYS if k not in set(out["factor_key"])]
+    if missing:
+        raise ValueError(f"{src}: expected factors {missing} not found; a Hub table may be truncated or renamed")
+    return out
 
 
 def parse_simap_food(link: str, release: EmissionFactorRelease) -> pd.DataFrame:

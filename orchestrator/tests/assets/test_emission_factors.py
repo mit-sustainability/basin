@@ -530,3 +530,36 @@ def test_registry_holds_every_uploaded_release():
         ("ghg_ef_hub", "2025"),
         ("simap_food", "v1"),
     } <= versions
+
+
+# --- Final review fixes ------------------------------------------------------
+
+
+def _hub_with(mocker, sheet):
+    mocker.patch("orchestrator.assets.emission_factors.pd.read_excel", return_value=sheet)
+    return lambda: ef.parse_ghg_ef_hub("link", ef.releases_for("ghg_ef_hub")[0])
+
+
+def test_hub_renamed_column_names_prefix_and_source(mocker):
+    sheet = HUB_SHEET.copy()
+    sheet = sheet.replace("Vehicle Type", "Vehicle Category")
+    parse = _hub_with(mocker, sheet)
+    with pytest.raises(ValueError, match="Vehicle Type.*EPA_GHG_emission_factors_June_2024"):
+        parse()
+
+
+def test_hub_missing_gwp_gas_names_source(mocker):
+    sheet = HUB_SHEET.replace("CH4", "CH4x")
+    parse = _hub_with(mocker, sheet)
+    with pytest.raises(ValueError, match="CH4.*EPA_GHG_emission_factors_June_2024"):
+        parse()
+
+
+def test_hub_truncated_table_fails_on_missing_anchor(mocker):
+    """A blank spacer row inside Table 10 would silently cut off 'Bus'"""
+    rows = HUB_SHEET.values.tolist()
+    bus = next(i for i, r in enumerate(rows) if r[2] == "Bus")
+    rows.insert(bus, [None] * len(rows[0]))
+    parse = _hub_with(mocker, pd.DataFrame(rows, dtype=object))
+    with pytest.raises(ValueError, match="Bus"):
+        parse()
