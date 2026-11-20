@@ -14,6 +14,10 @@ seeds:
       Which emission factor release each category uses for which fiscal years. Edited by hand and reviewed;
       nothing switches automatically when a release is archived. Empty fy_end = open-ended.
       Policy: existing years keep the release they were reported with; new fiscal years use the latest release.
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "fy_end IS NULL OR fy_end >= fy_start"
     config:
       column_types:
         category: text
