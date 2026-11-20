@@ -5,19 +5,24 @@ commuting.py, waste.py, food.py and business_travel.py) live alongside the
 versioned emission factor archive. See specs/009-emission-factor-archive/.
 """
 
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable, Optional
 
 import cpi
 from dagster import (
     asset,
     AssetCheckResult,
     AssetCheckSpec,
+    Failure,
     get_dagster_logger,
     Output,
     ResourceParam,
 )
 import numpy as np
 import pandas as pd
+import pandera as pa
+from pandera.typing import Series
 
 from orchestrator.assets.utils import normalize_column_name
 from orchestrator.resources.postgres_io_manager import PostgreConnResources
@@ -25,6 +30,152 @@ from orchestrator.resources.datahub import DataHubResource
 
 
 logger = get_dagster_logger()
+
+
+# --- Emission factor archive: release registry ------------------------------
+
+
+@dataclass(frozen=True)
+class EmissionFactorRelease:
+    """One published release of an emission factor family, as stored in DataHub.
+
+    ``filename`` is the exact DataHub display name; ``search_term`` is what the
+    (fuzzy) DataHub search is queried with. ``dollar_year`` is None for
+    activity-based families or when the parser sets it per row.
+    """
+
+    family: str
+    version: str
+    publisher: str
+    project: str
+    search_term: str
+    filename: str
+    dollar_year: Optional[int]
+    gwp_basis: Optional[str]
+
+
+# Adding a release = adding one entry. Assignment to fiscal years lives in the
+# dbt seed `emission_factor_assignment.csv`, never here.
+RELEASES: tuple[EmissionFactorRelease, ...] = (
+    EmissionFactorRelease(
+        family="supply_chain_naics",
+        version="v1.2",
+        publisher="EPA",
+        project="Scope3 General",
+        search_term="SupplyChainGHGEmissionFactors_v1.2_NAICS_CO2e_USD2021",
+        filename="SupplyChainGHGEmissionFactors_v1.2_NAICS_CO2e_USD2021.csv",
+        dollar_year=2021,
+        gwp_basis="AR5",
+    ),
+    EmissionFactorRelease(
+        family="ghg_ef_hub",
+        version="2024",
+        publisher="EPA",
+        project="Scope3 General",
+        search_term="EPA_GHG_emission_factors_June_2024",
+        filename="EPA_GHG_emission_factors_June_2024",
+        dollar_year=None,
+        gwp_basis="AR5",
+    ),
+    EmissionFactorRelease(
+        family="simap_food",
+        version="v1",
+        publisher="SIMAP",
+        project="Scope3 Food",
+        search_term="food_emission_factors_SIMAP.xlsx",
+        filename="food_emission_factors_SIMAP.xlsx",
+        dollar_year=2021,
+        gwp_basis=None,
+    ),
+)
+
+ARCHIVE_COLUMNS = [
+    "family",
+    "version",
+    "publisher",
+    "factor_key",
+    "factor_key_type",
+    "factor_basis",
+    "factor_name",
+    "factor_value",
+    "unit",
+    "dollar_year",
+    "gwp_basis",
+    "source_file",
+]
+
+
+class EmissionFactorArchive(pa.DataFrameModel):
+    """Shared long schema of every raw ``ef_archive_*`` table"""
+
+    family: Series[str]
+    version: Series[str]
+    publisher: Series[str]
+    factor_key: Series[str]
+    factor_key_type: Series[str]
+    factor_basis: Series[str] = pa.Field(isin=["spend", "activity"])
+    factor_name: Series[str] = pa.Field(nullable=True)
+    factor_value: Series[float] = pa.Field(coerce=True)
+    unit: Series[str]
+    dollar_year: Series[pd.Int64Dtype] = pa.Field(nullable=True)
+    gwp_basis: Series[str] = pa.Field(nullable=True)
+    source_file: Series[str]
+
+    class Config:
+        unique = ["version", "factor_key", "factor_basis"]
+
+
+def releases_for(family: str) -> list[EmissionFactorRelease]:
+    """Registered releases of one family (reads RELEASES at call time)"""
+    return [r for r in RELEASES if r.family == family]
+
+
+def download_release(dhub: DataHubResource, release: EmissionFactorRelease) -> str:
+    """Return the download link of exactly one DataHub file named ``release.filename``.
+
+    Fails rather than skipping, so a registered version can never silently vanish.
+    """
+    project_id = dhub.get_project_id(release.project)
+    hits = [f for f in (dhub.search_files_by_name(project_id, release.search_term) or [])
+            if f.get("display_name") == release.filename]
+    if len(hits) != 1:
+        raise Failure(
+            f"{release.family} {release.version}: expected 1 DataHub file named "
+            f"'{release.filename}' (search '{release.search_term}'), found {len(hits)}"
+        )
+    return dhub.get_download_link(hits[0]["hash_id"])
+
+
+def tag_release(df: pd.DataFrame, release: EmissionFactorRelease) -> pd.DataFrame:
+    """Add release metadata; keep a parser-supplied ``version``/``dollar_year`` if present"""
+    out = df.copy()
+    out["family"] = release.family
+    out["publisher"] = release.publisher
+    out["gwp_basis"] = release.gwp_basis
+    out["source_file"] = release.filename
+    if "version" not in out:
+        out["version"] = release.version
+    if "dollar_year" not in out:
+        out["dollar_year"] = release.dollar_year
+    out["dollar_year"] = out["dollar_year"].astype("Int64")
+    return out[ARCHIVE_COLUMNS]
+
+
+def build_archive(
+    dhub: DataHubResource,
+    family: str,
+    parse: Callable[[str, EmissionFactorRelease], pd.DataFrame],
+) -> pd.DataFrame:
+    """Download, parse and tag every registered release of ``family`` into one validated table"""
+    releases = releases_for(family)
+    if not releases:
+        raise Failure(f"{family}: no registered releases")
+    frames = []
+    for release in releases:
+        logger.info(f"Archiving {release.family} {release.version} from {release.filename}")
+        frames.append(tag_release(parse(download_release(dhub, release), release), release))
+    out = pd.concat(frames, ignore_index=True)
+    return EmissionFactorArchive.validate(out)
 
 
 @asset(

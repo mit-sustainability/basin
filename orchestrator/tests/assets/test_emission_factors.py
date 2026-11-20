@@ -166,3 +166,105 @@ def test_emission_factors_module_owns_legacy_assets():
         "annual_cpi_index",
     ]:
         assert hasattr(ef, name), name
+
+
+# --- Emission factor archive: registry and shared helpers -------------------
+
+import dataclasses  # noqa: E402
+
+from dagster import Failure  # noqa: E402
+
+from orchestrator.assets import emission_factors as ef  # noqa: E402
+
+
+def _sc_release():
+    return ef.releases_for("supply_chain_naics")[0]
+
+
+def _dhub_with_hits(hits):
+    dhub = Mock()
+    dhub.get_project_id.return_value = "pid"
+    dhub.search_files_by_name.return_value = hits
+    dhub.get_download_link.side_effect = lambda h: f"link-{h}"
+    return dhub
+
+
+def test_download_release_fails_when_missing():
+    with pytest.raises(Failure, match="SupplyChainGHGEmissionFactors_v1.2.*found 0"):
+        ef.download_release(_dhub_with_hits([]), _sc_release())
+
+
+def test_download_release_handles_none():
+    with pytest.raises(Failure, match="found 0"):
+        ef.download_release(_dhub_with_hits(None), _sc_release())
+
+
+def test_download_release_ignores_fuzzy_matches():
+    """DataHub search is fuzzy: only an exact display_name counts"""
+    rel = _sc_release()
+    hits = [
+        {"display_name": rel.filename + ".bak", "hash_id": "x"},
+        {"display_name": rel.filename, "hash_id": "h1"},
+    ]
+    assert ef.download_release(_dhub_with_hits(hits), rel) == "link-h1"
+
+
+def test_download_release_fails_when_ambiguous():
+    rel = _sc_release()
+    hits = [{"display_name": rel.filename, "hash_id": "a"}, {"display_name": rel.filename, "hash_id": "b"}]
+    with pytest.raises(Failure, match="found 2"):
+        ef.download_release(_dhub_with_hits(hits), rel)
+
+
+def _one_row_parser(link, release):
+    return pd.DataFrame(
+        {
+            "factor_key": ["X"],
+            "factor_key_type": ["useeio_code"],
+            "factor_basis": ["spend"],
+            "factor_name": [None],
+            "factor_value": [1.0],
+            "unit": ["kg CO2e/USD"],
+        }
+    )
+
+
+def test_build_archive_keeps_every_registered_version(monkeypatch):
+    rel = _sc_release()
+    monkeypatch.setattr(ef, "RELEASES", (rel, dataclasses.replace(rel, version="v1.2-test")))
+    monkeypatch.setattr(ef, "download_release", lambda dhub, r: "link")
+    out = ef.build_archive(Mock(), "supply_chain_naics", _one_row_parser)
+    assert set(out["version"]) == {"v1.2", "v1.2-test"}
+    assert list(out.columns) == ef.ARCHIVE_COLUMNS
+    assert (out["dollar_year"] == 2021).all()
+    assert (out["source_file"] == rel.filename).all()
+
+
+def test_build_archive_keeps_parser_supplied_version_and_dollar_year(monkeypatch):
+    """Multi-year files (Cornerstone EEIO) set version/dollar_year per row"""
+    rel = _sc_release()
+    monkeypatch.setattr(ef, "RELEASES", (rel,))
+    monkeypatch.setattr(ef, "download_release", lambda dhub, r: "link")
+
+    def parser(link, release):
+        df = _one_row_parser(link, release)
+        df["version"] = "custom/2025"
+        df["dollar_year"] = 2025
+        return df
+
+    out = ef.build_archive(Mock(), "supply_chain_naics", parser)
+    assert out.loc[0, "version"] == "custom/2025"
+    assert out.loc[0, "dollar_year"] == 2025
+
+
+def test_build_archive_rejects_duplicate_keys(monkeypatch):
+    rel = _sc_release()
+    monkeypatch.setattr(ef, "RELEASES", (rel,))
+    monkeypatch.setattr(ef, "download_release", lambda dhub, r: "link")
+    with pytest.raises(Exception):
+        ef.build_archive(Mock(), "supply_chain_naics", lambda link, r: pd.concat([_one_row_parser(link, r)] * 2))
+
+
+def test_build_archive_fails_for_unregistered_family():
+    with pytest.raises(Failure, match="no registered releases"):
+        ef.build_archive(Mock(), "nope", _one_row_parser)
