@@ -268,3 +268,88 @@ def test_build_archive_rejects_duplicate_keys(monkeypatch):
 def test_build_archive_fails_for_unregistered_family():
     with pytest.raises(Failure, match="no registered releases"):
         ef.build_archive(Mock(), "nope", _one_row_parser)
+
+
+# --- Supply Chain archive ----------------------------------------------------
+
+SC_COLS = [
+    "2017 NAICS Code",
+    "2017 NAICS Title",
+    "Supply Chain Emission Factors without Margins",
+    "Margins of Supply Chain Emission Factors",
+    "Supply Chain Emission Factors with Margins",
+    "Reference USEEIO Code",
+]
+
+
+def _sc_frame(rows):
+    """rows: (naics_code, useeio_codes, factor_with_margins)"""
+    return pd.DataFrame(
+        [(code, f"title {code}", f - 0.1, 0.1, f, useeio) for code, useeio, f in rows],
+        columns=SC_COLS,
+    )
+
+
+def _rolled(df):
+    out = ef.rollup_supply_chain_to_useeio(df)
+    return out.set_index("Reference USEEIO Code")["Supply Chain Emission Factors with Margins"].round(6).to_dict()
+
+
+def test_rollup_drops_land_subdivision_and_specialty_trades():
+    df = _sc_frame([(237210, "X", 9.0), (238110, "X", 5.0), (236220, "X", 1.0)])
+    assert _rolled(df) == {"X": 1.0}
+
+
+def test_rollup_keeps_group_mixing_excluded_and_regular_naics():
+    """v1.3 groups Land Subdivision with regular NAICS under one factor"""
+    df = _sc_frame([(236116, "Y", 2.0), (237210, "Y", 2.0), (238110, "Y", 4.0)])
+    assert _rolled(df) == {"Y": 2.0}
+
+
+def test_rollup_averages_distinct_regular_factors():
+    df = _sc_frame([(236220, "Z", 2.0), (236210, "Z", 4.0)])
+    assert _rolled(df) == {"Z": 3.0}
+
+
+def test_rollup_keeps_code_when_every_group_is_excluded():
+    df = _sc_frame([(237210, "W", 3.0), (238110, "W", 5.0)])
+    assert _rolled(df) == {"W": 4.0}
+
+
+def test_rollup_explodes_comma_separated_useeio_codes():
+    df = _sc_frame([(111110, "1111A0, 1111B0", 1.5)])
+    assert _rolled(df) == {"1111A0": 1.5, "1111B0": 1.5}
+
+
+def test_parse_supply_chain_reads_csv(mocker):
+    rel = _sc_release()
+    df = _sc_frame([(111110, "1111A0", 1.5)])
+    df["GHG"], df["Unit"] = "All GHGs", "kg CO2e/2021 USD, purchaser price"
+    mocker.patch("orchestrator.assets.emission_factors.pd.read_csv", return_value=df)
+    out = ef.parse_supply_chain("link", rel)
+    assert out.to_dict("records") == [
+        {
+            "factor_key": "1111A0",
+            "factor_key_type": "useeio_code",
+            "factor_basis": "spend",
+            "factor_name": None,
+            "factor_value": 1.5,
+            "unit": "kg CO2e/USD",
+        }
+    ]
+
+
+def test_parse_supply_chain_reads_co2e_sheet_of_xlsx(mocker):
+    rel = dataclasses.replace(_sc_release(), version="v1.4.0-rc.1", filename="SupplyChainGHGEmissionFactorsv1.4.0-rc.1.xlsx")
+    read_excel = mocker.patch(
+        "orchestrator.assets.emission_factors.pd.read_excel", return_value=_sc_frame([(111110, "1111A0", 0.602)])
+    )
+    out = ef.parse_supply_chain("link", rel)
+    assert read_excel.call_args.kwargs["sheet_name"] == "CO2e"
+    assert out["factor_value"].tolist() == [0.602]
+
+
+def test_parse_supply_chain_rejects_unexpected_layout(mocker):
+    mocker.patch("orchestrator.assets.emission_factors.pd.read_csv", return_value=pd.DataFrame({"a": [1]}))
+    with pytest.raises(ValueError, match="Reference USEEIO Code"):
+        ef.parse_supply_chain("link", _sc_release())

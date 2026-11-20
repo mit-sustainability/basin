@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 import cpi
+from dagster_pandera import pandera_schema_to_dagster_type
 from dagster import (
     asset,
     AssetCheckResult,
@@ -19,7 +20,6 @@ from dagster import (
     Output,
     ResourceParam,
 )
-import numpy as np
 import pandas as pd
 import pandera as pa
 from pandera.typing import Series
@@ -161,6 +161,68 @@ def tag_release(df: pd.DataFrame, release: EmissionFactorRelease) -> pd.DataFram
     return out[ARCHIVE_COLUMNS]
 
 
+SC_FACTOR_COLUMNS = [
+    "Supply Chain Emission Factors without Margins",
+    "Margins of Supply Chain Emission Factors",
+    "Supply Chain Emission Factors with Margins",
+]
+SC_REQUIRED_COLUMNS = ["2017 NAICS Code", *SC_FACTOR_COLUMNS, "Reference USEEIO Code"]
+
+
+def _is_rolled_into_other_naics(naics_code) -> bool:
+    """Land Subdivision (237210) and specialty trade contractors (238*) are sub-activities
+    already counted inside whole-building construction NAICS."""
+    code = str(naics_code).split(".")[0]
+    return code == "237210" or code.startswith("238")
+
+
+def rollup_supply_chain_to_useeio(df_naics: pd.DataFrame) -> pd.DataFrame:
+    """Collapse NAICS-6 Supply Chain factors onto USEEIO codes.
+
+    Each NAICS row lists one or more ``Reference USEEIO Code``. NAICS rows sharing a USEEIO
+    code and identical factors form one group. When a USEEIO code has more than one group,
+    groups whose NAICS are all Land Subdivision / specialty trades are dropped (unless that
+    would drop every group), and the remaining groups are averaged.
+    """
+    df = df_naics[SC_REQUIRED_COLUMNS].copy()
+    df["Reference USEEIO Code"] = df["Reference USEEIO Code"].astype(str).str.split(",")
+    df = df.explode("Reference USEEIO Code", ignore_index=True)
+    df["Reference USEEIO Code"] = df["Reference USEEIO Code"].str.strip()
+
+    keys = ["Reference USEEIO Code", *SC_FACTOR_COLUMNS]
+    groups = (
+        df.assign(excluded=df["2017 NAICS Code"].map(_is_rolled_into_other_naics))
+        .groupby(keys, as_index=False)["excluded"]
+        .all()
+    )
+    n_groups = groups.groupby("Reference USEEIO Code")["excluded"].transform("size")
+    n_kept = groups.groupby("Reference USEEIO Code")["excluded"].transform(lambda s: (~s).sum())
+    keep = (n_groups == 1) | (n_kept == 0) | ~groups["excluded"]
+    return groups[keep].groupby("Reference USEEIO Code", as_index=False)[SC_FACTOR_COLUMNS].mean()
+
+
+def parse_supply_chain(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
+    """Read a Supply Chain GHG EF release (CSV, or the ``CO2e`` sheet of an xlsx) into archive rows"""
+    if release.filename.endswith(".xlsx"):
+        df = pd.read_excel(link, sheet_name="CO2e", engine="openpyxl")
+    else:
+        df = pd.read_csv(link)
+    missing = [c for c in SC_REQUIRED_COLUMNS if c not in df.columns]
+    if missing:
+        raise ValueError(f"{release.filename}: unexpected Supply Chain layout, missing {missing}")
+    rolled = rollup_supply_chain_to_useeio(df)
+    return pd.DataFrame(
+        {
+            "factor_key": rolled["Reference USEEIO Code"],
+            "factor_key_type": "useeio_code",
+            "factor_basis": "spend",
+            "factor_name": None,
+            "factor_value": rolled["Supply Chain Emission Factors with Margins"],
+            "unit": "kg CO2e/USD",
+        }
+    )
+
+
 def build_archive(
     dhub: DataHubResource,
     family: str,
@@ -242,33 +304,8 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
     engine = pg_engine.create_engine()
     df_eeio = pd.read_sql_query("SELECT * FROM raw.emission_factor_useeio_v2", engine)
 
-    # Expand USEEIO code from NAICS table
-    ref1 = df_naics.copy()
-    ref1["Reference USEEIO Code"] = (
-        ref1["Reference USEEIO Code"].str.split(",").map(lambda elements: [e.strip() for e in elements])
-    )
-    ref1 = ref1.explode("Reference USEEIO Code", ignore_index=True)
-
-    explode = ref1.copy().iloc[:, 2:6]
-    explode.drop_duplicates(inplace=True, ignore_index=True)
-    explode.sort_values(by=["Reference USEEIO Code"], inplace=True, ignore_index=True)
-    explode["freq"] = explode.groupby("Reference USEEIO Code")["Reference USEEIO Code"].transform("count")
-    explode["NAICS"] = np.nan
-    for f in explode.query("freq > 1").index:
-        naics = ref1.loc[
-            (ref1["Reference USEEIO Code"] == explode.iloc[f, 3])
-            & (ref1["Supply Chain Emission Factors with Margins"] == explode.iloc[f, 2])
-        ]["2017 NAICS Title"]
-        explode.iloc[f, 5] = ",".join(map(str, naics))
-
-    # Drop the naics categories that may be included in others(Land Subdvision),
-    # and average the emission factor of the rest naics categories of the same eeio code
-    ref2 = explode.copy()
-    print(len(ref2))
-    ref2 = ref2[ref2["NAICS"] != ref2.iloc[23, 5]].reset_index(drop=True)
-    ref2 = ref2[ref2["NAICS"] != "Land Subdivision"].reset_index(drop=True)
-    ref2.drop(columns=["freq", "NAICS"], inplace=True)  # drop non-numeric columns
-    ref2 = ref2.groupby("Reference USEEIO Code").mean().reset_index()
+    # Collapse NAICS-6 factors onto USEEIO codes (same rule as the archive)
+    ref2 = rollup_supply_chain_to_useeio(df_naics)
     factor_eeio_new = df_eeio.copy()
     factor_eeio_new = factor_eeio_new.merge(ref2, left_on="Code", right_on="Reference USEEIO Code", how="left")
     factor_eeio_new.drop(columns=["Reference USEEIO Code"], inplace=True)
@@ -392,3 +429,19 @@ def food_emission_factor(dhub: ResourceParam[DataHubResource]):
         "Weight-Based Emissions Factors (kg CO2e/kg food)": "weight-based emissions factor (kg CO2e/kg food)",
     }
     return df.rename(columns=name_mapping)
+
+
+# --- Emission factor archive: raw assets --------------------------------------
+
+ARCHIVE_DAGSTER_TYPE = pandera_schema_to_dagster_type(EmissionFactorArchive)
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+    dagster_type=ARCHIVE_DAGSTER_TYPE,
+)
+def ef_archive_supply_chain(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
+    """Every registered Supply Chain GHG Emission Factors release, rolled up to USEEIO codes"""
+    return build_archive(dhub, "supply_chain_naics", parse_supply_chain)
