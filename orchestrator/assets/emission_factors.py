@@ -314,6 +314,25 @@ def parse_ghg_ef_hub(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
     return pd.concat([mobile_out.dropna(subset=["factor_value"]), waste_out], ignore_index=True)
 
 
+def parse_simap_food(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
+    """SIMAP food factors: one spend row (kg CO2e/USD) and one weight row (kg CO2e/kg) per category"""
+    df = pd.read_excel(link, sheet_name="Final Table", engine="openpyxl")
+    spend = next((c for c in df.columns if str(c).startswith("Spend-Based")), None)
+    weight = next((c for c in df.columns if str(c).startswith("Weight-Based")), None)
+    if spend is None or weight is None:
+        raise ValueError(f"{release.filename}: unexpected SIMAP layout, need Spend-Based and Weight-Based columns")
+    category = df["Food Category"].astype(str).str.strip()
+    frames = [
+        pd.DataFrame({"factor_basis": basis, "factor_value": df[col], "unit": unit})
+        for basis, col, unit in (("spend", spend, "kg CO2e/USD"), ("activity", weight, "kg CO2e/kg"))
+    ]
+    out = pd.concat(frames, keys=[0, 1]).reset_index(level=0, drop=True)
+    out.insert(0, "factor_key", pd.concat([category, category]))
+    out.insert(1, "factor_key_type", "simap_category")
+    out.insert(3, "factor_name", None)
+    return out.reset_index(drop=True)
+
+
 def build_archive(
     dhub: DataHubResource,
     family: str,
@@ -547,3 +566,14 @@ def ef_archive_supply_chain(dhub: ResourceParam[DataHubResource]) -> pd.DataFram
 def ef_archive_ghg_ef_hub(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
     """Every registered GHG Emission Factors Hub edition: mobile (Table 10) and waste (Table 9) factors"""
     return build_archive(dhub, "ghg_ef_hub", parse_ghg_ef_hub)
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+    dagster_type=ARCHIVE_DAGSTER_TYPE,
+)
+def ef_archive_simap_food(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
+    """Every registered SIMAP food emission factor release (spend- and weight-based)"""
+    return build_archive(dhub, "simap_food", parse_simap_food)

@@ -454,3 +454,33 @@ def test_mobile_co2e_uses_gwp_from_same_file_and_strips_footnote(mocker):
 def test_waste_disposal_names_are_stable_across_editions(header, expected):
     """2024-April and 2025 editions drop the 'E' footnote on the digestion columns"""
     assert ef.waste_disposal_name(header) == expected
+
+
+# --- SIMAP food archive ------------------------------------------------------
+
+
+def test_simap_emits_spend_and_weight_rows(mocker):
+    sheet = pd.DataFrame(
+        {
+            "Food Category": ["Beef", "Chicken"],
+            "Spend-Based Emissions Factor (kg CO2e/2021 USD, purchaser price)": [1.9, 0.9],
+            "Weight-Based Emissions Factors (kg CO2e/kg food)": [26.45, 5.05],
+        }
+    )
+    read_excel = mocker.patch("orchestrator.assets.emission_factors.pd.read_excel", return_value=sheet)
+    out = ef.parse_simap_food("link", ef.releases_for("simap_food")[0])
+    assert read_excel.call_args.kwargs["sheet_name"] == "Final Table"
+    rows = {(r["factor_key"], r["factor_basis"]): (r["factor_value"], r["unit"]) for r in out.to_dict("records")}
+    assert rows == {
+        ("Beef", "spend"): (1.9, "kg CO2e/USD"),
+        ("Chicken", "spend"): (0.9, "kg CO2e/USD"),
+        ("Beef", "activity"): (26.45, "kg CO2e/kg"),
+        ("Chicken", "activity"): (5.05, "kg CO2e/kg"),
+    }
+    assert (out["factor_key_type"] == "simap_category").all()
+
+
+def test_simap_rejects_unexpected_layout(mocker):
+    mocker.patch("orchestrator.assets.emission_factors.pd.read_excel", return_value=pd.DataFrame({"Food Category": ["x"]}))
+    with pytest.raises(ValueError, match="Spend-Based"):
+        ef.parse_simap_food("link", ef.releases_for("simap_food")[0])
