@@ -18,6 +18,26 @@
 - dbt models consume those tables using source and model references and publish staging and final views or tables.
 - Final model names and source documentation form part of the repository's published data contract.
 
+## Emission Factor Contract
+
+Defined in `specs/009-emission-factor-archive/`. Downstream pipelines get emission factors and inflation targets only from this contract and never hardcode a factor release or a target CPI year.
+
+- **Archive.** `orchestrator/assets/emission_factors.py` holds a release registry (`RELEASES`). Each `raw.ef_archive_*` asset (`supply_chain`, `cornerstone_eeio`, `ghg_ef_hub`, `simap_food`) rebuilds its table from every registered release. A registered release that doesn't match exactly one DataHub file by display name fails the asset. Adding a release means one registry entry, plus a parser branch only if the layout changes.
+- **Assignment.** `warehouse/seeds/emission_factor_assignment.csv` (`category, family, version, fy_start, fy_end`) is the only place that decides which release a category uses for a fiscal year. Existing fiscal years keep the release they were reported with; new fiscal years point at the latest release. dbt tests reject overlapping ranges and versions that aren't in the archive.
+- **Contract model.** `staging.emission_factor_by_fiscal_year` has one row per `(category, fiscal_year, factor_key, factor_basis)` with `factor_value`, `unit`, `family`, `version`, `publisher`, `dollar_year` and `gwp_basis`. Open-ended assignments run through the next fiscal year. Join pattern:
+
+  ```sql
+  LEFT JOIN {{ ref('emission_factor_by_fiscal_year') }} AS ef
+    ON ef.category = '<category>' AND ef.fiscal_year = t.fiscal_year
+   AND ef.factor_key = t.<key> AND ef.factor_basis = 'spend'
+  ```
+
+- **Inflation.** `{{ inflate_to_dollar_year(amount, spend_year, dollar_year) }}` returns `amount * CPI(dollar_year) / CPI(spend_year)` from `raw.annual_cpi_index`.
+  - `dollar_year` comes from the contract row.
+  - `spend_year` is the transaction's calendar year, or the fiscal year only for already-annual sources.
+  - A missing spend-year CPI falls back to the latest CPI; a missing target-year CPI yields NULL.
+- **Legacy tables.** `emission_factor_useeio_v2`, `emission_factor_naics`, `commuting_emission_factors_EPA`, `waste_emission_factors_epa`, `food_emission_factor` and `annual_cpi_index` also live in `emission_factors.py`, with unchanged asset keys. Each legacy factor table is removed when its pipeline migrates to the contract.
+
 ## External Dependency Contract
 
 - Credentials and endpoints are supplied by environment variables, not static files.

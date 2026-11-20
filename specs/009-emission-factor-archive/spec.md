@@ -1,6 +1,6 @@
 # 009 — Emission Factor Archive
 
-Status: draft · Branch: `emission-factors-archive` · Backlog: BL-017 – BL-021
+Status: implemented (archive + contract; pipeline migrations BL-022..BL-027 pending) · Branch: `emission-factors-archive` · Backlog: BL-017 – BL-021
 
 ## Why
 
@@ -309,3 +309,14 @@ and keeps today's fallback (latest available CPI when `spend_year` is missing).
 
 Exact pandera field names, EPA Hub table title strings per release, the
 explicit NAICS title replacing `iloc[23, 5]`, and test fixture shapes.
+
+## As built (2026-11-20)
+
+Where this differs from the design above, the as-built version wins:
+
+- **Registry.** `EmissionFactorRelease` also has `filename`, the exact DataHub display name. DataHub search is fuzzy, so `download_release` keeps only an exact name match and fails on 0 or more than 1.
+- **Supply Chain.** Registered releases are v1.2 (2021 USD), v1.3.0 (2022 USD) and **v1.4.0-rc.1** (2023 USD, the file in DataHub). The final v1.4.0 (2024 USD) isn't uploaded yet (BL-028). FY2025+ seed rows point at v1.4.0-rc.1 for now.
+- **NAICS roll-up.** The positional `iloc[23, 5]` exclusion is replaced by a code rule: for a USEEIO code with more than one distinct factor, drop factor groups whose NAICS are all 237210 (Land Subdivision) or 238* (specialty trades). On v1.2 it reproduces the legacy output exactly. The positional version picked the wrong group on v1.3.0.
+- **Cornerstone EEIO.** Added family `cornerstone_eeio` (2026-rc file): US rows, purchaser-price sheets, version `2026-rc/<year>`, dollar year = data year. It's archived but not assigned.
+- **GHG EF Hub.** Registered editions are 2024 (the June 2024 re-issue) and 2025. The April 2024 file differs on four mobile factors (Passenger Car 0.176 vs 0.308 kg CO2e/vehicle-mile) and is not archived. The legacy commuting asset still reads it. Commuting and waste use 2024 up to FY2024 and 2025 from FY2025.
+- **GWP basis.** Filled only where stated: AR5 for the Hub, AR6 for Cornerstone and v1.4.0-rc.1, and null for v1.2 and v1.3.0.
