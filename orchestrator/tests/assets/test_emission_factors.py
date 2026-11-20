@@ -484,3 +484,49 @@ def test_simap_rejects_unexpected_layout(mocker):
     mocker.patch("orchestrator.assets.emission_factors.pd.read_excel", return_value=pd.DataFrame({"Food Category": ["x"]}))
     with pytest.raises(ValueError, match="Spend-Based"):
         ef.parse_simap_food("link", ef.releases_for("simap_food")[0])
+
+
+# --- Cornerstone EEIO archive ------------------------------------------------
+
+
+def test_cornerstone_reads_us_purchaser_price_sheets_per_year(mocker):
+    def sheet(total):
+        return pd.DataFrame(
+            {
+                "Code": ["481000", "481000", "721000"],
+                "Name": ["Air transport", "Air transport", "Hotels and campgrounds"],
+                "Location": ["USA", "AUS", "USA"],
+                "Total GHGs": [total, 9.9, total / 2],
+            }
+        )
+
+    book = Mock(sheet_names=["Cover", "2025PRO", "2025PUR", "2026PUR", "GWP"])
+    mocker.patch("orchestrator.assets.emission_factors.pd.ExcelFile", return_value=book)
+    read_excel = mocker.patch(
+        "orchestrator.assets.emission_factors.pd.read_excel",
+        side_effect=lambda x, sheet_name: sheet(0.6 if sheet_name == "2025PUR" else 0.5),
+    )
+    rel = ef.releases_for("cornerstone_eeio")[0]
+    out = ef.parse_cornerstone_eeio("link", rel)
+    assert sorted(c.kwargs["sheet_name"] for c in read_excel.call_args_list) == ["2025PUR", "2026PUR"]
+    got = {(r["version"], r["factor_key"]): (r["factor_value"], r["dollar_year"]) for r in out.to_dict("records")}
+    assert got == {
+        ("2026-rc/2025", "481000"): (0.6, 2025),
+        ("2026-rc/2025", "721000"): (0.3, 2025),
+        ("2026-rc/2026", "481000"): (0.5, 2026),
+        ("2026-rc/2026", "721000"): (0.25, 2026),
+    }
+    assert (out["unit"] == "kg CO2e/USD").all() and (out["factor_key_type"] == "useeio_code").all()
+
+
+def test_registry_holds_every_uploaded_release():
+    versions = {(r.family, r.version) for r in ef.RELEASES}
+    assert {
+        ("supply_chain_naics", "v1.2"),
+        ("supply_chain_naics", "v1.3.0"),
+        ("supply_chain_naics", "v1.4.0-rc.1"),
+        ("cornerstone_eeio", "2026-rc"),
+        ("ghg_ef_hub", "2024"),
+        ("ghg_ef_hub", "2025"),
+        ("simap_food", "v1"),
+    } <= versions

@@ -67,7 +67,40 @@ RELEASES: tuple[EmissionFactorRelease, ...] = (
         search_term="SupplyChainGHGEmissionFactors_v1.2_NAICS_CO2e_USD2021",
         filename="SupplyChainGHGEmissionFactors_v1.2_NAICS_CO2e_USD2021.csv",
         dollar_year=2021,
-        gwp_basis="AR5",
+        gwp_basis=None,  # not stated in the file
+    ),
+    EmissionFactorRelease(
+        family="supply_chain_naics",
+        version="v1.3.0",
+        publisher="EPA",
+        project="Scope3 General",
+        search_term="SupplyChainGHGEmissionFactors_v1.3.0",
+        filename="SupplyChainGHGEmissionFactors_v1.3.0_NAICS_CO2e_USD2022.csv",
+        dollar_year=2022,
+        gwp_basis=None,  # not stated in the file
+    ),
+    EmissionFactorRelease(
+        # Release candidate; final v1.4.0 (Zenodo, Oct 2025) is in 2024 USD. Register it as its own
+        # entry when uploaded, then point the seed at it.
+        family="supply_chain_naics",
+        version="v1.4.0-rc.1",
+        publisher="Cornerstone",
+        project="Scope3 General",
+        search_term="SupplyChainGHGEmissionFactorsv1.4.0",
+        filename="SupplyChainGHGEmissionFactorsv1.4.0-rc.1.xlsx",
+        dollar_year=2023,  # unit in file: 'kg CO2e/2023 USD, purchaser price'
+        gwp_basis="AR6",
+    ),
+    EmissionFactorRelease(
+        # One file, one version per data year ('2026-rc/2024'...); dollar year = data year
+        family="cornerstone_eeio",
+        version="2026-rc",
+        publisher="Cornerstone",
+        project="Scope3 General",
+        search_term="Cornerstone_EEIO_2026",
+        filename="Cornerstone_EEIO_2026-rc_Spend-based_GHG_Emission_Factors.xlsx",
+        dollar_year=None,
+        gwp_basis="AR6",
     ),
     EmissionFactorRelease(
         family="ghg_ef_hub",
@@ -75,7 +108,18 @@ RELEASES: tuple[EmissionFactorRelease, ...] = (
         publisher="EPA",
         project="Scope3 General",
         search_term="EPA_GHG_emission_factors_June_2024",
+        # June re-issue of the 2024 edition; the April file has different mobile factors
         filename="EPA_GHG_emission_factors_June_2024",
+        dollar_year=None,
+        gwp_basis="AR5",
+    ),
+    EmissionFactorRelease(
+        family="ghg_ef_hub",
+        version="2025",
+        publisher="EPA",
+        project="Scope3 General",
+        search_term="hub",
+        filename="ghg-emission-factors-hub-2025.xlsx",
         dollar_year=None,
         gwp_basis="AR5",
     ),
@@ -333,6 +377,36 @@ def parse_simap_food(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
+def parse_cornerstone_eeio(link: str, release: EmissionFactorRelease) -> pd.DataFrame:
+    """US purchaser-price factors from every ``{YEAR}PUR`` sheet; version '<release>/<year>', dollar year = year"""
+    book = pd.ExcelFile(link, engine="openpyxl")
+    frames = []
+    for name in book.sheet_names:
+        match = re.fullmatch(r"(\d{4})PUR", name)
+        if not match:
+            continue
+        year = int(match.group(1))
+        df = pd.read_excel(book, sheet_name=name)
+        us = df[df["Location"] == "USA"]
+        frames.append(
+            pd.DataFrame(
+                {
+                    "version": f"{release.version}/{year}",
+                    "factor_key": us["Code"].astype(str).str.strip(),
+                    "factor_key_type": "useeio_code",
+                    "factor_basis": "spend",
+                    "factor_name": us["Name"],
+                    "factor_value": us["Total GHGs"],
+                    "unit": "kg CO2e/USD",
+                    "dollar_year": year,
+                }
+            )
+        )
+    if not frames:
+        raise ValueError(f"{release.filename}: no {{YEAR}}PUR sheets found")
+    return pd.concat(frames, ignore_index=True)
+
+
 def build_archive(
     dhub: DataHubResource,
     family: str,
@@ -577,3 +651,14 @@ def ef_archive_ghg_ef_hub(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
 def ef_archive_simap_food(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
     """Every registered SIMAP food emission factor release (spend- and weight-based)"""
     return build_archive(dhub, "simap_food", parse_simap_food)
+
+
+@asset(
+    io_manager_key="postgres_replace",
+    compute_kind="python",
+    group_name="raw",
+    dagster_type=ARCHIVE_DAGSTER_TYPE,
+)
+def ef_archive_cornerstone_eeio(dhub: ResourceParam[DataHubResource]) -> pd.DataFrame:
+    """Cornerstone EEIO spend-based factors: US, purchaser price, one version per data year"""
+    return build_archive(dhub, "cornerstone_eeio", parse_cornerstone_eeio)
