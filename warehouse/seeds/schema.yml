@@ -40,3 +40,27 @@ seeds:
         data_tests: [not_null]
       - name: fy_end
         description: "Last fiscal year (inclusive); null = open-ended"
+  - name: waste_stream_factor_map
+    description: >
+      Maps MIT's coarse waste streams (Casella, small stream, historical) onto EPA GHG Emission Factors Hub
+      Table 9 material|disposal keys. A stream's factor is the weighted sum of its rows; weights per stream sum to 1.
+      Mirrors the landfill/combustion averaging used by stg_waste_emission.
+    config:
+      column_types:
+        stream: text
+        material: text
+        disposal: text
+        weight: numeric
+    columns:
+      - name: stream
+        description: "Waste stream as it appears in final_waste_recycle.material"
+        data_tests: [not_null]
+      - name: material
+        description: "EPA Hub Table 9 material"
+        data_tests: [not_null]
+      - name: disposal
+        description: "EPA Hub disposal method (landfilled, combusted, recycled, composted, ...)"
+        data_tests: [not_null]
+      - name: weight
+        description: "Share of the stream assigned to this material/disposal"
+        data_tests: [not_null]

@@ -36,6 +36,7 @@ Defined in `specs/009-emission-factor-archive/`. Downstream pipelines get emissi
   - `dollar_year` comes from the contract row.
   - `spend_year` is the transaction's calendar year, or the fiscal year only for already-annual sources.
   - A missing spend-year CPI falls back to the latest CPI; a missing target-year CPI yields NULL.
+- **Waste streams.** The Hub publishes waste factors per material and disposal method; MIT's hauler data only has coarse streams. The `waste_stream_factor_map` seed assigns each stream weighted `material|disposal` keys, and `waste_stream_emission_factor` gives one factor per (stream, fiscal_year). Edit the seed, not the pipeline, to change a stream's mix.
 - **Rollout and refresh.** The manual `emission_factor_archive_job` materializes the four `ef_archive_*` assets, the seed, `stg_emission_factor_archive` and `emission_factor_by_fiscal_year`. Run it once in each new environment **before** the nightly `materialize_dbt_models` build, because the contract models read `raw.ef_archive_*`. Run it again after any `RELEASES` or seed edit.
 - **Legacy tables.** `emission_factor_useeio_v2`, `emission_factor_naics`, `commuting_emission_factors_EPA`, `waste_emission_factors_epa`, `food_emission_factor` and `annual_cpi_index` also live in `emission_factors.py`, with unchanged asset keys. Each legacy factor table is removed when its pipeline migrates to the contract.
 

@@ -533,6 +533,34 @@ models:
         data_tests: [not_null]
       - name: dollar_year
         description: "USD year of spend factors; inflate spend to this year"
+
+  - name: waste_stream_emission_factor
+    description: >
+      Waste pipeline's view of the emission factor contract at MIT stream granularity: one factor per
+      (stream, fiscal_year), the weighted sum of EPA Hub material|disposal factors per waste_stream_factor_map.
+      Join on (stream = material, fiscal_year).
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - stream
+              - fiscal_year
+    columns:
+      - name: stream
+        description: "MIT waste stream (Trash, Recycling, Compost, C & D, Yard Waste, Other, Hard-to-Recycle Materials)"
+        data_tests: [not_null]
+      - name: fiscal_year
+        description: "MIT fiscal year (July-June)"
+        data_tests: [not_null]
+      - name: version
+        description: "EPA Hub release the factor came from"
+      - name: unit
+        description: "MT CO2e/short ton"
+      - name: emission_factor
+        description: "Stream emission factor in `unit`"
+        data_tests: [not_null]
 unit_tests:
   - name: test_waste_split_adjustment
     description: >

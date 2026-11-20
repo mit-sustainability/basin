@@ -1,0 +1,11 @@
+stream,material,disposal,weight
+Trash,Mixed MSW,landfilled,0.5
+Trash,Mixed MSW,combusted,0.5
+Hard-to-Recycle Materials,Mixed MSW,landfilled,0.5
+Hard-to-Recycle Materials,Mixed MSW,combusted,0.5
+C & D,Mixed MSW,landfilled,1
+Recycling,Mixed Recyclables,recycled,1
+Compost,Food Waste,composted,1
+Yard Waste,Yard Trimmings,composted,1
+Other,Mixed Organics,landfilled,0.5
+Other,Mixed Organics,combusted,0.5
