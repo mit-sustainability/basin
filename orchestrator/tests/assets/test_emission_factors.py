@@ -563,3 +563,12 @@ def test_hub_truncated_table_fails_on_missing_anchor(mocker):
     parse = _hub_with(mocker, pd.DataFrame(rows, dtype=object))
     with pytest.raises(ValueError, match="Bus"):
         parse()
+
+
+def test_build_archive_rejects_release_that_parses_to_zero_rows(monkeypatch):
+    """An empty parse must not silently drop a registered release from the archive"""
+    rel = _sc_release()
+    monkeypatch.setattr(ef, "RELEASES", (rel,))
+    monkeypatch.setattr(ef, "download_release", lambda dhub, r: "link")
+    with pytest.raises(Failure, match=f"{rel.version}.*{rel.filename}.*no rows"):
+        ef.build_archive(Mock(), "supply_chain_naics", lambda link, r: _one_row_parser(link, r).iloc[0:0])

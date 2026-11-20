@@ -139,14 +139,23 @@ class DataHubResource:
         filter these records by exact ``display_name``.
         """
         self._ensure_authorized()
-        res = requests.post(
-            f"{self.api_endpoint}/search",
-            headers=self.headers,
-            json={"term": search_term, "projects": [project_id], "paging": {"start": 0, "size": 50}},
-            timeout=default_timeout,
-        )
-        res.raise_for_status()
-        return res.json()["data"]
+        page_size, records = 50, []
+        while True:
+            res = requests.post(
+                f"{self.api_endpoint}/search",
+                headers=self.headers,
+                json={
+                    "term": search_term,
+                    "projects": [project_id],
+                    "paging": {"start": len(records), "size": page_size},
+                },
+                timeout=default_timeout,
+            )
+            res.raise_for_status()
+            page = res.json()["data"]
+            records.extend(page)
+            if len(page) < page_size:
+                return records
 
     def get_upload_link(self, meta):
         """Get upload link to datahub"""

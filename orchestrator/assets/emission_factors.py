@@ -435,7 +435,10 @@ def build_archive(
     frames = []
     for release in releases:
         logger.info(f"Archiving {release.family} {release.version} from {release.filename}")
-        frames.append(tag_release(parse(download_release(dhub, release), release), release))
+        parsed = parse(download_release(dhub, release), release)
+        if parsed.empty:
+            raise Failure(f"{family} {release.version}: {release.filename} parsed to no rows")
+        frames.append(tag_release(parsed, release))
     out = pd.concat(frames, ignore_index=True)
     return EmissionFactorArchive.validate(out)
 
