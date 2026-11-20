@@ -499,6 +499,40 @@ models:
       - name: gwp_basis
         description: "IPCC GWP set (AR5/AR6) when stated by the publisher"
 
+  - name: emission_factor_by_fiscal_year
+    description: >
+      Emission factor contract for downstream pipelines: the factor each category uses in each fiscal year,
+      per emission_factor_assignment. Join on (category, fiscal_year, factor_key, factor_basis); inflate spend
+      to dollar_year with inflate_to_dollar_year(). Pipelines never hardcode a release or target year.
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - category
+              - fiscal_year
+              - factor_key
+              - factor_basis
+    columns:
+      - name: category
+        description: "Downstream pipeline category"
+        data_tests: [not_null]
+      - name: fiscal_year
+        description: "MIT fiscal year (July-June)"
+        data_tests: [not_null]
+      - name: factor_key
+        description: "Join key (USEEIO code, vehicle type, 'material|disposal', SIMAP category)"
+      - name: factor_basis
+        description: "spend or activity"
+      - name: factor_value
+        description: "Emission factor value in `unit`"
+        data_tests: [not_null]
+      - name: unit
+        description: "Unit of factor_value"
+        data_tests: [not_null]
+      - name: dollar_year
+        description: "USD year of spend factors; inflate spend to this year"
 unit_tests:
   - name: test_waste_split_adjustment
     description: >
