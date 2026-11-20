@@ -40,6 +40,7 @@ from orchestrator.jobs.website_content_health import (
     website_content_health_link_check_job,
 )
 from orchestrator.jobs.construction_job import construction_asset_job
+from orchestrator.jobs.emission_factor_archive import emission_factor_archive_job
 from orchestrator.jobs.commuting_job import commuting_asset_job
 from orchestrator.jobs.food_job import food_asset_job
 from orchestrator.jobs.ghg_inventory import ghg_job
@@ -132,6 +133,7 @@ defs = Definitions(
         confluence_wiki_snapshot_job,
         knowledge_publish_job,
         construction_asset_job,
+        emission_factor_archive_job,
         waste_asset_job,
         commuting_asset_job,
         parking_asset_job,
