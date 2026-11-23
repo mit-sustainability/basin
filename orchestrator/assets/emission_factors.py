@@ -505,7 +505,10 @@ def emission_factor_naics(dhub: ResourceParam[DataHubResource], pg_engine: Postg
 
     # Load USEEIO emission factors
     engine = pg_engine.create_engine()
-    df_eeio = pd.read_sql_query("SELECT * FROM raw.emission_factor_useeio_v2", engine)
+    df_eeio = pd.read_sql_query(
+        'SELECT "ID", emission_factor, "Name", "Code", "Category", "Description" FROM raw.emission_factor_useeio_v2',
+        engine,
+    )
 
     # Collapse NAICS-6 factors onto USEEIO codes (same rule as the archive)
     ref2 = rollup_supply_chain_to_useeio(df_naics)

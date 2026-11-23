@@ -23,6 +23,6 @@ missing AS (
     WHERE e.factor_key IS NULL
 )
 
-SELECT * FROM weights
+SELECT stream, problem, fiscal_year FROM weights
 UNION ALL
-SELECT * FROM missing
+SELECT stream, problem, fiscal_year FROM missing
