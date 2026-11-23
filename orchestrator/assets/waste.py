@@ -1,13 +1,9 @@
-from datetime import datetime
 
 from dagster import (
     asset,
-    AssetCheckResult,
-    AssetCheckSpec,
     Config,
     Failure,
     get_dagster_logger,
-    Output,
     ResourceParam,
 )
 from dagster_pandera import pandera_schema_to_dagster_type
@@ -19,7 +15,6 @@ import pandas as pd
 from orchestrator.assets.utils import (
     empty_dataframe_from_model,
     add_dhub_sync,
-    normalize_column_name,
 )
 from orchestrator.resources.datahub import DataHubResource
 
@@ -130,53 +125,6 @@ def small_stream_recycle(config: SmallStreamConfig, dhub: ResourceParam[DataHubR
     df_out["diverted"] = df_out["tons"]
 
     return df_out
-
-
-@asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-    check_specs=[
-        AssetCheckSpec(
-            name="waste_emission_factor_check_unique",
-            asset="waste_emission_factors_epa",
-        )
-    ],
-)
-def waste_emission_factors_epa(
-    dhub: ResourceParam[DataHubResource],
-):
-    """This asset ingest the Commuting Emission Factors by waste material streams Table 9
-    from EPA Emission Factors Hub."""
-    project_id = dhub.get_project_id("Scope3 General")
-    logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "EPA_GHG_emission_factors_June_2024")
-    if len(download_links) == 0:
-        logger.error("No download links found!")
-        return pd.DataFrame()
-    # Load the emission factors from Table 9
-    workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
-    ef = pd.read_excel(
-        workbook,
-        usecols="C:I",
-        skiprows=425,
-        nrows=61,
-    )
-    mapping = {
-        "RecycledA": "Recycled",
-        "LandfilledB": "Landfilled",
-        "CombustedC": "Combusted",
-        "CompostedD": "Composted",
-        "Anaerobically Digested (Dry Digestate with Curing)E": "Dry Anaerobically Digested",
-        "Anaerobically Digested (Wet  Digestate with Curing)E": "Wet Anaerobically Digested",
-    }
-    df_out = ef.rename(columns=mapping)
-    df_out.columns = [normalize_column_name(col) for col in df_out.columns]
-    df_out["last_update"] = datetime.now()
-    yield Output(df_out)
-
-    # check it
-    yield AssetCheckResult(passed=df_out["material"].is_unique)
 
 
 # Sync to datahub using the factory function

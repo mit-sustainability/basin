@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from dagster import (
     asset,
@@ -11,55 +10,6 @@ from orchestrator.assets.utils import add_dhub_sync
 from orchestrator.resources.datahub import DataHubResource
 
 logger = get_dagster_logger()
-
-
-@asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
-def commuting_emission_factors_EPA(dhub: ResourceParam[DataHubResource]):
-    """This asset ingest the Commuting Emission Factors by vehicle
-    type from EPA Emission Factors Hub."""
-    project_id = dhub.get_project_id("Scope3 General")
-    logger.info(f"Found project id: {project_id}!")
-    download_links = dhub.search_files_from_project(project_id, "EPA_GHG_emission_factors_2024")
-    if len(download_links) == 0:
-        logger.error("No download links found!")
-        return pd.DataFrame()
-    # Load the data
-    workbook = pd.ExcelFile(download_links[0], engine="openpyxl")
-    df = pd.read_excel(
-        workbook,
-        usecols="C:G",
-        skiprows=492,
-        nrows=12,
-    )
-    # Clean up column names
-    name_map = {
-        "Vehicle Type": "vehicle_type",
-        "CO2 Factor \n(kg CO2 / unit)": "CO2_kg",
-        "CH4 Factor \n(g CH4 / unit)": "CH4_g",
-        "N2O Factor \n(g N2O / unit)": "N2O_g",
-        "Units": "units",
-    }
-    df_out = df.rename(columns=name_map)
-
-    # Get GWP to calculate CO2-eq
-    gwp = pd.read_excel(
-        workbook,
-        usecols="C:E",
-        skiprows=512,
-        nrows=3,
-    )
-    gwp_100 = gwp["100-Year GWP"].to_list()
-    gwp_map = dict(zip(["CO2_kg", "CH4_g", "N2O_g"], gwp_100))
-    df_out["CO2eq_kg"] = (
-        df_out["CO2_kg"] + df_out["CH4_g"] * gwp_map["CH4_g"] / 1000 + df_out["N2O_g"] * gwp_map["N2O_g"] / 1000
-    )
-    df_out["last_update"] = datetime.now()
-
-    return df_out
 
 
 @asset(

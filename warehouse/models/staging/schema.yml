@@ -451,6 +451,116 @@ models:
       - name: last_update
         description: "Timestamp when the record was last ingested"
 
+  - name: stg_emission_factor_archive
+    description: "Every archived emission factor release in one long table. dollar_year is null for activity-based factors."
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - family
+              - version
+              - factor_key
+              - factor_basis
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "factor_basis <> 'spend' OR dollar_year IS NOT NULL"
+    columns:
+      - name: family
+        description: "Factor family: supply_chain_naics, cornerstone_eeio, ghg_ef_hub, simap_food"
+        data_tests: [not_null]
+      - name: version
+        description: "Release label from the Python registry (cornerstone_eeio: '<release>/<data year>')"
+        data_tests: [not_null]
+      - name: publisher
+        description: "EPA, Cornerstone or SIMAP"
+      - name: factor_key
+        description: "Join key: USEEIO code, vehicle type, 'material|disposal' or SIMAP category"
+        data_tests: [not_null]
+      - name: factor_key_type
+        description: "useeio_code, vehicle_type, waste_material_disposal or simap_category"
+      - name: factor_basis
+        description: "spend (per USD of dollar_year) or activity (per physical unit)"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["spend", "activity"]
+      - name: factor_name
+        description: "Human-readable label as published"
+      - name: factor_value
+        description: "Emission factor value in `unit`"
+        data_tests: [not_null]
+      - name: unit
+        description: "e.g. kg CO2e/USD, kg CO2e/vehicle-mile, MT CO2e/short ton, kg CO2e/kg"
+        data_tests: [not_null]
+      - name: dollar_year
+        description: "USD year a spend factor is denominated in; null for activity factors"
+      - name: gwp_basis
+        description: "IPCC GWP set (AR5/AR6) when stated by the publisher"
+
+  - name: emission_factor_by_fiscal_year
+    description: >
+      Emission factor contract for downstream pipelines: the factor each category uses in each fiscal year,
+      per emission_factor_assignment. Join on (category, fiscal_year, factor_key, factor_basis); inflate spend
+      to dollar_year with inflate_to_dollar_year(). Pipelines never hardcode a release or target year.
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - category
+              - fiscal_year
+              - factor_key
+              - factor_basis
+    columns:
+      - name: category
+        description: "Downstream pipeline category"
+        data_tests: [not_null]
+      - name: fiscal_year
+        description: "MIT fiscal year (July-June)"
+        data_tests: [not_null]
+      - name: factor_key
+        description: "Join key (USEEIO code, vehicle type, 'material|disposal', SIMAP category)"
+      - name: factor_basis
+        description: "spend or activity"
+      - name: factor_value
+        description: "Emission factor value in `unit`"
+        data_tests: [not_null]
+      - name: unit
+        description: "Unit of factor_value"
+        data_tests: [not_null]
+      - name: dollar_year
+        description: "USD year of spend factors; inflate spend to this year"
+
+  - name: waste_stream_emission_factor
+    description: >
+      Waste pipeline's view of the emission factor contract at MIT stream granularity: one factor per
+      (stream, fiscal_year), the weighted sum of EPA Hub material|disposal factors per waste_stream_factor_map.
+      Join on (stream = material, fiscal_year).
+    meta:
+      owner: yu_cheng@mit.edu
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - stream
+              - fiscal_year
+    columns:
+      - name: stream
+        description: "MIT waste stream (Trash, Recycling, Compost, C & D, Yard Waste, Other, Hard-to-Recycle Materials)"
+        data_tests: [not_null]
+      - name: fiscal_year
+        description: "MIT fiscal year (July-June)"
+        data_tests: [not_null]
+      - name: version
+        description: "EPA Hub release the factor came from"
+      - name: unit
+        description: "MT CO2e/short ton"
+      - name: emission_factor
+        description: "Stream emission factor in `unit`"
+        data_tests: [not_null]
 unit_tests:
   - name: test_waste_split_adjustment
     description: >

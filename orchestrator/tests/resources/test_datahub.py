@@ -63,3 +63,19 @@ def test_get_project_id(mock_data_hub_resource):
     ):
         result = mock_data_hub_resource.get_project_id("Test Project")
         assert result == "123"
+
+
+def test_search_files_by_name_fetches_every_page(mock_data_hub_resource):
+    """Exact-name matching downstream needs the full result set, not just the first page"""
+    page_1 = [{"display_name": f"f{i}", "hash_id": str(i)} for i in range(50)]
+    page_2 = [{"display_name": "target.xlsx", "hash_id": "t"}]
+    with requests_mock.Mocker() as m:
+        m.post(
+            f"{mock_data_hub_resource.api_endpoint}/search",
+            [{"json": {"data": page_1}}, {"json": {"data": page_2}}],
+        )
+        result = mock_data_hub_resource.search_files_by_name("p", "hub")
+        starts = [r.json()["paging"]["start"] for r in m.request_history]
+    assert len(result) == 51
+    assert result[-1]["display_name"] == "target.xlsx"
+    assert starts == [0, 50]

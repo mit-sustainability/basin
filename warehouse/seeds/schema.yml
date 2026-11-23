@@ -9,3 +9,58 @@ seeds:
         data_tests:
           - unique
           - not_null
+  - name: emission_factor_assignment
+    description: >
+      Which emission factor release each category uses for which fiscal years. Edited by hand and reviewed;
+      nothing switches automatically when a release is archived. Empty fy_end = open-ended.
+      Policy: existing years keep the release they were reported with; new fiscal years use the latest release.
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "fy_end IS NULL OR fy_end >= fy_start"
+    config:
+      column_types:
+        category: text
+        family: text
+        version: text
+        fy_start: integer
+        fy_end: integer
+    columns:
+      - name: category
+        description: "Downstream pipeline category (purchased_goods, construction, ...)"
+        data_tests: [not_null]
+      - name: family
+        description: "Emission factor family in stg_emission_factor_archive"
+        data_tests: [not_null]
+      - name: version
+        description: "Release version in stg_emission_factor_archive"
+        data_tests: [not_null]
+      - name: fy_start
+        description: "First fiscal year (inclusive)"
+        data_tests: [not_null]
+      - name: fy_end
+        description: "Last fiscal year (inclusive); null = open-ended"
+  - name: waste_stream_factor_map
+    description: >
+      Maps MIT's coarse waste streams (Casella, small stream, historical) onto EPA GHG Emission Factors Hub
+      Table 9 material|disposal keys. A stream's factor is the weighted sum of its rows; weights per stream sum to 1.
+      Mirrors the landfill/combustion averaging used by stg_waste_emission.
+    config:
+      column_types:
+        stream: text
+        material: text
+        disposal: text
+        weight: numeric
+    columns:
+      - name: stream
+        description: "Waste stream as it appears in final_waste_recycle.material"
+        data_tests: [not_null]
+      - name: material
+        description: "EPA Hub Table 9 material"
+        data_tests: [not_null]
+      - name: disposal
+        description: "EPA Hub disposal method (landfilled, combusted, recycled, composted, ...)"
+        data_tests: [not_null]
+      - name: weight
+        description: "Share of the stream assigned to this material/disposal"
+        data_tests: [not_null]

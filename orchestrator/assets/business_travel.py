@@ -1,6 +1,5 @@
 from datetime import datetime
 import json
-import cpi
 from dagster_aws.pipes import PipesLambdaClient
 from dagster import (
     AssetExecutionContext,
@@ -141,22 +140,6 @@ def travel_spending(
         df_out = new_entries[required_cols].rename(columns=cols_mapping).dropna()
         df_out = df_out.sort_values("trip_end_date")
     return Output(df_out, metadata={"New entry count": new_entries_count})
-
-
-@asset(
-    io_manager_key="postgres_replace",
-    compute_kind="python",
-    group_name="raw",
-)
-def annual_cpi_index():
-    """Get annual CPI index from python cpi library"""
-    DEFAULT_SERIES_ID = cpi.defaults.DEFAULT_SERIES_ID
-    logger.info("Ectract the annual CPI data using the python cpi library ")
-    cpi_df = cpi.series.get_by_id(DEFAULT_SERIES_ID).to_dataframe()
-    cpi_sub = cpi_df[cpi_df["period_code"] == "M13"][["year", "value", "series_id"]].sort_values("year")
-    cpi_sub["last_update"] = datetime.now()
-
-    return cpi_sub
 
 
 @asset(

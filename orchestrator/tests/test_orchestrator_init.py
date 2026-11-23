@@ -43,3 +43,19 @@ def test_orchestrator_definitions_register_knowledge_publish_job():
         "knowledge_bundle",
         "knowledge_published",
     }
+
+
+def test_orchestrator_definitions_register_emission_factor_archive_job():
+    import orchestrator
+
+    job = orchestrator.defs.resolve_job_def("emission_factor_archive_job")
+
+    assert {
+        "ef_archive_supply_chain",
+        "ef_archive_cornerstone_eeio",
+        "ef_archive_ghg_ef_hub",
+        "ef_archive_simap_food",
+        "raw/emission_factor_assignment",
+        "staging/stg_emission_factor_archive",
+        "staging/emission_factor_by_fiscal_year",
+    } <= {key.to_user_string() for key in job.asset_layer.executable_asset_keys}

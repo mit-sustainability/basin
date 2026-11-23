@@ -164,3 +164,4 @@ orchestrator/.dagster/*
 .codex/*
 !.codex/config.toml
 diff.md
+output/
